@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Finance Workspace — Debtors &amp; Loans</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #0D9488;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F8FA; color: #0F172A; font-family: 'Outfit', system-ui, sans-serif; font-size: 15px; line-height: 1.45">
+
+<header style="background: linear-gradient(100deg, #0F5A50 0%, #0B3D38 100%); color: #FFFFFF; padding: 22px clamp(16px, 4vw, 48px)">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<div style="display: flex; align-items: center; gap: 14px; min-width: 0">
+<div style="width: 46px; height: 46px; flex: none; border-radius: 12px; background: #1D6E63; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-2"></path><path d="M21 9h-6a3 3 0 0 0 0 6h6z"></path></svg>
+</div>
+<div style="min-width: 0">
+<div style="font-weight: 700; font-size: clamp(18px, 2.2vw, 26px); letter-spacing: -0.01em; text-transform: uppercase">Personal Finance &amp; Loan Recovery Workspace</div>
+<div style="font-size: 14.5px; color: #A7F3D0">Debtor receivables, multiple loan tracking, settlement dates &amp; repayment ledger</div>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" onClick="{{openLog}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #10B981; color: #04241B; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Log Loan / Repayment</button>
+<button type="button" onClick="{{openDebtor}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #12756A; border: 1px solid #5EEAD4; color: #FFFFFF; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg>Add Debtor</button>
+<dc-import name="AdminButton" preview-open="{{ false }}" hint-size="112px,44px"></dc-import>
+</div>
+</div>
+</header>
+
+<nav aria-label="Sections" style="background: #FFFFFF; border-bottom: 1px solid #E5E7EB; padding: 0 clamp(16px, 4vw, 48px)">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0">
+<a href="Main.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Overview</a>
+<a href="Accounts.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Bank Account</a>
+<a href="Lending.dc.html" aria-current="page" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap">Debtors &amp; Loans</a>
+<a href="Cards.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Credit Card 1</a>
+<a href="Card2.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Credit Card 2</a>
+</div>
+</nav>
+
+<main style="padding: 28px clamp(16px, 4vw, 48px) 72px">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px">
+
+<section aria-label="Loan figures" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<div style="background: {{k.bg}}; border: 1px solid {{k.border}}; border-bottom: 4px solid {{k.line}}; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+<span style="font-size: 12.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #334155">{{k.label}}</span>
+<span aria-hidden="true" style="width: 30px; height: 30px; flex: none; border-radius: 8px; background: {{k.soft}}; color: {{k.ink}}; display: flex; align-items: center; justify-content: center; font-weight: 700">{{k.glyph}}</span>
+</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 24px; color: {{k.valColor}}">{{k.value}}</div>
+<div style="font-size: 13px; color: {{k.subColor}}">{{k.sub}}</div>
+</div>
+</sc-for>
+</section>
+
+<section aria-label="Workspace controls" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+<div role="tablist" aria-label="Views" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button type="button" role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid {{t.border}}; background: {{t.bg}}; color: {{t.fg}}; font-size: 15.5px; font-weight: 600">{{t.label}}</button>
+</sc-for>
+</div>
+<label style="flex: 0 1 300px; min-width: 200px; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; box-sizing: border-box">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search</span>
+<input type="search" onInput="{{onSearch}}" placeholder="Search person, reason, notes…" style="flex: 1 1 auto; min-width: 0; border: none; outline: none; font-size: 15px; background: transparent; color: #0F172A">
+</label>
+</div>
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid #F1F5F9; padding-top: 12px">
+<div role="group" aria-label="Filter by status" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+<span style="font-size: 14px; color: #64748B; margin-right: 4px">Filter:</span>
+<sc-for list="{{statusChips}}" as="c" hint-placeholder-count="5">
+<button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid {{c.border}}; background: {{c.bg}}; color: {{c.fg}}; font-size: 14px; font-weight: 500">{{c.label}}</button>
+</sc-for>
+</div>
+<div role="group" aria-label="Filter ledger by type" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+<span style="font-size: 14px; color: #64748B; margin-right: 4px">Ledger type:</span>
+<sc-for list="{{typeChips}}" as="c" hint-placeholder-count="3">
+<button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: none; background: {{c.bg}}; color: {{c.fg}}; font-size: 14px; font-weight: 600">{{c.label}}</button>
+</sc-for>
+</div>
+</div>
+</section>
+
+<sc-if value="{{showPortfolio}}" hint-placeholder-val="{{ true }}">
+<section aria-labelledby="port-h" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+<h2 id="port-h" style="margin: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20c-.5-2.5-2-4.2-4-5"></path></svg>
+Borrower profiles &amp; reason breakdown</h2>
+<button type="button" onClick="{{openDebtor}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #0F4C45; color: #FFFFFF; font-weight: 600; font-size: 15px">+ Add Debtor</button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; align-items: start">
+<sc-for list="{{people}}" as="p" hint-placeholder-count="6">
+<article style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<div style="width: 42px; height: 42px; flex: none; border-radius: 50%; background: #CCFBF1; color: #115E59; display: flex; align-items: center; justify-content: center; font-weight: 700">{{p.initials}}</div>
+<div style="flex: 1 1 auto; min-width: 0">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-weight: 700; font-size: 17px">{{p.name}}</span><span style="font-size: 12px; padding: 1px 7px; border-radius: 6px; border: 1px solid #C7D2FE; background: #EEF2FF; color: #4338CA">{{p.loanBadge}}</span></div>
+<div style="font-size: 13.5px; color: #64748B">Due: {{p.dueFmt}}</div>
+</div>
+<span style="font-size: 13px; font-weight: 600; padding: 3px 11px; border-radius: 999px; background: {{p.pillBg}}; color: {{p.pillFg}}; white-space: nowrap">{{p.status}}</span>
+</div>
+<div style="background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<span style="font-size: 12.5px; font-weight: 600; letter-spacing: 0.06em; color: #475569">REASONS ({{p.reasonCount}})</span>
+<button type="button" onClick="{{p.toggle}}" aria-expanded="{{p.openStr}}" style="min-height: 32px; border: none; background: transparent; color: #0F766E; font-size: 13.5px; font-weight: 600; padding: 0 4px">{{p.histLabel}}</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{p.reasons}}" as="r" hint-placeholder-count="2">
+<span style="font-size: 13px; padding: 2px 8px; border-radius: 6px; background: #FFFFFF; border: 1px solid #E2E8F0">#{{r}}</span>
+</sc-for>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); text-align: center; border-top: 1px solid #F1F5F9; border-bottom: 1px solid #F1F5F9; padding: 10px 0">
+<div><div style="font-size: 12px; letter-spacing: 0.06em; color: #64748B">BORROWED</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700">{{p.lentFmt}}</div></div>
+<div><div style="font-size: 12px; letter-spacing: 0.06em; color: #64748B">REPAID</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #0F766E">{{p.repaidFmt}}</div></div>
+<div><div style="font-size: 12px; letter-spacing: 0.06em; color: #B45309">LEFT</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #92400E">{{p.leftFmt}}</div></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span>Recovery progress</span><span style="font-family: 'JetBrains Mono', monospace">{{p.pct}}%</span></div>
+<div style="height: 8px; border-radius: 4px; background: #F1F5F9; overflow: hidden"><div style="width: {{p.pct}}%; height: 100%; background: #14B8A6"></div></div>
+</div>
+<sc-if value="{{p.isOpen}}" hint-placeholder-val="{{ false }}">
+<ol style="list-style: none; margin: 0; padding: 12px; background: #F8FAFC; border-radius: 12px; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{p.events}}" as="e" hint-placeholder-count="3">
+<li style="display: flex; align-items: center; gap: 10px">
+<span style="width: 10px; height: 10px; flex: none; border-radius: 50%; background: {{e.color}}"></span>
+<div style="flex: 1 1 auto; min-width: 0"><div style="font-weight: 600; font-size: 14px">{{e.label}}</div><div style="font-size: 13px; color: #64748B">{{e.dateFmt}} · {{e.note}}</div></div>
+<div style="text-align: right"><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: {{e.color}}">{{e.amtFmt}}</div><div style="font-size: 12.5px; color: #64748B">left {{e.runFmt}}</div></div>
+</li>
+</sc-for>
+</ol>
+</sc-if>
+<div style="display: flex; align-items: center; gap: 8px">
+<button type="button" onClick="{{p.addLoan}}" style="min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #C7D2FE; background: #EEF2FF; color: #3730A3; font-weight: 600; font-size: 14.5px">+ Loan</button>
+<button type="button" onClick="{{p.repay}}" style="flex: 1 1 auto; min-height: 44px; border-radius: 10px; border: 1px solid #99F6E4; background: #F0FDFA; color: #0F766E; font-weight: 600; font-size: 14.5px">↙ Repay</button>
+<button type="button" onClick="{{p.toggle}}" aria-label="Show history" style="width: 44px; height: 44px; border: none; background: transparent; color: #475569; border-radius: 10px; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5M12 7v5l3 2"></path></svg></button>
+<button type="button" aria-label="Edit debtor" style="width: 44px; height: 44px; border: none; background: transparent; color: #475569; border-radius: 10px; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></button>
+<button type="button" aria-label="Delete debtor" style="width: 44px; height: 44px; border: none; background: transparent; color: #94A3B8; border-radius: 10px; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+</div>
+</article>
+</sc-for>
+</div>
+<sc-if value="{{noPeople}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 16px; padding: 32px; text-align: center; color: #64748B">No borrowers match this filter.</div>
+</sc-if>
+</section>
+</sc-if>
+
+<sc-if value="{{showTable}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="tbl-h" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 18px">
+<div>
+<h2 id="tbl-h" style="margin: 0; font-size: 19px; font-weight: 700; text-transform: uppercase">Loan receivables &amp; debtor settlement summary</h2>
+<div style="font-size: 14px; color: #64748B">Multiple loans per person, every borrowing reason, and what is left to collect</div>
+</div>
+<button type="button" onClick="{{openDebtor}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #0F4C45; color: #FFFFFF; font-weight: 600; font-size: 15px">+ Add Debtor</button>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 1080px; border-collapse: collapse; font-size: 14.5px">
+<thead>
+<tr style="background: #F8FAFC; text-align: left; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Person name</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Loans</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Total borrowed</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Total repaid</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right; background: #FEFCE8; color: #92400E">Balance left</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Status</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Borrowing reasons</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Next due</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Repaid %</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Actions</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{people}}" as="p" hint-placeholder-count="6">
+<tr style="border-bottom: 1px solid #F1F5F9">
+<th scope="row" style="padding: 12px 16px; text-align: left; font-weight: 600"><span style="display: inline-flex; align-items: center; gap: 10px"><span style="width: 28px; height: 28px; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">{{p.initial}}</span>{{p.name}}</span></th>
+<td style="padding: 12px 16px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 2px 8px; border-radius: 6px; border: 1px solid #C7D2FE; background: #EEF2FF; color: #4338CA">{{p.loanCount}}</span></td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace">{{p.lentFmt}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #0F766E">{{p.repaidFmt}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; background: #FEFCE8; color: #78350F">{{p.leftFmt}}</td>
+<td style="padding: 12px 16px"><span style="font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{p.pillBg}}; color: {{p.pillFg}}; white-space: nowrap">{{p.status}}</span></td>
+<td style="padding: 12px 16px"><span style="display: inline-flex; flex-wrap: wrap; gap: 4px"><sc-for list="{{p.reasons}}" as="r" hint-placeholder-count="2"><span style="font-size: 12.5px; padding: 1px 7px; border-radius: 6px; background: #F1F5F9">#{{r}}</span></sc-for></span></td>
+<td style="padding: 12px 16px; white-space: nowrap">{{p.dueFmt}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace">{{p.pct}}%</td>
+<td style="padding: 8px 16px"><span style="display: inline-flex; gap: 6px"><button type="button" onClick="{{p.addLoan}}" style="min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #C7D2FE; background: #EEF2FF; color: #3730A3; font-size: 13.5px; font-weight: 600">+ Loan</button><button type="button" onClick="{{p.repay}}" style="min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #99F6E4; background: #F0FDFA; color: #0F766E; font-size: 13.5px; font-weight: 600">Repay</button></span></td>
+</tr>
+</sc-for>
+<tr style="background: #F8FAFC; border-top: 2px solid #E5E7EB">
+<th scope="row" style="padding: 14px 16px; text-align: left; font-weight: 700">TOTAL SUMMARY</th>
+<td style="padding: 14px 16px; font-family: 'JetBrains Mono', monospace">{{totLoans}}</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700">{{totLentFmt}}</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #0F766E">{{totRepaidFmt}}</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; background: #FEF9C3; color: #78350F">{{totLeftFmt}}</td>
+<td style="padding: 14px 16px">—</td>
+<td style="padding: 14px 16px; color: #64748B">Active receivables</td>
+<td style="padding: 14px 16px">—</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700">{{totPct}}%</td>
+<td style="padding: 14px 16px">—</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{showLedger}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="led-h" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="padding: 18px">
+<h2 id="led-h" style="margin: 0; font-size: 19px; font-weight: 700; text-transform: uppercase">Loan &amp; repayment ledger</h2>
+<div style="font-size: 14px; color: #64748B">Every time someone took money from you, and every time they gave it back</div>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 860px; border-collapse: collapse; font-size: 14.5px">
+<thead>
+<tr style="background: #F8FAFC; text-align: left; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Date</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Person</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Type</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Reason / method</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Amount</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Their balance after</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ledger}}" as="l" hint-placeholder-count="8">
+<tr style="border-bottom: 1px solid #F1F5F9">
+<td style="padding: 12px 16px; white-space: nowrap; color: #475569">{{l.dateFmt}}</td>
+<td style="padding: 12px 16px; font-weight: 600">{{l.person}}</td>
+<td style="padding: 12px 16px"><span style="font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{l.chipBg}}; color: {{l.color}}">{{l.type}}</span></td>
+<td style="padding: 12px 16px; color: #475569">{{l.note}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: {{l.color}}">{{l.amtFmt}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace">{{l.runFmt}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+</sc-if>
+
+</div>
+</main>
+
+<sc-if value="{{modalOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50">
+<div role="dialog" aria-modal="true" aria-labelledby="modal-h" style="width: 100%; max-width: 560px; max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; border-radius: 14px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35)">
+<div style="background: #0F4C45; color: #FFFFFF; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h2 id="modal-h" style="margin: 0; font-size: 20px; font-weight: 700">{{modalTitle}}</h2>
+<button type="button" onClick="{{closeModal}}" aria-label="Close" style="width: 44px; height: 44px; border: none; background: transparent; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<div style="padding: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+
+<sc-if value="{{isDebtorForm}}" hint-placeholder-val="{{ true }}">
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Borrower / debtor name *
+<input type="text" placeholder="e.g. Mamun Vai, Rafi Ahmed…" style="min-height: 46px; padding: 0 14px; border: 2px solid #14B8A6; border-radius: 10px; font-size: 15px; font-weight: 400"></label>
+</sc-if>
+
+<sc-if value="{{isPersonForm}}" hint-placeholder-val="{{ false }}">
+<div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; background: #F0FDFA; border: 1px solid #99F6E4; border-radius: 10px; padding: 10px 14px">
+<span style="width: 32px; height: 32px; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">{{modalPerson.initials}}</span>
+<div><div style="font-weight: 600">{{modalPerson.name}}</div><div style="font-size: 13px; color: #475569">Currently owes {{modalPerson.leftFmt}}</div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{isRepayForm}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Amount repaid (৳) *
+<input type="number" placeholder="0" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-family: 'JetBrains Mono', monospace"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Date received
+<input type="date" defaultValue="2026-10-12" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px"></label>
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Paid via
+<select style="min-height: 46px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; background: #FFFFFF"><option>Cash</option><option>bKash</option><option>Nagad</option><option>Bank transfer</option></select></label>
+</sc-if>
+
+<sc-if value="{{isLoanFields}}" hint-placeholder-val="{{ true }}">
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Loan amount (৳) *
+<input type="number" placeholder="0" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-family: 'JetBrains Mono', monospace"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Initial repaid (৳)
+<input type="number" placeholder="0" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-family: 'JetBrains Mono', monospace"></label>
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Reason / purpose for this loan *
+<input type="text" placeholder="e.g. bKash, medical bills, grocery advance, house rent…" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Borrowing date
+<input type="date" defaultValue="2026-10-12" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Settlement due date
+<input type="date" defaultValue="2026-10-26" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px"></label>
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Status
+<select style="min-height: 46px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; background: #FFFFFF"><option>Pending</option><option>Partially Paid</option><option>Repaid</option><option>Overdue</option></select></label>
+</sc-if>
+
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Note (optional)
+<input type="text" placeholder="Anything to remember about this" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-weight: 400"></label>
+</div>
+<div style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #E5E7EB; background: #F8FAFC">
+<button type="button" onClick="{{closeModal}}" style="min-height: 44px; padding: 0 16px; border: none; background: transparent; color: #334155; font-size: 15px; font-weight: 500">Cancel</button>
+<button type="button" onClick="{{closeModal}}" style="min-height: 44px; padding: 0 20px; border: none; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-size: 15px; font-weight: 600">{{modalAction}}</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var st = this.state || {};
+    var tab = st.tab || 'portfolio';
+    var statusF = st.status || 'All';
+    var typeF = st.type || 'ALL';
+    var q = (st.q || '').toLowerCase().trim();
+    var openId = st.open || null;
+    var modal = st.modal || null;
+    var TODAY = 1012;
+    var MON = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function fmt(n) { return '৳' + Math.abs(n).toLocaleString('en-IN'); }
+    function dfmt(d) { return MON[d[0]] + ' ' + d[1] + ', 2026'; }
+    function key(d) { return d[0] * 100 + d[1]; }
+    var pill = {
+      'Pending': ['#DBEAFE', '#1D4ED8'], 'Partially Paid': ['#FEF3C7', '#92400E'],
+      'Repaid': ['#D1FAE5', '#065F46'], 'Overdue': ['#FEE2E2', '#B91C1C']
+    };
+    var raw = [
+      { id: 'tanvir', name: 'Tanvir Rahman', due: [10, 15],
+        loans: [{ d: [6, 12], reason: 'House rent', amt: 12000 }, { d: [9, 30], reason: 'Grocery advance', amt: 2000 }],
+        pays: [{ d: [7, 20], amt: 3000, via: 'Bank transfer' }, { d: [8, 22], amt: 3000, via: 'Bank transfer' }] },
+      { id: 'nayeem', name: 'Nayeem Hasan', due: [10, 10],
+        loans: [{ d: [8, 15], reason: 'Bike servicing', amt: 8000 }],
+        pays: [{ d: [9, 20], amt: 2000, via: 'Nagad' }] },
+      { id: 'rafi', name: 'Rafi Ahmed', due: [10, 30],
+        loans: [{ d: [7, 4], reason: 'Laptop repair', amt: 10000 }, { d: [9, 2], reason: 'Semester fee', amt: 5000 }],
+        pays: [{ d: [8, 10], amt: 5000, via: 'bKash' }, { d: [9, 28], amt: 4000, via: 'Cash' }] },
+      { id: 'mamun', name: 'Mamun Vai', due: [10, 26],
+        loans: [{ d: [10, 9], reason: 'Bkash', amt: 2000 }], pays: [] },
+      { id: 'mehedi', name: 'Mehedi Khan', due: [10, 20],
+        loans: [{ d: [10, 8], reason: 'Lunch & transport', amt: 1500 }], pays: [] },
+      { id: 'sadia', name: 'Sadia Islam', due: [10, 5],
+        loans: [{ d: [9, 5], reason: 'Concert tickets', amt: 3500 }],
+        pays: [{ d: [10, 1], amt: 3500, via: 'bKash' }] }
+    ];
+    var ORANGE = '#B45309', TEAL = '#0F766E';
+    var ledgerAll = [];
+    var all = raw.map(function (p) {
+      var lent = p.loans.reduce(function (s, l) { return s + l.amt; }, 0);
+      var repaid = p.pays.reduce(function (s, l) { return s + l.amt; }, 0);
+      var left = lent - repaid;
+      var status = left === 0 ? 'Repaid' : key(p.due) < TODAY ? 'Overdue' : repaid > 0 ? 'Partially Paid' : 'Pending';
+      var evs = p.loans.map(function (l) { return { d: l.d, took: true, amt: l.amt, note: l.reason }; })
+        .concat(p.pays.map(function (r) { return { d: r.d, took: false, amt: r.amt, note: 'via ' + r.via }; }))
+        .sort(function (a, b) { return key(a.d) - key(b.d); });
+      var run = 0;
+      var events = evs.map(function (e) {
+        run += e.took ? e.amt : -e.amt;
+        var row = {
+          k: key(e.d), dateFmt: dfmt(e.d), person: p.name, note: e.note, took: e.took,
+          label: e.took ? 'Took money' : 'Gave money back',
+          type: e.took ? 'Money lent' : 'Repayment received',
+          amtFmt: (e.took ? '− ' : '+ ') + fmt(e.amt), color: e.took ? ORANGE : TEAL,
+          chipBg: e.took ? '#FEF3C7' : '#CCFBF1', runFmt: fmt(run)
+        };
+        ledgerAll.push(row);
+        return row;
+      }).reverse();
+      var reasons = p.loans.map(function (l) { return l.reason; });
+      var initials = p.name.split(' ').map(function (w) { return w[0]; }).join('').toUpperCase();
+      var isOpen = openId === p.id;
+      var person = { id: p.id, name: p.name, initials: initials, leftFmt: fmt(left) };
+      return {
+        id: p.id, name: p.name, initials: initials, initial: p.name[0],
+        loanCount: p.loans.length, loanBadge: p.loans.length + (p.loans.length === 1 ? ' Loan' : ' Loans'),
+        dueFmt: dfmt(p.due), status: status, pillBg: pill[status][0], pillFg: pill[status][1],
+        reasons: reasons, reasonCount: reasons.length,
+        lent: lent, repaid: repaid, left: left,
+        lentFmt: fmt(lent), repaidFmt: fmt(repaid), leftFmt: fmt(left),
+        pct: (Math.round(repaid / lent * 1000) / 10).toFixed(1),
+        events: events, isOpen: isOpen, openStr: isOpen ? 'true' : 'false',
+        histLabel: isOpen ? 'Hide history' : 'Full history',
+        toggle: function () { self.setState({ open: isOpen ? null : p.id }); },
+        addLoan: function () { self.setState({ modal: { mode: 'loan', person: person } }); },
+        repay: function () { self.setState({ modal: { mode: 'repay', person: person } }); },
+        search: (p.name + ' ' + reasons.join(' ')).toLowerCase()
+      };
+    });
+
+    var people = all.filter(function (p) {
+      return (statusF === 'All' || p.status === statusF) && (!q || p.search.indexOf(q) !== -1);
+    });
+    var ledger = ledgerAll
+      .filter(function (l) { return typeF === 'ALL' || (typeF === 'LENT' ? l.took : !l.took); })
+      .filter(function (l) { return !q || (l.person + ' ' + l.note).toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) { return b.k - a.k; });
+
+    var totLent = all.reduce(function (s, p) { return s + p.lent; }, 0);
+    var totRepaid = all.reduce(function (s, p) { return s + p.repaid; }, 0);
+    var overdue = all.filter(function (p) { return p.status === 'Overdue'; });
+    var overdueAmt = overdue.reduce(function (s, p) { return s + p.left; }, 0);
+    var pTot = people.reduce(function (s, p) { return { lent: s.lent + p.lent, rep: s.rep + p.repaid, loans: s.loans + p.loanCount }; }, { lent: 0, rep: 0, loans: 0 });
+
+    var tabs = [['portfolio', 'Debtor Portfolio'], ['table', 'Receivables Table (' + people.length + ')'], ['ledger', 'Loan & Repayment Ledger (' + ledgerAll.length + ')']].map(function (t) {
+      var on = t[0] === tab;
+      return { label: t[1], selected: on ? 'true' : 'false', bg: on ? '#0F4C45' : '#F1F5F9', fg: on ? '#FFFFFF' : '#1E293B', border: on ? '#0F4C45' : '#E2E8F0',
+        pick: function () { self.setState({ tab: t[0] }); } };
+    });
+    var statusChips = ['All', 'Pending', 'Partially Paid', 'Repaid', 'Overdue'].map(function (s) {
+      var on = s === statusF;
+      return { label: s === 'All' ? 'All Statuses' : s, pressed: on ? 'true' : 'false',
+        bg: on ? '#CCFBF1' : '#F1F5F9', fg: on ? '#115E59' : '#334155', border: on ? '#5EEAD4' : '#F1F5F9',
+        pick: function () { self.setState({ status: s }); } };
+    });
+    var typeChips = [['ALL', 'ALL'], ['LENT', 'Money Lent'], ['REPAID', 'Repayment Received']].map(function (t) {
+      var on = t[0] === typeF;
+      return { label: t[1], pressed: on ? 'true' : 'false', bg: on ? '#0F172A' : '#F1F5F9', fg: on ? '#FFFFFF' : '#334155',
+        pick: function () { self.setState({ type: t[0], tab: 'ledger' }); } };
+    });
+
+    var mode = modal ? modal.mode : null;
+    return {
+      kpis: [
+        { label: 'Money lent', value: fmt(totLent), sub: 'Total loans given', glyph: '↗', line: '#6366F1', soft: '#E0E7FF', ink: '#4338CA', bg: '#FFFFFF', border: '#E5E7EB', valColor: '#0F172A', subColor: '#64748B' },
+        { label: 'Repaid back', value: fmt(totRepaid), sub: (Math.round(totRepaid / totLent * 1000) / 10) + '% recovered', glyph: '↙', line: '#14B8A6', soft: '#CCFBF1', ink: '#0F766E', bg: '#FFFFFF', border: '#E5E7EB', valColor: '#0F172A', subColor: '#0F766E' },
+        { label: 'Outstanding due', value: fmt(totLent - totRepaid), sub: '● ' + all.filter(function (p) { return p.left > 0; }).length + ' people still owe', glyph: '!', line: '#F59E0B', soft: '#FEF3C7', ink: '#B45309', bg: '#FFFBEB', border: '#FDE68A', valColor: '#92400E', subColor: '#92400E' },
+        { label: 'Overdue', value: fmt(overdueAmt), sub: overdue.length + ' person past due date', glyph: '!!', line: '#EF4444', soft: '#FEE2E2', ink: '#B91C1C', bg: '#FFF5F5', border: '#FECACA', valColor: '#991B1B', subColor: '#B91C1C' }
+      ],
+      tabs: tabs, statusChips: statusChips, typeChips: typeChips,
+      onSearch: function (e) { self.setState({ q: e.target.value }); },
+      showPortfolio: tab === 'portfolio', showTable: tab === 'table', showLedger: tab === 'ledger',
+      people: people, noPeople: people.length === 0, ledger: ledger,
+      totLoans: pTot.loans, totLentFmt: fmt(pTot.lent), totRepaidFmt: fmt(pTot.rep), totLeftFmt: fmt(pTot.lent - pTot.rep),
+      totPct: pTot.lent ? (Math.round(pTot.rep / pTot.lent * 1000) / 10).toFixed(1) : '0.0',
+      openDebtor: function () { self.setState({ modal: { mode: 'debtor' } }); },
+      openLog: function () { self.setState({ modal: { mode: 'debtor' } }); },
+      closeModal: function () { self.setState({ modal: null }); },
+      modalOpen: !!modal,
+      modalTitle: mode === 'repay' ? 'Record repayment' : mode === 'loan' ? 'Add another loan' : 'Add debtor',
+      modalAction: mode === 'repay' ? 'Save repayment' : mode === 'loan' ? 'Add loan' : 'Add debtor',
+      modalPerson: (modal && modal.person) || { name: '', initials: '', leftFmt: '' },
+      isDebtorForm: mode === 'debtor',
+      isPersonForm: mode === 'loan' || mode === 'repay',
+      isRepayForm: mode === 'repay',
+      isLoanFields: mode === 'debtor' || mode === 'loan'
+    };
+  }
+}
+</script>
+</body>
+</html>

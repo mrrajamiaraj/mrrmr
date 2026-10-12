@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Finance Workspace — Bank Account</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #0D9488;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F8FA; color: #0F172A; font-family: 'Outfit', system-ui, sans-serif; font-size: 15px; line-height: 1.45">
+
+<header style="background: linear-gradient(100deg, #0F5A50 0%, #0B3D38 100%); color: #FFFFFF; padding: 22px clamp(16px, 4vw, 48px)">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<div style="display: flex; align-items: center; gap: 14px; min-width: 0">
+<div style="width: 46px; height: 46px; flex: none; border-radius: 12px; background: #1D6E63; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"></path><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"></path><path d="M3 21h18"></path></svg>
+</div>
+<div style="min-width: 0">
+<div style="font-weight: 700; font-size: clamp(18px, 2.2vw, 26px); letter-spacing: -0.01em; text-transform: uppercase">Personal Finance &amp; Loan Recovery Workspace</div>
+<div style="font-size: 14.5px; color: #A7F3D0">City Bank — money there now, who took money from it, debtor profiles, and the balance once everyone pays back</div>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" onClick="{{openAdd}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #10B981; color: #04241B; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg>Add Debtor</button>
+<dc-import name="AdminButton" preview-open="{{ false }}" hint-size="112px,44px"></dc-import>
+</div>
+</div>
+</header>
+
+<nav aria-label="Sections" style="background: #FFFFFF; border-bottom: 1px solid #E5E7EB; padding: 0 clamp(16px, 4vw, 48px)">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0">
+<a href="Main.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Overview</a>
+<a href="Accounts.dc.html" aria-current="page" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap">Bank Account</a>
+<a href="Lending.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Debtors &amp; Loans</a>
+<a href="Cards.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Credit Card 1</a>
+<a href="Card2.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Credit Card 2</a>
+</div>
+</nav>
+
+<main style="padding: 28px clamp(16px, 4vw, 48px) 72px">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px">
+
+<section aria-label="Balance now and after repayment" style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px">
+<div style="flex: 1 1 280px; background: #FFFFFF; border: 1px solid #E5E7EB; border-bottom: 4px solid #10B981; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+<span style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #334155">City Bank — money now</span>
+<sc-if value="{{notEditing}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{startEdit}}" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #A7F3D0; background: #ECFDF5; color: #047857; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Change</button>
+</sc-if>
+</div>
+<sc-if value="{{notEditing}}" hint-placeholder-val="{{ true }}">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: clamp(28px, 3.4vw, 38px)">{{nowFmt}}</div>
+<div style="font-size: 14px; color: #047857">● Updated {{updated}}</div>
+</sc-if>
+<sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">New City Bank balance (৳)
+<span style="display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 14px; border: 2px solid #14B8A6; border-radius: 10px">
+<span aria-hidden="true" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px; color: #475569">৳</span>
+<input type="number" min="0" step="1" defaultValue="{{nowRaw}}" onInput="{{onDraft}}" style="flex: 1 1 auto; min-width: 0; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; background: transparent; color: #0F172A"></span></label>
+<sc-if value="{{badDraft}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="font-size: 13.5px; color: #B91C1C; font-weight: 600">Enter a balance of 0 or more.</div>
+</sc-if>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{saveEdit}}" style="flex: 1 1 auto; min-height: 44px; border: none; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-size: 15px; font-weight: 600">Save balance</button>
+<button type="button" onClick="{{cancelEdit}}" style="min-height: 44px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; background: #FFFFFF; color: #334155; font-size: 15px; font-weight: 500">Cancel</button>
+</div>
+</sc-if>
+</div>
+<div aria-hidden="true" style="display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; color: #94A3B8; flex: 0 0 auto; padding: 0 2px">+</div>
+<div style="flex: 1 1 280px; background: #FFFBEB; border: 1px solid #FDE68A; border-bottom: 4px solid #F59E0B; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #334155">People owe you</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: clamp(28px, 3.4vw, 38px); color: #92400E">{{owedFmt}}</div>
+<div style="font-size: 14px; color: #92400E">{{owingCount}} people · loans {{loanFmt}} + card use {{cardFmt}}</div>
+</div>
+<div aria-hidden="true" style="display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; color: #94A3B8; flex: 0 0 auto; padding: 0 2px">=</div>
+<div style="flex: 1 1 300px; background: #0F4C45; color: #FFFFFF; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7F3D0">After everyone pays you back</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: clamp(28px, 3.4vw, 38px)">{{afterFmt}}</div>
+<div style="font-size: 14px; color: #A7F3D0">Your City Bank balance once all money comes back</div>
+</div>
+</section>
+
+<section aria-label="Progress" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 14.5px">
+<span><strong>{{inHandPct}}%</strong> of your money is in the bank now</span>
+<span style="color: #92400E"><strong>{{outPct}}%</strong> is still with other people</span>
+</div>
+<div style="display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: #F1F5F9">
+<div style="width: {{inHandPct}}%; background: #10B981"></div>
+<div style="width: {{outPct}}%; background: #F59E0B"></div>
+</div>
+</section>
+
+<sc-if value="{{justAdded}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; border-radius: 12px; padding: 12px 16px; font-size: 14.5px; font-weight: 500">{{justAddedText}}</div>
+</sc-if>
+
+<section aria-labelledby="prof-h" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+<div>
+<h2 id="prof-h" style="margin: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20c-.5-2.5-2-4.2-4-5"></path></svg>
+Debtor profiles</h2>
+<div style="font-size: 14px; color: #64748B">Everyone who has taken money from you. Open a profile to see their full history.</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<sc-if value="{{searchClosed}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{openSearch}}" aria-label="Search debtors" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button>
+</sc-if>
+<sc-if value="{{searchOpen}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; align-items: center; gap: 8px; min-height: 44px; width: min(320px, 100%); padding: 0 6px 0 12px; border: 2px solid #14B8A6; border-radius: 10px; background: #FFFFFF; box-sizing: border-box">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search debtors</span>
+<input type="search" autoFocus="{{ true }}" defaultValue="{{q}}" onInput="{{onSearch}}" placeholder="Search name or reason…" style="flex: 1 1 auto; min-width: 0; border: none; outline: none; font-size: 15px; background: transparent; color: #0F172A">
+<button type="button" onClick="{{closeSearch}}" aria-label="Close search" style="width: 36px; height: 36px; flex: none; border: none; background: transparent; color: #475569; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</label>
+</sc-if>
+<button type="button" onClick="{{slidePrev}}" aria-label="Previous debtors" style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<button type="button" onClick="{{slideNext}}" aria-label="Next debtors" style="width: 44px; height: 44px; border-radius: 50%; border: none; background: #0F4C45; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+<button type="button" onClick="{{openAdd}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #0F4C45; color: #FFFFFF; font-weight: 600; font-size: 15px">+ Add Debtor</button>
+</div>
+</div>
+<sc-if value="{{hasQuery}}" hint-placeholder-val="{{ false }}">
+<div style="font-size: 14px; color: #475569">{{matchText}}</div>
+</sc-if>
+<div ref="{{setTrack}}" role="region" aria-label="Debtor profiles, scroll sideways" tabindex="0" style="display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 4px 2px 14px; margin: 0 -2px">
+<sc-for list="{{profiles}}" as="p" hint-placeholder-count="8">
+<article style="flex: 0 0 280px; scroll-snap-align: start; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 42px; height: 42px; flex: none; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-weight: 700">{{p.initials}}</span>
+<div style="flex: 1 1 auto; min-width: 0">
+<div style="font-weight: 700; font-size: 16px">{{p.name}}</div>
+<div style="font-size: 13px; color: #64748B">{{p.txCount}} records · last {{p.lastFmt}}</div>
+</div>
+<span style="font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{p.pillBg}}; color: {{p.pillFg}}; white-space: nowrap">{{p.status}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); text-align: center; background: #F8FAFC; border-radius: 10px; padding: 8px 0">
+<div><div style="font-size: 11.5px; letter-spacing: 0.06em; color: #64748B">TOOK</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px">{{p.takenFmt}}</div></div>
+<div><div style="font-size: 11.5px; letter-spacing: 0.06em; color: #64748B">PAID</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: #0F766E">{{p.paidFmt}}</div></div>
+<div><div style="font-size: 11.5px; letter-spacing: 0.06em; color: #B45309">OWES</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: #92400E">{{p.owesFmt}}</div></div>
+</div>
+<div style="height: 6px; border-radius: 3px; background: #F1F5F9; overflow: hidden"><div style="width: {{p.pct}}%; height: 100%; background: #14B8A6"></div></div>
+<button type="button" onClick="{{p.open}}" style="min-height: 44px; border-radius: 10px; border: 1px solid #99F6E4; background: #F0FDFA; color: #0F766E; font-weight: 600; font-size: 14.5px">Open profile →</button>
+</article>
+</sc-for>
+</div>
+<sc-if value="{{noMatch}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 16px; padding: 28px; text-align: center; color: #64748B">No debtor matches “{{q}}”.</div>
+</sc-if>
+</section>
+
+<section aria-labelledby="deb-h" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 18px">
+<div>
+<h2 id="deb-h" style="margin: 0; font-size: 19px; font-weight: 700; text-transform: uppercase">Debtors from this account</h2>
+<div style="font-size: 14px; color: #64748B">Who took money from City Bank, when, why, how, and when they will pay it back. Tap a name to open their profile.</div>
+</div>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 900px; border-collapse: collapse; font-size: 14.5px">
+<thead>
+<tr style="background: #F8FAFC; text-align: left; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Date taken</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Person</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Why</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">How</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Amount</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Pay back by</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{log}}" as="l" hint-placeholder-count="8">
+<tr style="border-bottom: 1px solid #F1F5F9; background: {{l.rowBg}}">
+<td style="padding: 12px 16px; color: #475569; white-space: nowrap">{{l.date}}</td>
+<th scope="row" style="padding: 6px 16px; text-align: left">
+<button type="button" onClick="{{l.open}}" style="min-height: 44px; border: none; background: transparent; padding: 0; display: inline-flex; align-items: center; gap: 10px; color: #0F172A; font-size: 14.5px; font-weight: 600; text-decoration: underline; text-decoration-color: #99F6E4; text-underline-offset: 4px">
+<span style="width: 28px; height: 28px; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700">{{l.initials}}</span>{{l.name}}</button>
+<sc-if value="{{l.isNew}}" hint-placeholder-val="{{ false }}"> <span style="font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 6px; background: #D1FAE5; color: #065F46">New</span></sc-if>
+</th>
+<td style="padding: 12px 16px"><span style="font-size: 13px; padding: 2px 8px; border-radius: 6px; background: #F1F5F9">#{{l.why}}</span></td>
+<td style="padding: 12px 16px; color: #475569">{{l.how}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #B45309">− {{l.amtFmt}}</td>
+<td style="padding: 12px 16px; white-space: nowrap">{{l.due}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="owe-h" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="padding: 18px">
+<h2 id="owe-h" style="margin: 0; font-size: 19px; font-weight: 700; text-transform: uppercase">Who will bring money back</h2>
+<div style="font-size: 14px; color: #64748B">Each person's amount still owed, and what your City Bank balance becomes as each one pays — biggest first</div>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 820px; border-collapse: collapse; font-size: 14.5px">
+<thead>
+<tr style="background: #F8FAFC; text-align: left; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Person</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Loan still owed</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Card use still owed</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right; background: #FEFCE8; color: #92400E">Will give back</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Due</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Bank balance after</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #F1F5F9; background: #F0FDF4">
+<th scope="row" style="padding: 12px 16px; text-align: left; font-weight: 600; color: #047857">Now</th>
+<td style="padding: 12px 16px; text-align: right">—</td>
+<td style="padding: 12px 16px; text-align: right">—</td>
+<td style="padding: 12px 16px; text-align: right; background: #FEFCE8">—</td>
+<td style="padding: 12px 16px">Today</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700">{{nowFmt}}</td>
+</tr>
+<sc-for list="{{owing}}" as="p" hint-placeholder-count="6">
+<tr style="border-bottom: 1px solid #F1F5F9">
+<th scope="row" style="padding: 6px 16px; text-align: left">
+<button type="button" onClick="{{p.open}}" style="min-height: 44px; border: none; background: transparent; padding: 0; display: inline-flex; align-items: center; gap: 10px; color: #0F172A; font-size: 14.5px; font-weight: 600; text-decoration: underline; text-decoration-color: #99F6E4; text-underline-offset: 4px">
+<span style="width: 30px; height: 30px; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">{{p.initials}}</span>{{p.name}}</button>
+</th>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #475569">{{p.loanOutFmt}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #475569">{{p.cardOutFmt}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; background: #FEFCE8; color: #78350F">+ {{p.owesFmt}}</td>
+<td style="padding: 12px 16px"><span style="font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{p.duePillBg}}; color: {{p.duePillFg}}; white-space: nowrap">{{p.dueShort}}</span></td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #0F766E">{{p.runFmt}}</td>
+</tr>
+</sc-for>
+<tr style="background: #0F4C45; color: #FFFFFF">
+<th scope="row" style="padding: 14px 16px; text-align: left; font-weight: 700">AFTER EVERYONE PAYS</th>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace">{{loanFmt}}</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace">{{cardFmt}}</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700">+ {{owedFmt}}</td>
+<td style="padding: 14px 16px">—</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px">{{afterFmt}}</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+</div>
+</main>
+
+<sc-if value="{{adding}}" hint-placeholder-val="{{ false }}">
+<div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50">
+<div role="dialog" aria-modal="true" aria-labelledby="add-h" style="width: 100%; max-width: 580px; max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; border-radius: 14px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35)">
+<div style="background: #0F4C45; color: #FFFFFF; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h2 id="add-h" style="margin: 0; font-size: 20px; font-weight: 700">Add debtor — City Bank</h2>
+<button type="button" onClick="{{closeAdd}}" aria-label="Close" style="width: 44px; height: 44px; border: none; background: transparent; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<div style="padding: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Who took the money? *
+<input type="text" list="known-people" defaultValue="{{prefillName}}" onInput="{{f.name}}" placeholder="e.g. Mamun Vai, Rafi Ahmed…" style="min-height: 46px; padding: 0 14px; border: 2px solid #14B8A6; border-radius: 10px; font-size: 15px; font-weight: 400">
+<datalist id="known-people"><sc-for list="{{knownNames}}" as="n" hint-placeholder-count="6"><option value="{{n}}"></option></sc-for></datalist></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">How much? (৳) *
+<input type="number" min="1" onInput="{{f.amt}}" placeholder="0" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-family: 'JetBrains Mono', monospace"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">When did they take it?
+<input type="date" defaultValue="2026-10-12" onInput="{{f.date}}" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px"></label>
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Why did they take it? *
+<input type="text" onInput="{{f.why}}" placeholder="e.g. Medical bills, house rent, semester fee…" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">How was it given?
+<select onChange="{{f.how}}" style="min-height: 46px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; background: #FFFFFF"><option>Bank transfer</option><option>Cash withdrawal</option><option>Cheque</option><option>bKash from bank</option></select></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Pay back by
+<input type="date" defaultValue="2026-10-26" onInput="{{f.due}}" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px"></label>
+<label style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14.5px; cursor: pointer; background: #F8FAFC; border-radius: 10px; padding: 8px 12px">
+<input type="checkbox" defaultChecked="{{ true }}" onChange="{{toggleDeduct}}" style="width: 18px; height: 18px; accent-color: #0F766E">
+Take this amount out of my City Bank balance</label>
+<sc-if value="{{hasFormError}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="grid-column: 1 / -1; background: #FEE2E2; color: #991B1B; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 500">{{formError}}</div>
+</sc-if>
+</div>
+<div style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #E5E7EB; background: #F8FAFC">
+<button type="button" onClick="{{closeAdd}}" style="min-height: 44px; padding: 0 16px; border: none; background: transparent; color: #334155; font-size: 15px; font-weight: 500">Cancel</button>
+<button type="button" onClick="{{saveAdd}}" style="min-height: 44px; padding: 0 20px; border: none; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-size: 15px; font-weight: 600">Add debtor &amp; open profile</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{profileOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50">
+<div role="dialog" aria-modal="true" aria-labelledby="pv-h" style="width: 100%; max-width: 760px; max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; border-radius: 16px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35)">
+<div style="background: linear-gradient(100deg, #0F5A50 0%, #0B3D38 100%); color: #FFFFFF; padding: 18px 20px; display: flex; align-items: center; gap: 14px">
+<span style="width: 52px; height: 52px; flex: none; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px">{{pv.initials}}</span>
+<div style="flex: 1 1 auto; min-width: 0">
+<h2 id="pv-h" style="margin: 0; font-size: 22px; font-weight: 700">{{pv.name}}</h2>
+<div style="font-size: 14px; color: #A7F3D0">Debtor profile · {{pv.dueText}}</div>
+</div>
+<span style="font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: {{pv.pillBg}}; color: {{pv.pillFg}}; white-space: nowrap">{{pv.status}}</span>
+<button type="button" onClick="{{closeProfile}}" aria-label="Close profile" style="width: 44px; height: 44px; flex: none; border: none; background: transparent; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+
+<div style="padding: 20px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px">
+<div style="background: #F8FAFC; border: 1px solid #E5E7EB; border-bottom: 3px solid #6366F1; border-radius: 12px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #475569">TOOK AS LOANS</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px">{{pv.loanFmt}}</div>
+<div style="font-size: 12.5px; color: #64748B">{{pv.loanCount}} times</div>
+</div>
+<div style="background: #F8FAFC; border: 1px solid #E5E7EB; border-bottom: 3px solid #3B82F6; border-radius: 12px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #475569">USED MY CARDS</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px">{{pv.cardFmt}}</div>
+<div style="font-size: 12.5px; color: #64748B">{{pv.cardCount}} times</div>
+</div>
+<div style="background: #F8FAFC; border: 1px solid #E5E7EB; border-bottom: 3px solid #14B8A6; border-radius: 12px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #475569">PAID BACK</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; color: #0F766E">{{pv.paidFmt}}</div>
+<div style="font-size: 12.5px; color: #64748B">{{pv.payCount}} payments</div>
+</div>
+<div style="background: #FFFBEB; border: 1px solid #FDE68A; border-bottom: 3px solid #F59E0B; border-radius: 12px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #92400E">STILL OWES</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; color: #92400E">{{pv.owesFmt}}</div>
+<div style="font-size: 12.5px; color: #92400E">of {{pv.takenFmt}} total taken</div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span>Paid back so far</span><span style="font-family: 'JetBrains Mono', monospace">{{pv.pct}}%</span></div>
+<div style="height: 8px; border-radius: 4px; background: #F1F5F9; overflow: hidden"><div style="width: {{pv.pct}}%; height: 100%; background: #14B8A6"></div></div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+<span style="font-size: 12.5px; font-weight: 600; letter-spacing: 0.06em; color: #475569; margin-right: 4px">REASONS</span>
+<sc-for list="{{pv.reasons}}" as="r" hint-placeholder-count="3">
+<span style="font-size: 13px; padding: 2px 8px; border-radius: 6px; background: #F1F5F9; border: 1px solid #E2E8F0">#{{r}}</span>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em">Full history</h3>
+<div style="overflow-x: auto; border: 1px solid #E5E7EB; border-radius: 12px">
+<table style="width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="background: #F8FAFC; text-align: left; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Date</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">What happened</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Details</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600; text-align: right">Amount</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600; text-align: right">Owes after</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{pv.events}}" as="e" hint-placeholder-count="5">
+<tr style="border-bottom: 1px solid #F1F5F9">
+<td style="padding: 10px 12px; color: #475569; white-space: nowrap">{{e.date}}</td>
+<td style="padding: 10px 12px"><span style="font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: {{e.chipBg}}; color: {{e.chipFg}}; white-space: nowrap">{{e.kind}}</span></td>
+<td style="padding: 10px 12px; color: #334155">{{e.detail}}</td>
+<td style="padding: 10px 12px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: {{e.color}}; white-space: nowrap">{{e.amtFmt}}</td>
+<td style="padding: 10px 12px; text-align: right; font-family: 'JetBrains Mono', monospace; white-space: nowrap">{{e.runFmt}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</div>
+
+<sc-if value="{{pv.canRepay}}" hint-placeholder-val="{{ true }}">
+<div style="background: #F0FDFA; border: 1px solid #99F6E4; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-weight: 700; font-size: 15px">Record a repayment from {{pv.first}}</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end">
+<label style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px">Amount (৳)
+<input type="number" min="1" onInput="{{repAmt}}" placeholder="0" style="min-height: 44px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-family: 'JetBrains Mono', monospace; background: #FFFFFF"></label>
+<label style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px">Paid via
+<select onChange="{{repVia}}" style="min-height: 44px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; background: #FFFFFF"><option>Bank transfer</option><option>Cash</option><option>bKash</option><option>Nagad</option></select></label>
+<button type="button" onClick="{{saveRepay}}" style="min-height: 44px; padding: 0 18px; border: none; border-radius: 10px; background: #0F766E; color: #FFFFFF; font-weight: 600; font-size: 15px">Save repayment</button>
+</div>
+<div style="font-size: 13px; color: #475569">The amount is added to your City Bank balance.</div>
+<sc-if value="{{hasRepError}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="background: #FEE2E2; color: #991B1B; border-radius: 8px; padding: 8px 12px; font-size: 13.5px; font-weight: 500">{{repError}}</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #E5E7EB; background: #F8FAFC">
+<button type="button" onClick="{{lendMore}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #C7D2FE; background: #EEF2FF; color: #3730A3; font-size: 15px; font-weight: 600">+ Lend more to {{pv.first}}</button>
+<button type="button" onClick="{{closeProfile}}" style="min-height: 44px; padding: 0 20px; border: none; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-size: 15px; font-weight: 600">Done</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2450}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var st = this.state || {};
+    var TODAY = '2026-10-12';
+    var MON = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function fmt(n) { return '৳' + Math.abs(n).toLocaleString('en-IN'); }
+    function d2t(s) { if (!s) return 'Not set'; var p = s.split('-'); return MON[Number(p[1])] + ' ' + Number(p[2]) + ', ' + p[0]; }
+    function d2s(s) { if (!s) return 'Not set'; var p = s.split('-'); return MON[Number(p[1])] + ' ' + Number(p[2]); }
+    function inits(n) { return n.replace(/\(.*\)/, '').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase(); }
+    function k(n) { return n.trim().toLowerCase(); }
+
+    var now = st.now ?? 143345;
+    var editing = !!st.editing;
+    var draft = st.draft;
+    var badDraft = editing && st.tried && !(draft !== '' && draft != null && Number(draft) >= 0);
+    var added = st.added || [];
+    var addedRepays = st.addedRepays || [];
+
+    var loans = [
+      { iso: '2026-10-09', name: 'Mamun Vai', why: 'Bkash', how: 'Bank transfer', amt: 2000, due: '2026-10-26' },
+      { iso: '2026-10-08', name: 'Mehedi Khan', why: 'Lunch & transport', how: 'Bank transfer', amt: 1500, due: '2026-10-20' },
+      { iso: '2026-09-30', name: 'Tanvir Rahman', why: 'Grocery advance', how: 'Cash withdrawal', amt: 2000, due: '2026-10-15' },
+      { iso: '2026-09-05', name: 'Sadia Islam', why: 'Concert tickets', how: 'Bank transfer', amt: 3500, due: '2026-10-05' },
+      { iso: '2026-09-02', name: 'Rafi Ahmed', why: 'Semester fee', how: 'Bank transfer', amt: 5000, due: '2026-10-30' },
+      { iso: '2026-08-15', name: 'Nayeem Hasan', why: 'Bike servicing', how: 'Cash withdrawal', amt: 8000, due: '2026-10-10' },
+      { iso: '2026-07-04', name: 'Rafi Ahmed', why: 'Laptop repair', how: 'Bank transfer', amt: 10000, due: '2026-10-30' },
+      { iso: '2026-06-12', name: 'Tanvir Rahman', why: 'House rent', how: 'Cheque', amt: 12000, due: '2026-10-15' }
+    ].concat(added.map(function (a) { return Object.assign({ isNew: true }, a); }));
+    var cardUses = [
+      { iso: '2026-10-09', name: 'Rafi Ahmed', where: 'Star Kabab', card: 'Card 2 · Community Visa', amt: 2180 },
+      { iso: '2026-10-08', name: 'Tanvir Rahman', where: 'Foodpanda', card: 'Card 1 · City Amex', amt: 1250 },
+      { iso: '2026-10-05', name: 'Nusrat (sister)', where: 'Air ticket DAC–CXB', card: 'Card 2 · Community Visa', amt: 18600 },
+      { iso: '2026-10-02', name: 'Rafi Ahmed', where: 'Bata', card: 'Card 2 · Community Visa', amt: 3200 },
+      { iso: '2026-10-01', name: 'Tanvir Rahman', where: 'Ryans Computers', card: 'Card 2 · Community Visa', amt: 15400 },
+      { iso: '2026-09-29', name: 'Mother', where: 'Lazz Pharma', card: 'Card 1 · City Amex', amt: 1800 }
+    ];
+    var repays = [
+      { iso: '2026-08-10', name: 'Rafi Ahmed', amt: 5000, for: 'loan', via: 'bKash' },
+      { iso: '2026-09-28', name: 'Rafi Ahmed', amt: 4000, for: 'loan', via: 'Cash' },
+      { iso: '2026-10-10', name: 'Rafi Ahmed', amt: 2180, for: 'card', via: 'Cash' },
+      { iso: '2026-09-20', name: 'Nayeem Hasan', amt: 2000, for: 'loan', via: 'Nagad' },
+      { iso: '2026-07-20', name: 'Tanvir Rahman', amt: 3000, for: 'loan', via: 'Bank transfer' },
+      { iso: '2026-08-22', name: 'Tanvir Rahman', amt: 3000, for: 'loan', via: 'Bank transfer' },
+      { iso: '2026-10-01', name: 'Sadia Islam', amt: 3500, for: 'loan', via: 'bKash' },
+      { iso: '2026-10-07', name: 'Nusrat (sister)', amt: 10000, for: 'card', via: 'Bank transfer' },
+      { iso: '2026-09-30', name: 'Mother', amt: 1800, for: 'card', via: 'Cash' }
+    ].concat(addedRepays);
+
+    var order = [];
+    var displayName = {};
+    function note(n) { var key = k(n); if (!displayName[key]) { displayName[key] = n.trim(); order.push(key); } }
+    loans.forEach(function (l) { note(l.name); });
+    cardUses.forEach(function (c) { note(c.name); });
+    repays.forEach(function (r) { note(r.name); });
+
+    var pillMap = { 'Repaid': ['#D1FAE5', '#065F46'], 'Overdue': ['#FEE2E2', '#B91C1C'], 'Partially Paid': ['#FEF3C7', '#92400E'], 'Pending': ['#DBEAFE', '#1D4ED8'] };
+
+    function buildProfile(key) {
+      var name = displayName[key];
+      var L = loans.filter(function (x) { return k(x.name) === key; });
+      var C = cardUses.filter(function (x) { return k(x.name) === key; });
+      var R = repays.filter(function (x) { return k(x.name) === key; });
+      var loanT = L.reduce(function (s, x) { return s + x.amt; }, 0);
+      var cardT = C.reduce(function (s, x) { return s + x.amt; }, 0);
+      var loanP = R.filter(function (x) { return x.for === 'loan'; }).reduce(function (s, x) { return s + x.amt; }, 0);
+      var cardP = R.filter(function (x) { return x.for === 'card'; }).reduce(function (s, x) { return s + x.amt; }, 0);
+      var taken = loanT + cardT, paid = loanP + cardP, owes = taken - paid;
+      var dues = L.map(function (x) { return x.due; }).filter(function (d) { return !!d; }).sort();
+      var openDues = owes > 0 ? dues.filter(function (d) { return d >= (dues[0] || ''); }) : [];
+      var due = owes > 0 && L.length ? (dues.filter(function (d) { return d < TODAY; }).length && loanT - loanP > 0 ? dues.filter(function (d) { return d < TODAY; }).slice(-1)[0] : (dues.filter(function (d) { return d >= TODAY; })[0] || dues.slice(-1)[0] || '')) : '';
+      var status = owes <= 0 ? 'Repaid' : (due && due < TODAY) ? 'Overdue' : paid > 0 ? 'Partially Paid' : 'Pending';
+      var ev = L.map(function (x) { return { iso: x.iso, o: 0, kind: 'Took loan', detail: x.why + ' · ' + x.how + (x.due ? ' · pay back by ' + d2s(x.due) : ''), amt: x.amt, sign: 1 }; })
+        .concat(C.map(function (x) { return { iso: x.iso, o: 1, kind: 'Used my card', detail: x.where + ' · ' + x.card, amt: x.amt, sign: 1 }; }))
+        .concat(R.map(function (x) { return { iso: x.iso, o: 2, kind: 'Paid back', detail: (x.for === 'card' ? 'For card use' : 'For loan') + ' · via ' + x.via, amt: x.amt, sign: -1 }; }))
+        .sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : a.o - b.o; });
+      var run = 0;
+      var chips = { 'Took loan': ['#FEF3C7', '#92400E', '#B45309'], 'Used my card': ['#DBEAFE', '#1D4ED8', '#1D4ED8'], 'Paid back': ['#CCFBF1', '#115E59', '#0F766E'] };
+      var events = ev.map(function (e) {
+        run += e.sign * e.amt;
+        var c = chips[e.kind];
+        return { date: d2t(e.iso), kind: e.kind, detail: e.detail, amtFmt: (e.sign > 0 ? '− ' : '+ ') + fmt(e.amt), color: c[2], chipBg: c[0], chipFg: c[1], runFmt: fmt(Math.max(run, 0)) };
+      }).reverse();
+      var reasons = L.map(function (x) { return x.why; }).concat(C.length ? ['Card use'] : []);
+      var lastIso = ev.length ? ev[ev.length - 1].iso : '';
+      var kind = !due ? 'later' : due < TODAY ? 'late' : due <= '2026-10-19' ? 'soon' : 'later';
+      var duePill = { late: ['#FEE2E2', '#B91C1C'], soon: ['#FEF3C7', '#92400E'], later: ['#DBEAFE', '#1D4ED8'] }[kind];
+      return {
+        key: key, name: name, first: name.split(' ')[0], initials: inits(name),
+        loanT: loanT, cardT: cardT, loanOut: Math.max(loanT - loanP, 0), cardOut: Math.max(cardT - cardP, 0), owes: Math.max(owes, 0),
+        loanFmt: fmt(loanT), cardFmt: fmt(cardT), paidFmt: fmt(paid), owesFmt: fmt(Math.max(owes, 0)), takenFmt: fmt(taken),
+        loanCount: L.length, cardCount: C.length, payCount: R.length, txCount: ev.length,
+        pct: taken ? Math.round(paid / taken * 100) : 0,
+        status: status, pillBg: pillMap[status][0], pillFg: pillMap[status][1],
+        dueIso: due, dueText: owes <= 0 ? 'All paid back' : due ? (due < TODAY ? 'Was due ' + d2t(due) : 'Pay back by ' + d2t(due)) : 'No pay-back date set',
+        dueShort: !due ? 'Not set' : due < TODAY ? 'Late — ' + d2s(due) : d2s(due), duePillBg: duePill[0], duePillFg: duePill[1],
+        lastFmt: d2s(lastIso), events: events, reasons: reasons, canRepay: owes > 0,
+        open: function () { self.setState({ profile: key, rep: {}, repError: '' }); }
+      };
+    }
+    var all = order.map(buildProfile);
+    var profiles = all.slice().sort(function (a, b) { return b.owes - a.owes || a.name.localeCompare(b.name); });
+    var q = (st.q || '').trim();
+    var ql = q.toLowerCase();
+    var shown = !ql ? profiles : profiles.filter(function (p) {
+      return p.name.toLowerCase().indexOf(ql) !== -1 || p.reasons.join(' ').toLowerCase().indexOf(ql) !== -1;
+    });
+    var owingList = profiles.filter(function (p) { return p.owes > 0; });
+    var loan = 0, card = 0, run = now;
+    var owing = owingList.map(function (p) {
+      loan += p.loanOut; card += p.cardOut; run += p.owes;
+      return Object.assign({}, p, { loanOutFmt: p.loanOut ? fmt(p.loanOut) : '—', cardOutFmt: p.cardOut ? fmt(p.cardOut) : '—', runFmt: fmt(run) });
+    });
+    var owed = loan + card;
+    var after = now + owed;
+    var inHand = after ? Math.round(now / after * 1000) / 10 : 100;
+
+    var log = loans.slice().sort(function (a, b) { return a.iso < b.iso ? 1 : a.iso > b.iso ? -1 : (a.isNew ? -1 : 1); }).map(function (l) {
+      var key = k(l.name);
+      return { date: d2t(l.iso), name: l.name, initials: inits(l.name), why: l.why, how: l.how, amtFmt: fmt(l.amt), due: d2t(l.due),
+        isNew: !!l.isNew, rowBg: l.isNew ? '#F0FDF4' : 'transparent',
+        open: function () { self.setState({ profile: key, rep: {}, repError: '' }); } };
+    });
+
+    var pvKey = st.profile || null;
+    var pv = pvKey ? all.filter(function (p) { return p.key === pvKey; })[0] : null;
+
+    function setF(fk) { return function (e) { var f = Object.assign({}, (self.state && self.state.form) || {}); f[fk] = e.target.value; self.setState({ form: f, formError: '' }); }; }
+    function openForm(prefill) { self.setState({ adding: true, profile: null, prefill: prefill || '', form: { name: prefill || '', date: TODAY, due: '2026-10-26', how: 'Bank transfer' }, deduct: true, formError: '' }); }
+
+    return {
+      nowFmt: fmt(now), nowRaw: String(now), owedFmt: fmt(owed), afterFmt: fmt(after),
+      loanFmt: fmt(loan), cardFmt: fmt(card), owingCount: owing.length,
+      inHandPct: inHand, outPct: Math.round((100 - inHand) * 10) / 10,
+      profiles: shown, owing: owing, log: log,
+      q: q, hasQuery: !!q, noMatch: !!q && shown.length === 0,
+      matchText: shown.length + (shown.length === 1 ? ' debtor matches' : ' debtors match') + ' “' + q + '”',
+      searchOpen: !!st.searchOpen, searchClosed: !st.searchOpen,
+      openSearch: function () { self.setState({ searchOpen: true }); },
+      closeSearch: function () { self.setState({ searchOpen: false, q: '' }); },
+      onSearch: function (e) { self.setState({ q: e.target.value }); if (self.track) self.track.scrollLeft = 0; },
+      setTrack: function (el) { self.track = el; },
+      slidePrev: function () { if (self.track) self.track.scrollBy({ left: -294 * Math.max(1, Math.floor(self.track.clientWidth / 294)), behavior: 'smooth' }); },
+      slideNext: function () { if (self.track) self.track.scrollBy({ left: 294 * Math.max(1, Math.floor(self.track.clientWidth / 294)), behavior: 'smooth' }); },
+      knownNames: order.map(function (key) { return displayName[key]; }),
+      editing: editing, notEditing: !editing, badDraft: badDraft,
+      updated: st.updated || 'Oct 12, 2026',
+      startEdit: function () { self.setState({ editing: true, draft: String(now), tried: false }); },
+      cancelEdit: function () { self.setState({ editing: false, tried: false }); },
+      onDraft: function (e) { self.setState({ draft: e.target.value }); },
+      saveEdit: function () {
+        var d = self.state && self.state.draft;
+        var n = Math.round(Number(d));
+        if (d === '' || d == null || isNaN(n) || n < 0) { self.setState({ tried: true }); return; }
+        self.setState({ now: n, editing: false, tried: false, updated: 'just now' });
+      },
+      adding: !!st.adding, prefillName: st.prefill || '',
+      openAdd: function () { openForm(''); },
+      closeAdd: function () { self.setState({ adding: false, formError: '' }); },
+      toggleDeduct: function () { var s = self.state || {}; self.setState({ deduct: s.deduct === false }); },
+      f: { name: setF('name'), amt: setF('amt'), date: setF('date'), why: setF('why'), how: setF('how'), due: setF('due') },
+      hasFormError: !!st.formError, formError: st.formError || '',
+      saveAdd: function () {
+        var s = self.state || {};
+        var f = s.form || {};
+        var name = (f.name || '').trim(), why = (f.why || '').trim(), amt = Math.round(Number(f.amt));
+        var err = !name ? 'Enter who took the money.' : (!f.amt || isNaN(amt) || amt <= 0) ? 'Enter an amount above 0.' : !why ? 'Enter why they took it.' : '';
+        if (err) { self.setState({ formError: err }); return; }
+        var existing = displayName[k(name)];
+        var entry = { iso: f.date || TODAY, name: existing || name, why: why, how: f.how || 'Bank transfer', amt: amt, due: f.due || '' };
+        var deduct = s.deduct !== false;
+        var cur = s.now ?? 143345;
+        self.setState({
+          added: (s.added || []).concat([entry]), adding: false, formError: '',
+          now: deduct ? cur - amt : cur, updated: deduct ? 'just now' : (s.updated || 'Oct 12, 2026'),
+          profile: k(entry.name), rep: {}, repError: '',
+          flash: entry.name + ' added — ' + fmt(amt) + ' for ' + why + (deduct ? '. Taken out of your City Bank balance.' : '.')
+        });
+      },
+      justAdded: !!st.flash, justAddedText: st.flash || '',
+
+      profileOpen: !!pv,
+      pv: pv || { name: '', first: '', initials: '', events: [], reasons: [], canRepay: false },
+      closeProfile: function () { self.setState({ profile: null, repError: '' }); },
+      lendMore: function () { openForm(pv ? pv.name : ''); },
+      repAmt: function (e) { var r = Object.assign({}, (self.state && self.state.rep) || {}); r.amt = e.target.value; self.setState({ rep: r, repError: '' }); },
+      repVia: function (e) { var r = Object.assign({}, (self.state && self.state.rep) || {}); r.via = e.target.value; self.setState({ rep: r }); },
+      hasRepError: !!st.repError, repError: st.repError || '',
+      saveRepay: function () {
+        var s = self.state || {};
+        if (!pv) return;
+        var r = s.rep || {};
+        var amt = Math.round(Number(r.amt));
+        if (!r.amt || isNaN(amt) || amt <= 0) { self.setState({ repError: 'Enter an amount above 0.' }); return; }
+        if (amt > pv.owes) { self.setState({ repError: pv.first + ' only owes ' + fmt(pv.owes) + '.' }); return; }
+        var forWhat = pv.loanOut > 0 ? 'loan' : 'card';
+        var cur = s.now ?? 143345;
+        self.setState({
+          addedRepays: (s.addedRepays || []).concat([{ iso: TODAY, name: pv.name, amt: amt, for: forWhat, via: r.via || 'Bank transfer' }]),
+          now: cur + amt, updated: 'just now', rep: {}, repError: '',
+          flash: pv.name + ' paid back ' + fmt(amt) + '. Added to your City Bank balance.'
+        });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

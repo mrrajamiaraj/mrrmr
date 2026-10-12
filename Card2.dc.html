@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Finance Workspace — Credit Card 2</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #0D9488;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F8FA; color: #0F172A; font-family: 'Outfit', system-ui, sans-serif; font-size: 15px; line-height: 1.45">
+
+<header style="background: linear-gradient(100deg, #0F5A50 0%, #0B3D38 100%); color: #FFFFFF; padding: 22px clamp(16px, 4vw, 48px)">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<div style="display: flex; align-items: center; gap: 14px; min-width: 0">
+<div style="width: 46px; height: 46px; flex: none; border-radius: 12px; background: #1D6E63; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"></rect><path d="M2.5 10h19M6.5 15h4"></path></svg>
+</div>
+<div style="min-width: 0">
+<div style="font-weight: 700; font-size: clamp(18px, 2.2vw, 26px); letter-spacing: -0.01em; text-transform: uppercase">Personal Finance &amp; Loan Recovery Workspace</div>
+<div style="font-size: 14.5px; color: #A7F3D0">{{c.title}} — balance, who used it, debtor profiles &amp; your own share after everyone pays back</div>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" onClick="{{openAdd}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #10B981; color: #04241B; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg>Add Debtor</button>
+<dc-import name="AdminButton" preview-open="{{ false }}" hint-size="112px,44px"></dc-import>
+</div>
+</div>
+</header>
+
+<nav aria-label="Sections" style="background: #FFFFFF; border-bottom: 1px solid #E5E7EB; padding: 0 clamp(16px, 4vw, 48px)">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0">
+<a href="Main.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Overview</a>
+<a href="Accounts.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Bank Account</a>
+<a href="Lending.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Debtors &amp; Loans</a>
+<a href="Cards.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Credit Card 1</a>
+<a href="Card2.dc.html" aria-current="page" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap">Credit Card 2</a>
+</div>
+</nav>
+
+<main style="padding: 28px clamp(16px, 4vw, 48px) 72px">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px">
+
+<section aria-label="Card balance and your own share" style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px">
+<div style="flex: 1 1 280px; background: #FFF5F6; border: 1px solid #FECDD3; border-bottom: 4px solid #F43F5E; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+<span style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #334155">Card balance now</span>
+<sc-if value="{{notEditing}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{startEdit}}" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #FECDD3; background: #FFFFFF; color: #BE123C; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Change</button>
+</sc-if>
+</div>
+<sc-if value="{{notEditing}}" hint-placeholder-val="{{ true }}">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: clamp(28px, 3.4vw, 38px); color: #9F1239">{{balFmt}}</div>
+<div style="font-size: 14px; color: #BE123C">● What you owe the bank · updated {{updated}}</div>
+</sc-if>
+<sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">New card balance (৳)
+<span style="display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 14px; border: 2px solid #F43F5E; border-radius: 10px; background: #FFFFFF">
+<span aria-hidden="true" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px; color: #475569">৳</span>
+<input type="number" min="0" step="1" defaultValue="{{balRaw}}" onInput="{{onDraft}}" style="flex: 1 1 auto; min-width: 0; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; background: transparent; color: #0F172A"></span></label>
+<sc-if value="{{badDraft}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="font-size: 13.5px; color: #B91C1C; font-weight: 600">Enter a balance of 0 or more.</div>
+</sc-if>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{saveEdit}}" style="flex: 1 1 auto; min-height: 44px; border: none; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-size: 15px; font-weight: 600">Save balance</button>
+<button type="button" onClick="{{cancelEdit}}" style="min-height: 44px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; background: #FFFFFF; color: #334155; font-size: 15px; font-weight: 500">Cancel</button>
+</div>
+</sc-if>
+</div>
+<div aria-hidden="true" style="display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; color: #94A3B8; flex: 0 0 auto; padding: 0 2px">−</div>
+<div style="flex: 1 1 280px; background: #FFFBEB; border: 1px solid #FDE68A; border-bottom: 4px solid #F59E0B; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #334155">People owe you for this card</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: clamp(28px, 3.4vw, 38px); color: #92400E">{{owedFmt}}</div>
+<div style="font-size: 14px; color: #92400E">{{owingCount}} people used this card and still owe</div>
+</div>
+<div aria-hidden="true" style="display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; color: #94A3B8; flex: 0 0 auto; padding: 0 2px">=</div>
+<div style="flex: 1 1 300px; background: #0F4C45; color: #FFFFFF; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A7F3D0">Your own share after everyone pays</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: clamp(28px, 3.4vw, 38px)">{{shareFmt}}</div>
+<div style="font-size: 14px; color: #A7F3D0">What you pay from your own pocket for this bill</div>
+</div>
+</section>
+
+<section aria-label="{{c.title}}" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-top: 4px solid {{c.line}}; border-radius: 16px; padding: 18px; display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+<div style="flex: 1 1 300px; max-width: 400px; border-radius: 16px; padding: 22px; background: {{c.bg}}; color: #FFFFFF; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-height: 200px; box-sizing: border-box">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-weight: 600; font-size: 16px">{{c.bank}}</span><span style="font-size: 13px; color: #CBD5E1">{{c.network}}</span></div>
+<svg aria-hidden="true" width="40" height="30" viewBox="0 0 40 30" fill="none" stroke="#E2E8F0" stroke-width="1.4"><rect x="1" y="1" width="38" height="28" rx="5"></rect><path d="M1 11h12M1 19h12M27 11h12M27 19h12M13 1v28M27 1v28"></path></svg>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 18px; letter-spacing: 0.12em">{{c.mask}}</div>
+<div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 10px">
+<div><div style="font-size: 12px; color: #CBD5E1">Card holder</div><div style="font-weight: 600; letter-spacing: 0.04em">RAJA MIA RAJ</div></div>
+<div style="text-align: right"><div style="font-size: 12px; color: #CBD5E1">Balance</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px">{{balFmt}}</div></div>
+</div>
+</div>
+<div style="flex: 999 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px; justify-content: center">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
+<div style="background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 12px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #475569">{{s.label}}</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px; color: {{s.color}}">{{s.value}}</div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 14px">
+<span><strong>{{ownPct}}%</strong> of this bill is your own spending</span>
+<span style="color: #92400E"><strong>{{othersPct}}%</strong> is other people's — they owe you</span>
+</div>
+<div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #F1F5F9">
+<div style="width: {{ownPct}}%; background: #334155"></div>
+<div style="width: {{othersPct}}%; background: #F59E0B"></div>
+</div>
+<div style="font-size: 13px; color: #64748B">Limit used: {{util}}% of {{limitFmt}}</div>
+</div>
+</div>
+</section>
+
+<sc-if value="{{justAdded}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; border-radius: 12px; padding: 12px 16px; font-size: 14.5px; font-weight: 500">{{justAddedText}}</div>
+</sc-if>
+
+<section aria-labelledby="prof-h" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+<div>
+<h2 id="prof-h" style="margin: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20c-.5-2.5-2-4.2-4-5"></path></svg>
+Debtor profiles — this card</h2>
+<div style="font-size: 14px; color: #64748B">Everyone who used this card. Open a profile to see their full history.</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<sc-if value="{{searchClosed}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{openSearch}}" aria-label="Search debtors" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button>
+</sc-if>
+<sc-if value="{{searchOpen}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; align-items: center; gap: 8px; min-height: 44px; width: min(320px, 100%); padding: 0 6px 0 12px; border: 2px solid #14B8A6; border-radius: 10px; background: #FFFFFF; box-sizing: border-box">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search debtors</span>
+<input type="search" autoFocus="{{ true }}" defaultValue="{{q}}" onInput="{{onSearch}}" placeholder="Search name or reason…" style="flex: 1 1 auto; min-width: 0; border: none; outline: none; font-size: 15px; background: transparent; color: #0F172A">
+<button type="button" onClick="{{closeSearch}}" aria-label="Close search" style="width: 36px; height: 36px; flex: none; border: none; background: transparent; color: #475569; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</label>
+</sc-if>
+<button type="button" onClick="{{slidePrev}}" aria-label="Previous debtors" style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0F172A; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<button type="button" onClick="{{slideNext}}" aria-label="Next debtors" style="width: 44px; height: 44px; border-radius: 50%; border: none; background: #0F4C45; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+<button type="button" onClick="{{openAdd}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: #0F4C45; color: #FFFFFF; font-weight: 600; font-size: 15px">+ Add Debtor</button>
+</div>
+</div>
+<sc-if value="{{hasQuery}}" hint-placeholder-val="{{ false }}">
+<div style="font-size: 14px; color: #475569">{{matchText}}</div>
+</sc-if>
+<div ref="{{setTrack}}" role="region" aria-label="Debtor profiles, scroll sideways" tabindex="0" style="display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 4px 2px 14px; margin: 0 -2px">
+<sc-for list="{{profiles}}" as="p" hint-placeholder-count="4">
+<article style="flex: 0 0 280px; scroll-snap-align: start; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 42px; height: 42px; flex: none; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-weight: 700">{{p.initials}}</span>
+<div style="flex: 1 1 auto; min-width: 0">
+<div style="font-weight: 700; font-size: 16px">{{p.name}}</div>
+<div style="font-size: 13px; color: #64748B">{{p.txCount}} records · last {{p.lastFmt}}</div>
+</div>
+<span style="font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{p.pillBg}}; color: {{p.pillFg}}; white-space: nowrap">{{p.status}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); text-align: center; background: #F8FAFC; border-radius: 10px; padding: 8px 0">
+<div><div style="font-size: 11.5px; letter-spacing: 0.06em; color: #64748B">USED</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px">{{p.usedFmt}}</div></div>
+<div><div style="font-size: 11.5px; letter-spacing: 0.06em; color: #64748B">PAID</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: #0F766E">{{p.paidFmt}}</div></div>
+<div><div style="font-size: 11.5px; letter-spacing: 0.06em; color: #B45309">OWES</div><div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: #92400E">{{p.owesFmt}}</div></div>
+</div>
+<div style="height: 6px; border-radius: 3px; background: #F1F5F9; overflow: hidden"><div style="width: {{p.pct}}%; height: 100%; background: #14B8A6"></div></div>
+<button type="button" onClick="{{p.open}}" style="min-height: 44px; border-radius: 10px; border: 1px solid #99F6E4; background: #F0FDFA; color: #0F766E; font-weight: 600; font-size: 14.5px">Open profile →</button>
+</article>
+</sc-for>
+</div>
+<sc-if value="{{noMatch}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 16px; padding: 28px; text-align: center; color: #64748B">No debtor matches “{{q}}”.</div>
+</sc-if>
+</section>
+
+<section aria-labelledby="log-h" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="padding: 18px">
+<h2 id="log-h" style="margin: 0; font-size: 19px; font-weight: 700; text-transform: uppercase">Who used this card</h2>
+<div style="font-size: 14px; color: #64748B">Every transaction — who, when, why or where, and when they will pay it back. Tap a name to open their profile.</div>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 900px; border-collapse: collapse; font-size: 14.5px">
+<thead>
+<tr style="background: #F8FAFC; text-align: left; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Date used</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Person</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Why / where</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Category</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Amount</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Pay back by</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{log}}" as="l" hint-placeholder-count="6">
+<tr style="border-bottom: 1px solid #F1F5F9; background: {{l.rowBg}}">
+<td style="padding: 12px 16px; color: #475569; white-space: nowrap">{{l.date}}</td>
+<th scope="row" style="padding: 6px 16px; text-align: left">
+<sc-if value="{{l.isMe}}" hint-placeholder-val="{{ false }}">
+<span style="min-height: 44px; display: inline-flex; align-items: center; gap: 10px; font-weight: 600; color: #475569"><span style="width: 28px; height: 28px; border-radius: 50%; background: #E2E8F0; color: #1E293B; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700">ME</span>Me (my spending)</span>
+</sc-if>
+<sc-if value="{{l.notMe}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{l.open}}" style="min-height: 44px; border: none; background: transparent; padding: 0; display: inline-flex; align-items: center; gap: 10px; color: #0F172A; font-size: 14.5px; font-weight: 600; text-decoration: underline; text-decoration-color: #99F6E4; text-underline-offset: 4px">
+<span style="width: 28px; height: 28px; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700">{{l.initials}}</span>{{l.name}}</button>
+</sc-if>
+<sc-if value="{{l.isNew}}" hint-placeholder-val="{{ false }}"> <span style="font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 6px; background: #D1FAE5; color: #065F46">New</span></sc-if>
+</th>
+<td style="padding: 12px 16px; font-weight: 500">{{l.why}}</td>
+<td style="padding: 12px 16px"><span style="font-size: 13px; padding: 2px 8px; border-radius: 6px; background: #F1F5F9">#{{l.cat}}</span></td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: {{l.color}}">{{l.amtFmt}}</td>
+<td style="padding: 12px 16px; white-space: nowrap">{{l.due}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="owe-h" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="padding: 18px">
+<h2 id="owe-h" style="margin: 0; font-size: 19px; font-weight: 700; text-transform: uppercase">Who will bring money back</h2>
+<div style="font-size: 14px; color: #64748B">What each person still owes for this card, and how your own share of the bill shrinks as each one pays — biggest first</div>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 820px; border-collapse: collapse; font-size: 14.5px">
+<thead>
+<tr style="background: #F8FAFC; text-align: left; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Person</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Used this card</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Paid back</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right; background: #FEFCE8; color: #92400E">Will give back</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600">Due</th>
+<th scope="col" style="padding: 12px 16px; font-weight: 600; text-align: right">Your share after</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #F1F5F9; background: #FFF5F6">
+<th scope="row" style="padding: 12px 16px; text-align: left; font-weight: 600; color: #BE123C">Card balance now</th>
+<td style="padding: 12px 16px; text-align: right">—</td>
+<td style="padding: 12px 16px; text-align: right">—</td>
+<td style="padding: 12px 16px; text-align: right; background: #FEFCE8">—</td>
+<td style="padding: 12px 16px">Today</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700">{{balFmt}}</td>
+</tr>
+<sc-for list="{{owing}}" as="p" hint-placeholder-count="3">
+<tr style="border-bottom: 1px solid #F1F5F9">
+<th scope="row" style="padding: 6px 16px; text-align: left">
+<button type="button" onClick="{{p.open}}" style="min-height: 44px; border: none; background: transparent; padding: 0; display: inline-flex; align-items: center; gap: 10px; color: #0F172A; font-size: 14.5px; font-weight: 600; text-decoration: underline; text-decoration-color: #99F6E4; text-underline-offset: 4px">
+<span style="width: 30px; height: 30px; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">{{p.initials}}</span>{{p.name}}</button>
+</th>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #475569">{{p.usedFmt}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #0F766E">{{p.paidFmt}}</td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; background: #FEFCE8; color: #78350F">− {{p.owesFmt}}</td>
+<td style="padding: 12px 16px"><span style="font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{p.duePillBg}}; color: {{p.duePillFg}}; white-space: nowrap">{{p.dueShort}}</span></td>
+<td style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #0F766E">{{p.runFmt}}</td>
+</tr>
+</sc-for>
+<tr style="background: #0F4C45; color: #FFFFFF">
+<th scope="row" style="padding: 14px 16px; text-align: left; font-weight: 700">AFTER EVERYONE PAYS</th>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace">{{othersUsedFmt}}</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace">{{othersPaidFmt}}</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700">− {{owedFmt}}</td>
+<td style="padding: 14px 16px">—</td>
+<td style="padding: 14px 16px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px">{{shareFmt}}</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+</div>
+</main>
+
+<sc-if value="{{adding}}" hint-placeholder-val="{{ false }}">
+<div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50">
+<div role="dialog" aria-modal="true" aria-labelledby="add-h" style="width: 100%; max-width: 580px; max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; border-radius: 14px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35)">
+<div style="background: #0F4C45; color: #FFFFFF; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h2 id="add-h" style="margin: 0; font-size: 20px; font-weight: 700">Add debtor — {{c.short}}</h2>
+<button type="button" onClick="{{closeAdd}}" aria-label="Close" style="width: 44px; height: 44px; border: none; background: transparent; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<div style="padding: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Who used the card? *
+<input type="text" list="card-people" defaultValue="{{prefillName}}" onInput="{{f.name}}" placeholder="e.g. Rafi Ahmed, Nusrat…" style="min-height: 46px; padding: 0 14px; border: 2px solid #14B8A6; border-radius: 10px; font-size: 15px; font-weight: 400">
+<datalist id="card-people"><sc-for list="{{knownNames}}" as="n" hint-placeholder-count="6"><option value="{{n}}"></option></sc-for></datalist></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">How much? (৳) *
+<input type="number" min="1" onInput="{{f.amt}}" placeholder="0" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-family: 'JetBrains Mono', monospace"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">When did they use it?
+<input type="date" defaultValue="2026-10-12" onInput="{{f.date}}" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px"></label>
+<label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Why / where did they use it? *
+<input type="text" onInput="{{f.why}}" placeholder="e.g. Air ticket, Daraz order, restaurant bill…" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-weight: 400"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Category
+<select onChange="{{f.cat}}" style="min-height: 46px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; background: #FFFFFF"><option>Shopping</option><option>Food</option><option>Travel</option><option>Electronics</option><option>Health</option><option>Bills</option><option>Other</option></select></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14.5px">Pay back by
+<input type="date" defaultValue="2026-10-26" onInput="{{f.due}}" style="min-height: 46px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px"></label>
+<label style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14.5px; cursor: pointer; background: #F8FAFC; border-radius: 10px; padding: 8px 12px">
+<input type="checkbox" defaultChecked="{{ true }}" onChange="{{toggleAddBal}}" style="width: 18px; height: 18px; accent-color: #0F766E">
+Add this amount to the card balance</label>
+<sc-if value="{{hasFormError}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="grid-column: 1 / -1; background: #FEE2E2; color: #991B1B; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 500">{{formError}}</div>
+</sc-if>
+</div>
+<div style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #E5E7EB; background: #F8FAFC">
+<button type="button" onClick="{{closeAdd}}" style="min-height: 44px; padding: 0 16px; border: none; background: transparent; color: #334155; font-size: 15px; font-weight: 500">Cancel</button>
+<button type="button" onClick="{{saveAdd}}" style="min-height: 44px; padding: 0 20px; border: none; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-size: 15px; font-weight: 600">Add debtor &amp; open profile</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{profileOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50">
+<div role="dialog" aria-modal="true" aria-labelledby="pv-h" style="width: 100%; max-width: 760px; max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; border-radius: 16px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35)">
+<div style="background: linear-gradient(100deg, #0F5A50 0%, #0B3D38 100%); color: #FFFFFF; padding: 18px 20px; display: flex; align-items: center; gap: 14px">
+<span style="width: 52px; height: 52px; flex: none; border-radius: 50%; background: #CCFBF1; color: #115E59; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px">{{pv.initials}}</span>
+<div style="flex: 1 1 auto; min-width: 0">
+<h2 id="pv-h" style="margin: 0; font-size: 22px; font-weight: 700">{{pv.name}}</h2>
+<div style="font-size: 14px; color: #A7F3D0">Debtor profile · {{c.short}} · {{pv.dueText}}</div>
+</div>
+<span style="font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: {{pv.pillBg}}; color: {{pv.pillFg}}; white-space: nowrap">{{pv.status}}</span>
+<button type="button" onClick="{{closeProfile}}" aria-label="Close profile" style="width: 44px; height: 44px; flex: none; border: none; background: transparent; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<div style="padding: 20px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px">
+<div style="background: #F8FAFC; border: 1px solid #E5E7EB; border-bottom: 3px solid #3B82F6; border-radius: 12px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #475569">USED THIS CARD</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px">{{pv.usedFmt}}</div>
+<div style="font-size: 12.5px; color: #64748B">{{pv.useCount}} times</div>
+</div>
+<div style="background: #F8FAFC; border: 1px solid #E5E7EB; border-bottom: 3px solid #14B8A6; border-radius: 12px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #475569">PAID BACK</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; color: #0F766E">{{pv.paidFmt}}</div>
+<div style="font-size: 12.5px; color: #64748B">{{pv.payCount}} payments</div>
+</div>
+<div style="background: #FFFBEB; border: 1px solid #FDE68A; border-bottom: 3px solid #F59E0B; border-radius: 12px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #92400E">STILL OWES</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; color: #92400E">{{pv.owesFmt}}</div>
+<div style="font-size: 12.5px; color: #92400E">of {{pv.usedFmt}} used</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span>Paid back so far</span><span style="font-family: 'JetBrains Mono', monospace">{{pv.pct}}%</span></div>
+<div style="height: 8px; border-radius: 4px; background: #F1F5F9; overflow: hidden"><div style="width: {{pv.pct}}%; height: 100%; background: #14B8A6"></div></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+<span style="font-size: 12.5px; font-weight: 600; letter-spacing: 0.06em; color: #475569; margin-right: 4px">USED FOR</span>
+<sc-for list="{{pv.reasons}}" as="r" hint-placeholder-count="3">
+<span style="font-size: 13px; padding: 2px 8px; border-radius: 6px; background: #F1F5F9; border: 1px solid #E2E8F0">#{{r}}</span>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em">Full history</h3>
+<div style="overflow-x: auto; border: 1px solid #E5E7EB; border-radius: 12px">
+<table style="width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="background: #F8FAFC; text-align: left; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Date</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">What happened</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600">Details</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600; text-align: right">Amount</th>
+<th scope="col" style="padding: 10px 12px; font-weight: 600; text-align: right">Owes after</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{pv.events}}" as="e" hint-placeholder-count="4">
+<tr style="border-bottom: 1px solid #F1F5F9">
+<td style="padding: 10px 12px; color: #475569; white-space: nowrap">{{e.date}}</td>
+<td style="padding: 10px 12px"><span style="font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: {{e.chipBg}}; color: {{e.chipFg}}; white-space: nowrap">{{e.kind}}</span></td>
+<td style="padding: 10px 12px; color: #334155">{{e.detail}}</td>
+<td style="padding: 10px 12px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: {{e.color}}; white-space: nowrap">{{e.amtFmt}}</td>
+<td style="padding: 10px 12px; text-align: right; font-family: 'JetBrains Mono', monospace; white-space: nowrap">{{e.runFmt}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</div>
+<sc-if value="{{pv.canRepay}}" hint-placeholder-val="{{ true }}">
+<div style="background: #F0FDFA; border: 1px solid #99F6E4; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-weight: 700; font-size: 15px">Record a repayment from {{pv.first}}</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end">
+<label style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px">Amount (৳)
+<input type="number" min="1" onInput="{{repAmt}}" placeholder="0" style="min-height: 44px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; font-family: 'JetBrains Mono', monospace; background: #FFFFFF"></label>
+<label style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px">Paid via
+<select onChange="{{repVia}}" style="min-height: 44px; padding: 0 10px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 15px; background: #FFFFFF"><option>Bank transfer</option><option>Cash</option><option>bKash</option><option>Nagad</option></select></label>
+<button type="button" onClick="{{saveRepay}}" style="min-height: 44px; padding: 0 18px; border: none; border-radius: 10px; background: #0F766E; color: #FFFFFF; font-weight: 600; font-size: 15px">Save repayment</button>
+</div>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 14px; cursor: pointer">
+<input type="checkbox" defaultChecked="{{ true }}" onChange="{{toggleToBill}}" style="width: 18px; height: 18px; accent-color: #0F766E">
+Put this money toward the card bill (lowers the card balance)</label>
+<sc-if value="{{hasRepError}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="background: #FEE2E2; color: #991B1B; border-radius: 8px; padding: 8px 12px; font-size: 13.5px; font-weight: 500">{{repError}}</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+<div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #E5E7EB; background: #F8FAFC">
+<button type="button" onClick="{{useAgain}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #C7D2FE; background: #EEF2FF; color: #3730A3; font-size: 15px; font-weight: 600">+ Add another use by {{pv.first}}</button>
+<button type="button" onClick="{{closeProfile}}" style="min-height: 44px; padding: 0 20px; border: none; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-size: 15px; font-weight: 600">Done</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var CARD = 'a';
+    var self = this;
+    var st = this.state || {};
+    var TODAY = '2026-10-12';
+    var MON = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function fmt(n) { return '৳' + Math.abs(n).toLocaleString('en-IN'); }
+    function d2t(s) { if (!s) return '—'; var p = s.split('-'); return MON[Number(p[1])] + ' ' + Number(p[2]) + ', ' + p[0]; }
+    function d2s(s) { if (!s) return 'Not set'; var p = s.split('-'); return MON[Number(p[1])] + ' ' + Number(p[2]); }
+    function inits(n) { return n.replace(/\(.*\)/, '').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase(); }
+    function k(n) { return n.trim().toLowerCase(); }
+
+    var CARDS = {
+      a: { title: 'Credit Card 2 — Community Bank Visa Platinum', short: 'Community Bank Visa Platinum', bank: 'Community Bank', network: 'Visa Platinum', mask: '•••• •••• •••• 4417', limit: 150000, payBy: '2026-10-25', bg: '#0F172A', line: '#6366F1',
+        txns: [
+          { iso: '2026-10-10', name: 'Me', why: 'Daraz order', cat: 'Shopping', amt: 6450 },
+          { iso: '2026-10-09', name: 'Rafi Ahmed', why: 'Star Kabab', cat: 'Food', amt: 2180, due: '2026-10-20' },
+          { iso: '2026-10-07', name: 'Me', why: 'Shwapno', cat: 'Groceries', amt: 4890 },
+          { iso: '2026-10-05', name: 'Nusrat (sister)', why: 'Air ticket DAC–CXB', cat: 'Travel', amt: 18600, due: '2026-10-31' },
+          { iso: '2026-10-03', name: 'Me', why: 'Netflix', cat: 'Subscription', amt: 1100 },
+          { iso: '2026-10-02', name: 'Rafi Ahmed', why: 'Bata shoes', cat: 'Shopping', amt: 3200, due: '2026-10-20' },
+          { iso: '2026-10-01', name: 'Tanvir Rahman', why: 'Ryans Computers', cat: 'Electronics', amt: 15400, due: '2026-10-25' } ],
+        repays: [
+          { iso: '2026-10-10', name: 'Rafi Ahmed', amt: 2180, via: 'Cash' },
+          { iso: '2026-10-07', name: 'Nusrat (sister)', amt: 10000, via: 'Bank transfer' } ] },
+      b: { title: 'Credit Card 1 — City Bank Amex Blue', short: 'City Bank Amex Blue', bank: 'City Bank', network: 'Amex Blue', mask: '•••• •••••• •9032', limit: 80000, payBy: '2026-11-03', bg: '#134E4A', line: '#14B8A6',
+        txns: [
+          { iso: '2026-10-11', name: 'Me', why: 'Fuel station', cat: 'Transport', amt: 3000 },
+          { iso: '2026-10-08', name: 'Tanvir Rahman', why: 'Foodpanda order', cat: 'Food', amt: 1250, due: '2026-10-31' },
+          { iso: '2026-10-06', name: 'Me', why: 'Hotel booking', cat: 'Travel', amt: 7500 },
+          { iso: '2026-09-29', name: 'Mother', why: 'Lazz Pharma', cat: 'Health', amt: 1800, due: '2026-10-15' } ],
+        repays: [
+          { iso: '2026-09-30', name: 'Mother', amt: 1800, via: 'Cash' } ] }
+    };
+    var c = CARDS[CARD];
+    var added = st.added || [];
+    var txns = c.txns.concat(added.map(function (a) { return Object.assign({ isNew: true }, a); }));
+    var repays = c.repays.concat(st.addedRepays || []);
+    var baseBal = c.txns.reduce(function (s, t) { return s + t.amt; }, 0);
+    var bal = st.bal ?? baseBal;
+    var editing = !!st.editing;
+    var draft = st.draft;
+    var badDraft = editing && st.tried && !(draft !== '' && draft != null && Number(draft) >= 0);
+
+    var order = [], displayName = {};
+    function note(n) { var key = k(n); if (key === 'me') return; if (!displayName[key]) { displayName[key] = n.trim(); order.push(key); } }
+    txns.forEach(function (t) { note(t.name); });
+    repays.forEach(function (r) { note(r.name); });
+    var pillMap = { 'Repaid': ['#D1FAE5', '#065F46'], 'Overdue': ['#FEE2E2', '#B91C1C'], 'Partially Paid': ['#FEF3C7', '#92400E'], 'Pending': ['#DBEAFE', '#1D4ED8'] };
+
+    function buildProfile(key) {
+      var name = displayName[key];
+      var U = txns.filter(function (x) { return k(x.name) === key; });
+      var R = repays.filter(function (x) { return k(x.name) === key; });
+      var used = U.reduce(function (s, x) { return s + x.amt; }, 0);
+      var paid = R.reduce(function (s, x) { return s + x.amt; }, 0);
+      var owes = Math.max(used - paid, 0);
+      var dues = U.map(function (x) { return x.due; }).filter(function (d) { return !!d; }).sort();
+      var late = dues.filter(function (d) { return d < TODAY; });
+      var due = owes > 0 ? (late.length ? late[late.length - 1] : (dues[0] || '')) : '';
+      var status = owes <= 0 ? 'Repaid' : (due && due < TODAY) ? 'Overdue' : paid > 0 ? 'Partially Paid' : 'Pending';
+      var ev = U.map(function (x) { return { iso: x.iso, o: 0, kind: 'Used my card', detail: x.why + ' · #' + x.cat + (x.due ? ' · pay back by ' + d2s(x.due) : ''), amt: x.amt, sign: 1 }; })
+        .concat(R.map(function (x) { return { iso: x.iso, o: 1, kind: 'Paid back', detail: 'via ' + x.via, amt: x.amt, sign: -1 }; }))
+        .sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : a.o - b.o; });
+      var run = 0;
+      var events = ev.map(function (e) {
+        run += e.sign * e.amt;
+        var used = e.kind === 'Used my card';
+        return { date: d2t(e.iso), kind: e.kind, detail: e.detail, amtFmt: (used ? '− ' : '+ ') + fmt(e.amt),
+          color: used ? '#1D4ED8' : '#0F766E', chipBg: used ? '#DBEAFE' : '#CCFBF1', chipFg: used ? '#1D4ED8' : '#115E59', runFmt: fmt(Math.max(run, 0)) };
+      }).reverse();
+      var kind = !due ? 'later' : due < TODAY ? 'late' : due <= '2026-10-19' ? 'soon' : 'later';
+      var duePill = { late: ['#FEE2E2', '#B91C1C'], soon: ['#FEF3C7', '#92400E'], later: ['#DBEAFE', '#1D4ED8'] }[kind];
+      return {
+        key: key, name: name, first: name.split(' ')[0], initials: inits(name),
+        used: used, paid: paid, owes: owes,
+        usedFmt: fmt(used), paidFmt: fmt(paid), owesFmt: fmt(owes),
+        useCount: U.length, payCount: R.length, txCount: ev.length,
+        pct: used ? Math.round(paid / used * 100) : 0,
+        status: status, pillBg: pillMap[status][0], pillFg: pillMap[status][1],
+        dueText: owes <= 0 ? 'All paid back' : due ? (due < TODAY ? 'Was due ' + d2t(due) : 'Pay back by ' + d2t(due)) : 'No pay-back date set',
+        dueShort: !due ? 'Not set' : due < TODAY ? 'Late — ' + d2s(due) : d2s(due), duePillBg: duePill[0], duePillFg: duePill[1],
+        lastFmt: d2s(ev.length ? ev[ev.length - 1].iso : ''), events: events,
+        reasons: U.map(function (x) { return x.why; }), canRepay: owes > 0,
+        open: function () { self.setState({ profile: key, rep: {}, repError: '', toBill: true }); }
+      };
+    }
+    var all = order.map(buildProfile);
+    var profiles = all.slice().sort(function (a, b) { return b.owes - a.owes || a.name.localeCompare(b.name); });
+    var q = (st.q || '').trim(), ql = q.toLowerCase();
+    var shown = !ql ? profiles : profiles.filter(function (p) { return p.name.toLowerCase().indexOf(ql) !== -1 || p.reasons.join(' ').toLowerCase().indexOf(ql) !== -1; });
+    var owingList = profiles.filter(function (p) { return p.owes > 0; });
+    var owed = 0, othersUsed = 0, othersPaid = 0, run = bal;
+    all.forEach(function (p) { othersUsed += p.used; othersPaid += p.paid; });
+    var owing = owingList.map(function (p) {
+      owed += p.owes; run -= p.owes;
+      return Object.assign({}, p, { runFmt: fmt(Math.max(run, 0)) });
+    });
+    var share = Math.max(bal - owed, 0);
+    var othersPct = bal ? Math.min(100, Math.round(owed / bal * 1000) / 10) : 0;
+    var ownPct = Math.round((100 - othersPct) * 10) / 10;
+    var daysLeft = Math.round((new Date(c.payBy) - new Date(TODAY)) / 86400000);
+
+    var log = txns.slice().sort(function (a, b) { return a.iso < b.iso ? 1 : a.iso > b.iso ? -1 : (a.isNew ? -1 : 1); }).map(function (t) {
+      var me = k(t.name) === 'me', key = k(t.name);
+      return { date: d2t(t.iso), name: t.name, initials: inits(t.name), why: t.why, cat: t.cat, amtFmt: fmt(t.amt),
+        color: me ? '#334155' : '#B45309', due: me ? '—' : d2t(t.due), isMe: me, notMe: !me, isNew: !!t.isNew,
+        rowBg: t.isNew ? '#F0FDF4' : 'transparent',
+        open: function () { self.setState({ profile: key, rep: {}, repError: '', toBill: true }); } };
+    });
+
+    var pv = st.profile ? all.filter(function (p) { return p.key === st.profile; })[0] : null;
+    function setF(fk) { return function (e) { var f = Object.assign({}, (self.state && self.state.form) || {}); f[fk] = e.target.value; self.setState({ form: f, formError: '' }); }; }
+    function openForm(prefill) { self.setState({ adding: true, profile: null, prefill: prefill || '', form: { name: prefill || '', date: TODAY, due: '2026-10-26', cat: 'Shopping' }, addBal: true, formError: '' }); }
+    var everyone = ['Rafi Ahmed', 'Tanvir Rahman', 'Nusrat (sister)', 'Mother', 'Nayeem Hasan', 'Mamun Vai', 'Mehedi Khan', 'Sadia Islam'];
+    order.forEach(function (key) { if (everyone.indexOf(displayName[key]) === -1) everyone.push(displayName[key]); });
+
+    return {
+      c: { title: c.title, short: c.short, bank: c.bank, network: c.network, mask: c.mask, bg: c.bg, line: c.line },
+      balFmt: fmt(bal), balRaw: String(bal), owedFmt: fmt(owed), shareFmt: fmt(share),
+      othersUsedFmt: fmt(othersUsed), othersPaidFmt: fmt(othersPaid),
+      owingCount: owing.length, ownPct: ownPct, othersPct: othersPct,
+      util: Math.round(bal / c.limit * 1000) / 10, limitFmt: fmt(c.limit),
+      stats: [
+        { label: 'Credit limit', value: fmt(c.limit), color: '#0F172A' },
+        { label: 'Available', value: fmt(Math.max(c.limit - bal, 0)), color: '#0F766E' },
+        { label: 'Minimum due', value: fmt(Math.round(bal * 0.05)), color: '#0F172A' },
+        { label: 'Pay by', value: d2s(c.payBy) + ' · ' + daysLeft + 'd', color: '#9F1239' }
+      ],
+      profiles: shown, owing: owing, log: log, knownNames: everyone,
+      q: q, hasQuery: !!q, noMatch: !!q && shown.length === 0,
+      matchText: shown.length + (shown.length === 1 ? ' debtor matches' : ' debtors match') + ' “' + q + '”',
+      searchOpen: !!st.searchOpen, searchClosed: !st.searchOpen,
+      openSearch: function () { self.setState({ searchOpen: true }); },
+      closeSearch: function () { self.setState({ searchOpen: false, q: '' }); },
+      onSearch: function (e) { self.setState({ q: e.target.value }); if (self.track) self.track.scrollLeft = 0; },
+      setTrack: function (el) { self.track = el; },
+      slidePrev: function () { if (self.track) self.track.scrollBy({ left: -294 * Math.max(1, Math.floor(self.track.clientWidth / 294)), behavior: 'smooth' }); },
+      slideNext: function () { if (self.track) self.track.scrollBy({ left: 294 * Math.max(1, Math.floor(self.track.clientWidth / 294)), behavior: 'smooth' }); },
+      editing: editing, notEditing: !editing, badDraft: badDraft, updated: st.updated || 'Oct 12, 2026',
+      startEdit: function () { self.setState({ editing: true, draft: String(bal), tried: false }); },
+      cancelEdit: function () { self.setState({ editing: false, tried: false }); },
+      onDraft: function (e) { self.setState({ draft: e.target.value }); },
+      saveEdit: function () {
+        var d = self.state && self.state.draft, n = Math.round(Number(d));
+        if (d === '' || d == null || isNaN(n) || n < 0) { self.setState({ tried: true }); return; }
+        self.setState({ bal: n, editing: false, tried: false, updated: 'just now' });
+      },
+      adding: !!st.adding, prefillName: st.prefill || '',
+      openAdd: function () { openForm(''); },
+      closeAdd: function () { self.setState({ adding: false, formError: '' }); },
+      toggleAddBal: function () { var s = self.state || {}; self.setState({ addBal: s.addBal === false }); },
+      f: { name: setF('name'), amt: setF('amt'), date: setF('date'), why: setF('why'), cat: setF('cat'), due: setF('due') },
+      hasFormError: !!st.formError, formError: st.formError || '',
+      saveAdd: function () {
+        var s = self.state || {}, f = s.form || {};
+        var name = (f.name || '').trim(), why = (f.why || '').trim(), amt = Math.round(Number(f.amt));
+        var err = !name ? 'Enter who used the card.' : k(name) === 'me' ? 'This form is for other people. Your own spending is already in the card balance.' : (!f.amt || isNaN(amt) || amt <= 0) ? 'Enter an amount above 0.' : !why ? 'Enter why or where they used it.' : '';
+        if (err) { self.setState({ formError: err }); return; }
+        var entry = { iso: f.date || TODAY, name: displayName[k(name)] || name, why: why, cat: f.cat || 'Shopping', amt: amt, due: f.due || '' };
+        var addBal = s.addBal !== false, cur = s.bal ?? baseBal;
+        self.setState({
+          added: (s.added || []).concat([entry]), adding: false, formError: '',
+          bal: addBal ? cur + amt : cur, updated: addBal ? 'just now' : (s.updated || 'Oct 12, 2026'),
+          profile: k(entry.name), rep: {}, repError: '', toBill: true,
+          flash: entry.name + ' added — used ' + fmt(amt) + ' for ' + why + (addBal ? '. Added to the card balance.' : '.')
+        });
+      },
+      justAdded: !!st.flash, justAddedText: st.flash || '',
+      profileOpen: !!pv,
+      pv: pv || { name: '', first: '', initials: '', events: [], reasons: [], canRepay: false },
+      closeProfile: function () { self.setState({ profile: null, repError: '' }); },
+      useAgain: function () { openForm(pv ? pv.name : ''); },
+      toggleToBill: function () { var s = self.state || {}; self.setState({ toBill: s.toBill === false }); },
+      repAmt: function (e) { var r = Object.assign({}, (self.state && self.state.rep) || {}); r.amt = e.target.value; self.setState({ rep: r, repError: '' }); },
+      repVia: function (e) { var r = Object.assign({}, (self.state && self.state.rep) || {}); r.via = e.target.value; self.setState({ rep: r }); },
+      hasRepError: !!st.repError, repError: st.repError || '',
+      saveRepay: function () {
+        var s = self.state || {};
+        if (!pv) return;
+        var r = s.rep || {}, amt = Math.round(Number(r.amt));
+        if (!r.amt || isNaN(amt) || amt <= 0) { self.setState({ repError: 'Enter an amount above 0.' }); return; }
+        if (amt > pv.owes) { self.setState({ repError: pv.first + ' only owes ' + fmt(pv.owes) + ' for this card.' }); return; }
+        var toBill = s.toBill !== false, cur = s.bal ?? baseBal;
+        self.setState({
+          addedRepays: (s.addedRepays || []).concat([{ iso: TODAY, name: pv.name, amt: amt, via: r.via || 'Bank transfer' }]),
+          bal: toBill ? Math.max(cur - amt, 0) : cur, updated: toBill ? 'just now' : (s.updated || 'Oct 12, 2026'),
+          rep: {}, repError: '',
+          flash: pv.name + ' paid back ' + fmt(amt) + (toBill ? '. Put toward the card bill.' : '.')
+        });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

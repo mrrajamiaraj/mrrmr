@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Finance Workspace — Overview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #0D9488;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F8FA; color: #0F172A; font-family: 'Outfit', system-ui, sans-serif; font-size: 15px; line-height: 1.45">
+
+<header style="background: linear-gradient(100deg, #0F5A50 0%, #0B3D38 100%); color: #FFFFFF; padding: 22px clamp(16px, 4vw, 48px)">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<div style="display: flex; align-items: center; gap: 14px; min-width: 0">
+<div style="width: 46px; height: 46px; flex: none; border-radius: 12px; background: #1D6E63; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-2"></path><path d="M21 9h-6a3 3 0 0 0 0 6h6z"></path></svg>
+</div>
+<div style="min-width: 0">
+<div style="font-weight: 700; font-size: clamp(18px, 2.2vw, 26px); letter-spacing: -0.01em; text-transform: uppercase">Personal Finance &amp; Loan Recovery Workspace</div>
+<div style="font-size: 14.5px; color: #A7F3D0">Accounts, debtor receivables, loan tracking, credit cards &amp; monthly ledger</div>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<a href="Lending.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #10B981; color: #04241B; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Log Loan / Repayment</a>
+<a href="Lending.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #12756A; border: 1px solid #5EEAD4; color: #FFFFFF; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg>Add Debtor</a>
+<dc-import name="AdminButton" preview-open="{{ false }}" hint-size="112px,44px"></dc-import>
+</div>
+</div>
+</header>
+
+<nav aria-label="Sections" style="background: #FFFFFF; border-bottom: 1px solid #E5E7EB; padding: 0 clamp(16px, 4vw, 48px)">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0">
+<a href="Main.dc.html" aria-current="page" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #0F4C45; color: #FFFFFF; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap">Overview</a>
+<a href="Accounts.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Bank Account</a>
+<a href="Lending.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Debtors &amp; Loans</a>
+<a href="Cards.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Credit Card 1</a>
+<a href="Card2.dc.html" style="min-height: 44px; padding: 0 16px; border-radius: 10px; background: #F1F5F9; color: #1E293B; font-weight: 500; display: inline-flex; align-items: center; white-space: nowrap">Credit Card 2</a>
+</div>
+</nav>
+
+<main style="padding: 28px clamp(16px, 4vw, 48px) 72px">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px">
+
+<section aria-label="Key figures" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="6">
+<div style="background: {{k.bg}}; border: 1px solid {{k.border}}; border-bottom: 4px solid {{k.line}}; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+<span style="font-size: 12.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #334155">{{k.label}}</span>
+<span aria-hidden="true" style="width: 30px; height: 30px; flex: none; border-radius: 8px; background: {{k.soft}}; color: {{k.ink}}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">{{k.glyph}}</span>
+</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 24px; color: {{k.valColor}}; font-variant-numeric: tabular-nums">{{k.value}}</div>
+<div style="font-size: 13px; color: {{k.subColor}}">{{k.sub}}</div>
+</div>
+</sc-for>
+</section>
+
+<section aria-label="Net position" style="background: #ECFDF7; border: 1px solid #A7F3D0; border-radius: 16px; padding: 18px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+<div style="width: 46px; height: 46px; flex: none; border-radius: 12px; background: #0F766E; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+</div>
+<div style="flex: 1 1 260px">
+<div style="font-weight: 700; font-size: 15px; letter-spacing: 0.05em; text-transform: uppercase; color: #134E4A">Net personal financial position</div>
+<div style="font-size: 15px; color: #334155">Cash in all accounts + all pending money owed to you</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 10px 16px">
+<div style="font-size: 13px; color: #64748B">Active debtors</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px">{{activeDebtors}} borrowers</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 10px 16px">
+<div style="font-size: 13px; color: #64748B">After card dues</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px">{{afterCardsFmt}}</div>
+</div>
+<div style="background: #0F4C45; color: #FFFFFF; border-radius: 12px; padding: 10px 18px">
+<div style="font-size: 12.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A7F3D0">Net position</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px">{{netFmt}}</div>
+</div>
+</div>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; align-items: start">
+
+<section aria-labelledby="ov-debt" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 16px 18px; border-bottom: 1px solid #E5E7EB">
+<h2 id="ov-debt" style="margin: 0; font-size: 17px; font-weight: 700">Who owes me right now</h2>
+<a href="Lending.dc.html" style="min-height: 44px; display: inline-flex; align-items: center; font-weight: 600; font-size: 14px; color: #0F766E">Open debtors →</a>
+</div>
+<sc-for list="{{debtors}}" as="d" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #F1F5F9">
+<div style="width: 36px; height: 36px; flex: none; border-radius: 50%; background: #CCFBF1; color: #115E59; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">{{d.initials}}</div>
+<div style="flex: 1 1 auto; min-width: 0">
+<div style="font-weight: 600">{{d.name}}</div>
+<div style="font-size: 13px; color: #64748B">Due {{d.due}}</div>
+</div>
+<span style="font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: {{d.pillBg}}; color: {{d.pillFg}}">{{d.status}}</span>
+<div style="width: 92px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700">{{d.leftFmt}}</div>
+</div>
+</sc-for>
+</section>
+
+<div style="display: flex; flex-direction: column; gap: 16px">
+<section aria-labelledby="ov-card" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 16px 18px; border-bottom: 1px solid #E5E7EB">
+<h2 id="ov-card" style="margin: 0; font-size: 17px; font-weight: 700">Credit cards</h2>
+<a href="Cards.dc.html" style="min-height: 44px; display: inline-flex; align-items: center; font-weight: 600; font-size: 14px; color: #0F766E">Open cards →</a>
+</div>
+<sc-for list="{{cards}}" as="c" hint-placeholder-count="2">
+<div style="padding: 14px 18px; border-bottom: 1px solid #F1F5F9; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 46px; height: 30px; flex: none; border-radius: 6px; background: {{c.bg}}; color: #FFFFFF; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: flex-end; justify-content: flex-end; padding: 3px 5px; box-sizing: border-box">{{c.last4}}</div>
+<div style="flex: 1 1 auto; min-width: 0">
+<div style="font-weight: 600">{{c.name}}</div>
+<div style="font-size: 13px; color: #64748B">Pay by {{c.due}} · {{c.util}}% of limit used</div>
+</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #BE123C">{{c.usedFmt}}</div>
+</div>
+<div style="height: 6px; border-radius: 3px; background: #F1F5F9; overflow: hidden"><div style="width: {{c.util}}%; height: 100%; background: #F43F5E"></div></div>
+</div>
+</sc-for>
+</section>
+
+<section aria-labelledby="ov-acc" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 16px 18px; border-bottom: 1px solid #E5E7EB">
+<h2 id="ov-acc" style="margin: 0; font-size: 17px; font-weight: 700">Bank account</h2>
+<a href="Accounts.dc.html" style="min-height: 44px; display: inline-flex; align-items: center; font-weight: 600; font-size: 14px; color: #0F766E">Open account →</a>
+</div>
+<div style="padding: 14px 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px">
+<sc-for list="{{accounts}}" as="a" hint-placeholder-count="5">
+<div style="background: #F8FAFC; border-radius: 10px; padding: 10px 12px">
+<div style="font-size: 13px; color: #64748B">{{a.name}}</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px">{{a.balFmt}}</div>
+</div>
+</sc-for>
+</div>
+</section>
+</div>
+</div>
+
+<section aria-labelledby="ov-month" style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px">
+<h2 id="ov-month" style="margin: 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>
+Monthly performance &amp; recoveries summary</h2>
+<span style="font-size: 13.5px; color: #64748B">Net cash flow = income − expenses + loan recoveries</span>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 820px; border-collapse: collapse; font-size: 14.5px">
+<thead>
+<tr style="text-align: left; border-bottom: 1px solid #E5E7EB">
+<th scope="col" style="padding: 12px; font-weight: 600">Month</th>
+<th scope="col" style="padding: 12px; font-weight: 600; text-align: right">Total income</th>
+<th scope="col" style="padding: 12px; font-weight: 600; text-align: right">Total expenses</th>
+<th scope="col" style="padding: 12px; font-weight: 600; text-align: right">Loan recoveries</th>
+<th scope="col" style="padding: 12px; font-weight: 600; text-align: right">Net cash flow</th>
+<th scope="col" style="padding: 12px; font-weight: 600; text-align: right">Savings rate</th>
+<th scope="col" style="padding: 12px; font-weight: 600">Status note</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{months}}" as="m" hint-placeholder-count="4">
+<tr style="border-bottom: 1px solid #F1F5F9">
+<td style="padding: 12px; font-weight: 500">{{m.label}}</td>
+<td style="padding: 12px; text-align: right; font-family: 'JetBrains Mono', monospace">{{m.incFmt}}</td>
+<td style="padding: 12px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #BE123C">{{m.expFmt}}</td>
+<td style="padding: 12px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #0F766E">{{m.recFmt}}</td>
+<td style="padding: 12px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700">{{m.netFmt}}</td>
+<td style="padding: 12px; text-align: right; font-family: 'JetBrains Mono', monospace">{{m.rate}}%</td>
+<td style="padding: 12px"><span style="font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 6px; background: {{m.noteBg}}; color: {{m.noteFg}}">{{m.note}}</span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1550}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function fmt(n) { return '৳' + Math.abs(n).toLocaleString('en-IN'); }
+    var accounts = [
+      { name: 'City Bank · Raja Mia Raj', amt: 143345 }
+    ];
+    var cash = accounts.reduce(function (s, a) { return s + a.amt; }, 0);
+    var pill = {
+      'Pending': ['#DBEAFE', '#1D4ED8'], 'Partially Paid': ['#FEF3C7', '#92400E'],
+      'Repaid': ['#D1FAE5', '#065F46'], 'Overdue': ['#FEE2E2', '#B91C1C']
+    };
+    var debtors = [
+      { name: 'Tanvir Rahman', initials: 'TR', due: 'Oct 15', status: 'Partially Paid', left: 8000 },
+      { name: 'Nayeem Hasan', initials: 'NH', due: 'Oct 10', status: 'Overdue', left: 6000 },
+      { name: 'Rafi Ahmed', initials: 'RA', due: 'Oct 30', status: 'Partially Paid', left: 6000 },
+      { name: 'Mamun Vai', initials: 'MV', due: 'Oct 26', status: 'Pending', left: 2000 },
+      { name: 'Mehedi Khan', initials: 'MK', due: 'Oct 20', status: 'Pending', left: 1500 }
+    ];
+    var lent = 44000, repaid = 20500;
+    var owed = lent - repaid;
+    var cards = [
+      { name: 'Card 1 · City Bank Amex Blue', last4: '9032', used: 13550, limit: 80000, due: 'Nov 3', bg: '#134E4A' },
+      { name: 'Card 2 · Community Bank Visa Platinum', last4: '4417', used: 51820, limit: 150000, due: 'Oct 25', bg: '#0F172A' }
+    ];
+    var cardDue = cards.reduce(function (s, c) { return s + c.used; }, 0);
+    var income = 33312, expenses = 19040;
+    var months = [
+      { label: 'Jul 2026', inc: 30000, exp: 21400, rec: 3000 },
+      { label: 'Aug 2026', inc: 31500, exp: 24900, rec: 8000 },
+      { label: 'Sep 2026', inc: 30800, exp: 27300, rec: 6000 },
+      { label: 'Oct 2026 (so far)', inc: income, exp: expenses, rec: 3500 }
+    ].map(function (m) {
+      var rate = Math.round((m.inc - m.exp) / m.inc * 1000) / 10;
+      var note = rate >= 25 ? ['Healthy', '#D1FAE5', '#065F46'] : rate >= 15 ? ['On track', '#DBEAFE', '#1D4ED8'] : ['Tight month', '#FEF3C7', '#92400E'];
+      return { label: m.label, incFmt: fmt(m.inc), expFmt: fmt(m.exp), recFmt: fmt(m.rec), netFmt: fmt(m.inc - m.exp + m.rec),
+        rate: rate.toFixed(1), note: note[0], noteBg: note[1], noteFg: note[2] };
+    });
+    return {
+      kpis: [
+        { label: 'Wallet balance', value: fmt(cash), sub: '● City Bank account', glyph: '৳', line: '#10B981', soft: '#D1FAE5', ink: '#047857', bg: '#FFFFFF', border: '#E5E7EB', valColor: '#0F172A', subColor: '#047857' },
+        { label: 'Money lent', value: fmt(lent), sub: 'Total loans given', glyph: '↗', line: '#6366F1', soft: '#E0E7FF', ink: '#4338CA', bg: '#FFFFFF', border: '#E5E7EB', valColor: '#0F172A', subColor: '#64748B' },
+        { label: 'Repaid back', value: fmt(repaid), sub: Math.round(repaid / lent * 1000) / 10 + '% recovered', glyph: '↙', line: '#14B8A6', soft: '#CCFBF1', ink: '#0F766E', bg: '#FFFFFF', border: '#E5E7EB', valColor: '#0F172A', subColor: '#0F766E' },
+        { label: 'Outstanding due', value: fmt(owed), sub: '● Remaining money owed', glyph: '!', line: '#F59E0B', soft: '#FEF3C7', ink: '#B45309', bg: '#FFFBEB', border: '#FDE68A', valColor: '#92400E', subColor: '#92400E' },
+        { label: 'Total income', value: fmt(income), sub: 'This month so far', glyph: '↑', line: '#3B82F6', soft: '#DBEAFE', ink: '#1D4ED8', bg: '#FFFFFF', border: '#E5E7EB', valColor: '#0F172A', subColor: '#64748B' },
+        { label: 'Total expenses', value: fmt(expenses), sub: 'Recorded this month', glyph: '↓', line: '#F43F5E', soft: '#FFE4E6', ink: '#BE123C', bg: '#FFF5F6', border: '#FECDD3', valColor: '#9F1239', subColor: '#BE123C' }
+      ],
+      activeDebtors: debtors.length,
+      netFmt: fmt(cash + owed),
+      afterCardsFmt: fmt(cash + owed - cardDue),
+      debtors: debtors.map(function (d) { return Object.assign({}, d, { leftFmt: fmt(d.left), pillBg: pill[d.status][0], pillFg: pill[d.status][1] }); }),
+      cards: cards.map(function (c) { return Object.assign({}, c, { usedFmt: fmt(c.used), util: Math.round(c.used / c.limit * 100) }); }),
+      accounts: accounts.map(function (a) { return { name: a.name, balFmt: fmt(a.amt) }; }),
+      months: months
+    };
+  }
+}
+</script>
+</body>
+</html>
