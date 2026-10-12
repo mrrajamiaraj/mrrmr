@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-outfit), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --color-ink: #0F172A;
+  --color-brand: #0F4C45;
+  --color-brand-2: #0F766E;
+  --color-brand-3: #12756A;
+  --color-mint: #A7F3D0;
+  --color-page: #F6F8FA;
+  --color-line: #E5E7EB;
+  --color-soft: #F1F5F9;
+}
+
+@layer base {
+  body {
+    @apply bg-page text-ink font-sans text-[15px] leading-[1.45];
+  }
+  button { @apply cursor-pointer; }
+  button:disabled { @apply cursor-not-allowed opacity-60; }
+  :where(button, a, input, select, [tabindex]):focus-visible {
+    outline: 2px solid #0D9488;
+    outline-offset: 2px;
+  }
+}
+
+@utility money {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility field-input {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 400;
+  background: #FFFFFF;
+  color: var(--color-ink);
+  width: 100%;
+}
+
+@utility field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14.5px;
+}
