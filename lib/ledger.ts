@@ -12,6 +12,8 @@ export type HistoryEvent = {
   /** +1 adds to what they owe, −1 reduces it */
   sign: 1 | -1;
   owesAfter: number;
+  /** for "Paid back": whether it repaid a loan or card use */
+  paidFor?: "loan" | "card";
 };
 
 export type DueKind = "late" | "soon" | "later";
@@ -125,6 +127,7 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
       ...R.map((x) => ({
         id: x.id, iso: x.paid_on, created: x.created_at, o: 2, kind: "Paid back" as const, amount: x.amount, sign: -1 as const,
         detail: `${x.applies_to === "card" ? `For card use${x.card_id ? ` (${cardLabel(cardsById.get(x.card_id))})` : ""}` : "For loan"} · via ${x.via}`,
+        paidFor: x.applies_to,
       })),
     ].sort((a, b) => a.iso.localeCompare(b.iso) || a.o - b.o || a.created.localeCompare(b.created));
 
@@ -132,7 +135,7 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
     const events: HistoryEvent[] = raw
       .map((e) => {
         run += e.sign * e.amount;
-        return { id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: Math.max(run, 0) };
+        return { id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: Math.max(run, 0), paidFor: "paidFor" in e ? e.paidFor : undefined };
       })
       .reverse();
 
@@ -228,7 +231,10 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
       const events: HistoryEvent[] = raw
         .map((e) => {
           run += e.sign * e.amount;
-          return { id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: Math.max(run, 0) };
+          return {
+            id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: Math.max(run, 0),
+            paidFor: e.sign < 0 ? (isCard ? "card" : "loan") : undefined,
+          };
         })
         .reverse();
 

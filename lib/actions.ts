@@ -11,6 +11,8 @@ type DbError = { message: string; code?: string } | null;
 
 function friendly(error: NonNullable<DbError>): string {
   const m = error.message;
+  if ((error.code === "PGRST202" || /could not find the function/i.test(m)) && /delete_record/.test(m))
+    return "Deleting needs one more database function. Run supabase/migrations/0004_delete_records.sql in the Supabase SQL Editor, then try again.";
   if (error.code === "PGRST202" || /could not find the function/i.test(m))
     return "The database functions are missing. Run supabase/migrations/0002_finance_functions.sql in the Supabase SQL Editor, then try again.";
   if (/balance_check/.test(m)) return "That would make the balance go below ৳0.";
@@ -215,6 +217,16 @@ export async function updatePerson(
 export async function deletePerson(personId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("people").delete().eq("id", personId);
+  return done(error);
+}
+
+export type RecordKind = "loan" | "card_use" | "repayment";
+
+/** Permanently deletes one loan, card use or repayment; optionally undoes its balance change in the same transaction. */
+export async function deleteRecord(kind: RecordKind, id: string, undoBalance: boolean): Promise<ActionResult> {
+  if (!["loan", "card_use", "repayment"].includes(kind)) return { error: "Unknown record type." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_record", { p_kind: kind, p_id: id, p_undo_balance: undoBalance });
   return done(error);
 }
 
