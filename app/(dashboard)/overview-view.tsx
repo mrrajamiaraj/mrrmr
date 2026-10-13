@@ -7,7 +7,7 @@ import { Shell } from "@/components/shell";
 import { PersonIcon, PlusIcon, ShieldIcon, TrendIcon, WalletIcon } from "@/components/icons";
 import { Avatar, Flash, StatusPill } from "@/components/debtors/bits";
 import { ProfileModal } from "@/components/debtors/profile-modal";
-import { buildProfiles, byOwesThenName, cardTitle } from "@/lib/ledger";
+import { buildProfiles, byOwesThenName, CARD_NAMES, cardLabel } from "@/lib/ledger";
 import { dateShort, monthLabel, pct, taka } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
 
@@ -159,7 +159,7 @@ export function OverviewView({ data, today }: { data: FinanceData; today: string
                   <div className="flex items-center gap-3">
                     <div className="box-border flex h-[30px] w-[46px] flex-none items-end justify-end rounded-md px-[5px] py-[3px] font-mono text-[10px] text-white" style={{ background: CARD_BG[c.slot] }}>{c.last4 ?? ""}</div>
                     <div className="min-w-0 flex-auto">
-                      <div className="font-semibold">Card {c.slot} · {cardTitle(c)}</div>
+                      <div className="font-semibold">{cardLabel(c)} · {c.name}</div>
                       <div className="text-[13px] text-slate-500">Pay by {dateShort(c.pay_by)}{c.credit_limit ? ` · ${util}% of limit used` : ""}</div>
                     </div>
                     <div className="money text-[#BE123C]">{taka(c.balance)}</div>
@@ -171,7 +171,7 @@ export function OverviewView({ data, today }: { data: FinanceData; today: string
             {data.cards.length < 2 && (
               <div className="px-[18px] py-4 text-sm text-slate-500">
                 {[1, 2].filter((s) => !data.cards.some((c) => c.slot === s)).map((s) => (
-                  <Link key={s} href={`/cards/${s}`} className="mr-3 font-semibold text-brand-2">Set up Credit Card {s} →</Link>
+                  <Link key={s} href={`/cards/${s}`} className="mr-3 font-semibold text-brand-2">Set up {CARD_NAMES[s as 1 | 2]} →</Link>
                 ))}
               </div>
             )}

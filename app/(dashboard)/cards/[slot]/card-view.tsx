@@ -10,7 +10,7 @@ import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow } from "@/components/debtors/bits";
 import { EditCardDialog, SetupCard } from "@/components/setup-forms";
 import { setCardBalance } from "@/lib/actions";
-import { buildCardProfiles, byOwesThenName, cardTitle } from "@/lib/ledger";
+import { buildCardProfiles, byOwesThenName, CARD_NAMES, cardTitle } from "@/lib/ledger";
 import { dateLong, dateShort, daysBetween, initials, taka, timestampLong } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
 
@@ -33,25 +33,33 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
 
   if (!card) {
     return (
-      <Shell icon={<CardIcon />} subtitle={`Credit Card ${slot}`}>
+      <Shell icon={<CardIcon />} subtitle={CARD_NAMES[slot]}>
         <SetupCard slot={slot} />
       </Shell>
     );
   }
 
   const look = LOOK[slot];
-  const title = `Credit Card ${slot} — ${cardTitle(card)}`;
+  const title = `${CARD_NAMES[slot]} — ${card.name}`;
   const bal = card.balance;
+  const limit = card.credit_limit;
+  // Available credit = limit − what is used; each repayment frees that much limit again (never above the limit).
+  const availableAt = (used: number) => (limit != null ? Math.max(limit - Math.max(used, 0), 0) : null);
   const owing = profiles.filter((p) => p.owes > 0);
   let run = bal;
-  const owingRows = owing.map((p) => ({ ...p, run: Math.max((run -= p.owes), 0) }));
+  // Everyone who used the card; profiles are sorted biggest debt first, so paid-up people come last and change nothing.
+  const userRows = profiles.filter((p) => p.used > 0 || p.owes > 0).map((p) => {
+    run -= p.owes;
+    return { ...p, run: Math.max(run, 0), availAfter: availableAt(run) };
+  });
   const owed = owing.reduce((s, p) => s + p.owes, 0);
   const othersUsed = profiles.reduce((s, p) => s + p.used, 0);
   const othersPaid = profiles.reduce((s, p) => s + p.paid, 0);
   const share = Math.max(bal - owed, 0);
+  const availNow = availableAt(bal);
+  const availAfter = availableAt(share);
   const othersPct = bal ? Math.min(100, Math.round((owed / bal) * 1000) / 10) : 0;
   const ownPct = Math.round((100 - othersPct) * 10) / 10;
-  const limit = card.credit_limit;
   const util = limit ? Math.round((bal / limit) * 1000) / 10 : null;
   const daysLeft = card.pay_by ? daysBetween(today, card.pay_by) : null;
   const holder = (data.accounts[0]?.holder_name ?? "Card holder").toUpperCase();
@@ -64,8 +72,8 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const account = data.accounts[0] ? { id: data.accounts[0].id, name: data.accounts[0].name } : null;
 
   const stats = [
-    { label: "Credit limit", value: limit != null ? taka(limit) : "Not set", color: "#0F172A" },
-    { label: "Available", value: limit != null ? taka(Math.max(limit - bal, 0)) : "—", color: "#0F766E" },
+    { label: "Others used (total)", value: taka(othersUsed), color: "#B45309" },
+    { label: "Others paid back", value: taka(othersPaid), color: "#0F766E" },
     { label: "Minimum due", value: taka(Math.round(bal * 0.05)), color: "#0F172A" },
     {
       label: "Pay by",
@@ -87,26 +95,51 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
         </HeaderButton>
       }
     >
-      <section aria-label="Card balance and your own share" className="flex flex-wrap items-stretch gap-3.5">
+      <section aria-label="Credit limit and available balance now" className="flex flex-wrap items-stretch gap-3.5">
+        <div className="flex flex-[1_1_240px] flex-col gap-2.5 rounded-2xl border border-line border-b-4 border-b-slate-500 bg-white p-[22px]">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700">Credit limit</span>
+            <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-semibold text-slate-700">
+              <PencilIcon size={14} />
+              {limit != null ? "Change" : "Set limit"}
+            </button>
+          </div>
+          <div className="money text-[clamp(28px,3.4vw,38px)]">{limit != null ? taka(limit) : "Not set"}</div>
+          <div className="text-sm text-slate-600">The most the bank lets you spend on this card</div>
+        </div>
+        <EqSign>−</EqSign>
         <BalanceEditor
           tone="card"
-          label="Card balance now"
+          label="Used now (card balance)"
           inputLabel="New card balance (৳)"
           value={bal}
           footnote={`What you owe the bank · updated ${timestampLong(card.updated_at)}`}
           onSave={(n) => setCardBalance(card.id, n)}
         />
-        <EqSign>−</EqSign>
+        <EqSign>=</EqSign>
+        <div className="flex flex-[1_1_240px] flex-col gap-2.5 rounded-2xl border border-[#99F6E4] border-b-4 border-b-[#14B8A6] bg-[#F0FDFA] p-[22px]">
+          <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700">Available now</div>
+          <div className="money text-[clamp(28px,3.4vw,38px)] text-[#0F766E]">{availNow != null ? taka(availNow) : "—"}</div>
+          <div className="text-sm text-[#0F766E]">{limit != null ? "You can still spend this much today" : "Set the credit limit to see this"}</div>
+        </div>
+      </section>
+
+      <section aria-label="Available balance after everyone pays back" className="flex flex-wrap items-stretch gap-3.5">
+        <div className="flex flex-[1_1_240px] flex-col gap-2.5 rounded-2xl border border-line bg-white p-[22px]">
+          <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700">Available now</div>
+          <div className="money text-[clamp(24px,3vw,32px)] text-[#0F766E]">{availNow != null ? taka(availNow) : "—"}</div>
+        </div>
+        <EqSign>+</EqSign>
         <div className="flex flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border border-[#FDE68A] border-b-4 border-b-[#F59E0B] bg-[#FFFBEB] p-[22px]">
-          <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700">People owe you for this card</div>
+          <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700">People will give back</div>
           <div className="money text-[clamp(28px,3.4vw,38px)] text-[#92400E]">{taka(owed)}</div>
-          <div className="text-sm text-[#92400E]">{owing.length} people used this card and still owe</div>
+          <div className="text-sm text-[#92400E]">{owing.length} {owing.length === 1 ? "person" : "people"} used this card and still owe</div>
         </div>
         <EqSign>=</EqSign>
         <div className="flex flex-[1_1_300px] flex-col gap-2.5 rounded-2xl bg-brand p-[22px] text-white">
-          <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-mint">Your own share after everyone pays</div>
-          <div className="money text-[clamp(28px,3.4vw,38px)]">{taka(share)}</div>
-          <div className="text-sm text-mint">What you pay from your own pocket for this bill</div>
+          <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-mint">Available after everyone pays back</div>
+          <div className="money text-[clamp(28px,3.4vw,38px)]">{availAfter != null ? taka(availAfter) : "—"}</div>
+          <div className="text-sm text-mint">Your own spending left on the card: {taka(share)}</div>
         </div>
       </section>
 
@@ -151,17 +184,64 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
 
       <Flash text={flash.text} />
 
-      <ProfileSlider
-        title="Debtor profiles — this card"
-        sub="Everyone who used this card. Open a profile to see their full history."
-        tookLabel="USED"
-        items={profiles.map((p) => ({ ...p, took: p.used }))}
-        onOpen={setOpenId}
-        onAdd={() => openAdd()}
-      />
+      <SectionCard>
+        <SectionHead id="users-h" title="Who used this card's money"
+          sub="Everyone who spent on this card, what they still owe, and how your available balance grows as each one pays you back — biggest first. Tap a name to open their profile." />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[880px] border-collapse text-[14.5px]">
+            <thead>
+              <tr className={theadRow}>
+                <th scope="col" className={th}>Person</th>
+                <th scope="col" className={`${th} text-right`}>Used this card</th>
+                <th scope="col" className={`${th} text-right`}>Paid back</th>
+                <th scope="col" className={`${th} bg-[#FEFCE8] text-right text-[#92400E]`}>Will give back</th>
+                <th scope="col" className={th}>Due</th>
+                <th scope="col" className={`${th} text-right`}>Card balance after</th>
+                <th scope="col" className={`${th} bg-[#F0FDFA] text-right text-[#0F766E]`}>Available after</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-soft bg-[#FFF5F6]">
+                <th scope="row" className={`${td} text-left font-semibold text-[#BE123C]`}>Today</th>
+                <td className={`${td} text-right`}>—</td>
+                <td className={`${td} text-right`}>—</td>
+                <td className={`${td} bg-[#FEFCE8] text-right`}>—</td>
+                <td className={td}>—</td>
+                <td className={`${td} money text-right`}>{taka(bal)}</td>
+                <td className={`${td} money bg-[#F0FDFA] text-right text-[#0F766E]`}>{availNow != null ? taka(availNow) : "—"}</td>
+              </tr>
+              {userRows.map((p) => (
+                <tr key={p.id} className="border-b border-soft">
+                  <th scope="row" className="px-4 py-1.5 text-left">
+                    <PersonButton name={p.name} initials={p.initials} size={30} onClick={() => setOpenId(p.id)} />
+                  </th>
+                  <td className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
+                  <td className={`${td} text-right font-mono text-brand-2`}>{taka(p.paid)}</td>
+                  <td className={`${td} money bg-[#FEFCE8] text-right text-[#78350F]`}>{p.owes > 0 ? `− ${taka(p.owes)}` : "Paid in full"}</td>
+                  <td className={td}>{p.owes > 0 ? <DuePill kind={p.dueKind}>{p.dueShort}</DuePill> : "—"}</td>
+                  <td className={`${td} money text-right`}>{taka(p.run)}</td>
+                  <td className={`${td} money bg-[#F0FDFA] text-right text-[#0F766E]`}>{p.availAfter != null ? taka(p.availAfter) : "—"}</td>
+                </tr>
+              ))}
+              {userRows.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-500">Nobody else has used this card yet.</td></tr>
+              )}
+              <tr className="bg-brand text-white">
+                <th scope="row" className="px-4 py-3.5 text-left font-bold">AFTER EVERYONE PAYS</th>
+                <td className="px-4 py-3.5 text-right font-mono">{taka(othersUsed)}</td>
+                <td className="px-4 py-3.5 text-right font-mono">{taka(othersPaid)}</td>
+                <td className="money px-4 py-3.5 text-right">− {taka(owed)}</td>
+                <td className="px-4 py-3.5">—</td>
+                <td className="money px-4 py-3.5 text-right">{taka(share)}</td>
+                <td className="money px-4 py-3.5 text-right text-base">{availAfter != null ? taka(availAfter) : "Set limit"}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
 
       <SectionCard>
-        <SectionHead id="log-h" title="Who used this card"
+        <SectionHead id="log-h" title="Every card transaction"
           sub="Every transaction — who, when, why or where, and when they will pay it back. Tap a name to open their profile." />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-[14.5px]">
@@ -209,54 +289,14 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
         </div>
       </SectionCard>
 
-      <SectionCard>
-        <SectionHead id="owe-h" title="Who will bring money back"
-          sub="What each person still owes for this card, and how your own share of the bill shrinks as each one pays — biggest first" />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-[14.5px]">
-            <thead>
-              <tr className={theadRow}>
-                <th scope="col" className={th}>Person</th>
-                <th scope="col" className={`${th} text-right`}>Used this card</th>
-                <th scope="col" className={`${th} text-right`}>Paid back</th>
-                <th scope="col" className={`${th} bg-[#FEFCE8] text-right text-[#92400E]`}>Will give back</th>
-                <th scope="col" className={th}>Due</th>
-                <th scope="col" className={`${th} text-right`}>Your share after</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-soft bg-[#FFF5F6]">
-                <th scope="row" className={`${td} text-left font-semibold text-[#BE123C]`}>Card balance now</th>
-                <td className={`${td} text-right`}>—</td>
-                <td className={`${td} text-right`}>—</td>
-                <td className={`${td} bg-[#FEFCE8] text-right`}>—</td>
-                <td className={td}>Today</td>
-                <td className={`${td} money text-right`}>{taka(bal)}</td>
-              </tr>
-              {owingRows.map((p) => (
-                <tr key={p.id} className="border-b border-soft">
-                  <th scope="row" className="px-4 py-1.5 text-left">
-                    <PersonButton name={p.name} initials={p.initials} size={30} onClick={() => setOpenId(p.id)} />
-                  </th>
-                  <td className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
-                  <td className={`${td} text-right font-mono text-brand-2`}>{taka(p.paid)}</td>
-                  <td className={`${td} money bg-[#FEFCE8] text-right text-[#78350F]`}>− {taka(p.owes)}</td>
-                  <td className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
-                  <td className={`${td} money text-right text-brand-2`}>{taka(p.run)}</td>
-                </tr>
-              ))}
-              <tr className="bg-brand text-white">
-                <th scope="row" className="px-4 py-3.5 text-left font-bold">AFTER EVERYONE PAYS</th>
-                <td className="px-4 py-3.5 text-right font-mono">{taka(othersUsed)}</td>
-                <td className="px-4 py-3.5 text-right font-mono">{taka(othersPaid)}</td>
-                <td className="money px-4 py-3.5 text-right">− {taka(owed)}</td>
-                <td className="px-4 py-3.5">—</td>
-                <td className="money px-4 py-3.5 text-right text-base">{taka(share)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </SectionCard>
+      <ProfileSlider
+        title="Debtor profiles — this card"
+        sub="Everyone who used this card. Open a profile to see their full history."
+        tookLabel="USED"
+        items={profiles.map((p) => ({ ...p, took: p.used }))}
+        onOpen={setOpenId}
+        onAdd={() => openAdd()}
+      />
 
       {adding && (
         <AddDebtorDialog

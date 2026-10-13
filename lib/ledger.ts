@@ -63,9 +63,15 @@ export const DUE_PILL: Record<DueKind, string> = {
   later: "bg-[#DBEAFE] text-[#1D4ED8]",
 };
 
+/** Display names for the two card slots (routes stay /cards/1 and /cards/2). */
+export const CARD_NAMES: Record<1 | 2, string> = {
+  1: "City Bank Credit Card",
+  2: "Community Bank Credit Card",
+};
+
 export function cardLabel(card: Card | undefined) {
   if (!card) return "Card";
-  return `Card ${card.slot} · ${card.bank}`;
+  return CARD_NAMES[card.slot] ?? `${card.bank} Credit Card`;
 }
 
 export function cardTitle(card: Card) {
@@ -163,32 +169,54 @@ export type CardProfile = Omit<Profile, "events" | "reasons" | "status" | "due" 
   events: HistoryEvent[];
 };
 
-/** Profiles limited to one card: what each person used on it and paid back for it. */
+type Scope = { kind: "card"; cardId: string } | { kind: "loans" };
+
+/** Profiles limited to one card. */
 export function buildCardProfiles(data: FinanceData, cardId: string, today: string): CardProfile[] {
+  return buildScopedProfiles(data, { kind: "card", cardId }, today);
+}
+
+/** Profiles limited to bank loans — card use is kept on the card pages. */
+export function buildLoanProfiles(data: FinanceData, today: string): CardProfile[] {
+  return buildScopedProfiles(data, { kind: "loans" }, today);
+}
+
+/**
+ * Per-person totals for one money source only: a single card, or bank loans.
+ * `used` is what they took from that source; `owes` is what they still owe to it.
+ */
+function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): CardProfile[] {
   const base = new Map(buildProfiles(data, today).map((p) => [p.id, p]));
-  const uses = data.cardUses.filter((u) => u.card_id === cardId && u.person_id);
-  const repays = data.repayments.filter((r) => r.applies_to === "card" && r.card_id === cardId);
-  const ids = [...new Set([...uses.map((u) => u.person_id!), ...repays.map((r) => r.person_id)])];
+  const isCard = scope.kind === "card";
+  const takes = isCard
+    ? data.cardUses
+        .filter((u) => u.card_id === scope.cardId && u.person_id)
+        .map((u) => ({ id: u.id, person: u.person_id!, iso: u.used_on, created: u.created_at, amount: u.amount, due: u.due_on, reason: u.reason_or_place,
+          detail: `${u.reason_or_place} · #${u.category}${u.due_on ? ` · pay back by ${dateShort(u.due_on)}` : ""}` }))
+    : data.loans.map((l) => ({ id: l.id, person: l.person_id, iso: l.taken_on, created: l.created_at, amount: l.amount, due: l.due_on, reason: l.reason,
+        detail: `${l.reason} · ${l.method}${l.due_on ? ` · pay back by ${dateShort(l.due_on)}` : ""}` }));
+  const repays = data.repayments.filter((r) => (isCard ? r.applies_to === "card" && r.card_id === scope.cardId : r.applies_to === "loan"));
+  const ids = [...new Set([...takes.map((t) => t.person), ...repays.map((r) => r.person_id)])];
 
   return ids
     .filter((id) => base.has(id))
     .map((id) => {
       const p = base.get(id)!;
-      const U = uses.filter((u) => u.person_id === id);
+      const U = takes.filter((u) => u.person === id);
       const R = repays.filter((r) => r.person_id === id);
       const used = U.reduce((t, x) => t + x.amount, 0);
       const paid = R.reduce((t, x) => t + x.amount, 0);
       const owes = Math.max(used - paid, 0);
 
-      const dues = U.map((u) => u.due_on).filter((d): d is string => !!d).sort();
+      const dues = U.map((u) => u.due).filter((d): d is string => !!d).sort();
       const late = dues.filter((d) => d < today);
       const due = owes > 0 ? (late.length ? late[late.length - 1] : dues[0] ?? null) : null;
       const status: Status = owes <= 0 ? "Repaid" : due && due < today ? "Overdue" : paid > 0 ? "Partially Paid" : "Pending";
 
       const raw = [
         ...U.map((x) => ({
-          id: x.id, iso: x.used_on, created: x.created_at, o: 0, kind: "Used my card" as const, amount: x.amount, sign: 1 as const,
-          detail: `${x.reason_or_place} · #${x.category}${x.due_on ? ` · pay back by ${dateShort(x.due_on)}` : ""}`,
+          id: x.id, iso: x.iso, created: x.created, o: 0, kind: (isCard ? "Used my card" : "Took loan") as EventKind,
+          amount: x.amount, sign: 1 as const, detail: x.detail,
         })),
         ...R.map((x) => ({
           id: x.id, iso: x.paid_on, created: x.created_at, o: 1, kind: "Paid back" as const, amount: x.amount, sign: -1 as const,
@@ -207,11 +235,13 @@ export function buildCardProfiles(data: FinanceData, cardId: string, today: stri
       return {
         ...p,
         used, useCount: U.length, paid, payCount: R.length, owes, taken: used,
+        loanOut: isCard ? 0 : owes,
+        cardOut: isCard ? owes : 0,
         pct: pct(paid, used),
         status, due, ...dueInfo(due, owes, today),
         lastIso: raw.length ? raw[raw.length - 1].iso : null,
         txCount: raw.length,
-        reasons: U.map((u) => u.reason_or_place),
+        reasons: U.map((u) => u.reason),
         events,
       };
     });

@@ -47,10 +47,15 @@ export function ProfileModal({
   onMore: () => void;
   onSaved: (msg: string) => void;
 }) {
+  // Bank and card pages each show one money source only; "all" (Debtors, Overview) shows everything.
   const isCard = variant === "card" && !!card;
+  const isBank = variant === "bank";
+  const scoped = isCard || isBank;
   const targets: RepayTarget[] = isCard
     ? [{ key: card!.id, label: "This card", appliesTo: "card", cardId: card!.id, max: p.owes }]
-    : repayTargets(p, cards);
+    : isBank
+      ? [{ key: "loan", label: "Loan", appliesTo: "loan", cardId: null, max: p.owes }]
+      : repayTargets(p, cards);
 
   return (
     <Modal
@@ -63,7 +68,7 @@ export function ProfileModal({
           <div className="min-w-0 flex-auto">
             <h2 id={id} className="m-0 text-[22px] font-bold">{p.name}</h2>
             <div className="text-sm text-mint">
-              Debtor profile{isCard ? ` · ${cardTitle(card!)}` : ""} · {p.dueText}
+              Debtor profile{isCard ? ` · ${cardTitle(card!)}` : isBank && account ? ` · ${account.name}` : ""} · {p.dueText}
             </div>
           </div>
           <StatusPill status={p.status} className="px-3 py-1 text-[13px]" />
@@ -81,11 +86,11 @@ export function ProfileModal({
     >
       <div className="flex flex-col gap-[18px] p-5">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5">
-          {isCard ? (
+          {scoped ? (
             <>
-              <Stat label="USED THIS CARD" value={taka((p as CardProfile).used)} sub={`${(p as CardProfile).useCount} times`} line="#3B82F6" />
+              <Stat label={isCard ? "USED THIS CARD" : "TOOK AS LOANS"} value={taka((p as CardProfile).used)} sub={`${(p as CardProfile).useCount} times`} line={isCard ? "#3B82F6" : "#6366F1"} />
               <Stat label="PAID BACK" value={taka(p.paid)} sub={`${p.payCount} payments`} line="#14B8A6" valueClass="text-brand-2" />
-              <Stat label="STILL OWES" value={taka(p.owes)} sub={`of ${taka((p as CardProfile).used)} used`} line="#F59E0B" warn valueClass="text-[#92400E]" />
+              <Stat label="STILL OWES" value={taka(p.owes)} sub={`of ${taka((p as CardProfile).used)} ${isCard ? "used" : "taken"}`} line="#F59E0B" warn valueClass="text-[#92400E]" />
             </>
           ) : (
             <>

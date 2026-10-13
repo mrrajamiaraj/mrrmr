@@ -10,7 +10,7 @@ import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow } from "@/components/debtors/bits";
 import { SetupAccount } from "@/components/setup-forms";
 import { setAccountBalance } from "@/lib/actions";
-import { buildProfiles, byOwesThenName } from "@/lib/ledger";
+import { buildLoanProfiles, byOwesThenName } from "@/lib/ledger";
 import { dateLong, initials, pct, taka, timestampLong } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
 
@@ -20,7 +20,8 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
   const [adding, setAdding] = useState<{ prefill: string } | null>(null);
   const [flash, setFlash] = useState({ text: "", personId: "" });
 
-  const profiles = useMemo(() => buildProfiles(data, today).sort(byOwesThenName), [data, today]);
+  // Loans only: credit-card use and its repayments live on the card pages, not in the bank balance.
+  const profiles = useMemo(() => buildLoanProfiles(data, today).sort(byOwesThenName), [data, today]);
 
   if (!account) {
     return (
@@ -35,9 +36,9 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
   const owing = profiles.filter((p) => p.owes > 0);
   let run = now;
   const owingRows = owing.map((p) => ({ ...p, run: (run += p.owes) }));
-  const loanOut = owing.reduce((s, p) => s + p.loanOut, 0);
-  const cardOut = owing.reduce((s, p) => s + p.cardOut, 0);
   const owed = owing.reduce((s, p) => s + p.owes, 0);
+  const lentTotal = owing.reduce((s, p) => s + p.used, 0);
+  const paidTotal = owing.reduce((s, p) => s + p.paid, 0);
   const after = now + owed;
   const inHand = after ? pct(now, after, 1) : 100;
   const outPct = Math.round((100 - inHand) * 10) / 10;
@@ -75,7 +76,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
         <div className="flex flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border border-[#FDE68A] border-b-4 border-b-[#F59E0B] bg-[#FFFBEB] p-[22px]">
           <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700">People owe you</div>
           <div className="money text-[clamp(28px,3.4vw,38px)] text-[#92400E]">{taka(owed)}</div>
-          <div className="text-sm text-[#92400E]">{owing.length} people · loans {taka(loanOut)} + card use {taka(cardOut)}</div>
+          <div className="text-sm text-[#92400E]">{owing.length} people still owe on loans from this account</div>
         </div>
         <EqSign>=</EqSign>
         <div className="flex flex-[1_1_300px] flex-col gap-2.5 rounded-2xl bg-brand p-[22px] text-white">
@@ -101,7 +102,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
       <ProfileSlider
         title="Debtor profiles"
         sub="Everyone who has taken money from you. Open a profile to see their full history."
-        items={profiles.map((p) => ({ ...p, took: p.taken }))}
+        items={profiles.map((p) => ({ ...p, took: p.used }))}
         onOpen={open}
         onAdd={() => setAdding({ prefill: "" })}
       />
@@ -155,8 +156,8 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Person</th>
-                <th scope="col" className={`${th} text-right`}>Loan still owed</th>
-                <th scope="col" className={`${th} text-right`}>Card use still owed</th>
+                <th scope="col" className={`${th} text-right`}>Took</th>
+                <th scope="col" className={`${th} text-right`}>Paid back</th>
                 <th scope="col" className={`${th} bg-[#FEFCE8] text-right text-[#92400E]`}>Will give back</th>
                 <th scope="col" className={th}>Due</th>
                 <th scope="col" className={`${th} text-right`}>Bank balance after</th>
@@ -176,8 +177,8 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                   <th scope="row" className="px-4 py-1.5 text-left">
                     <PersonButton name={p.name} initials={p.initials} size={30} onClick={() => open(p.id)} />
                   </th>
-                  <td className={`${td} text-right font-mono text-slate-600`}>{p.loanOut ? taka(p.loanOut) : "—"}</td>
-                  <td className={`${td} text-right font-mono text-slate-600`}>{p.cardOut ? taka(p.cardOut) : "—"}</td>
+                  <td className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
+                  <td className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
                   <td className={`${td} money bg-[#FEFCE8] text-right text-[#78350F]`}>+ {taka(p.owes)}</td>
                   <td className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
                   <td className={`${td} money text-right text-brand-2`}>{taka(p.run)}</td>
@@ -185,8 +186,8 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
               ))}
               <tr className="bg-brand text-white">
                 <th scope="row" className="px-4 py-3.5 text-left font-bold">AFTER EVERYONE PAYS</th>
-                <td className="px-4 py-3.5 text-right font-mono">{taka(loanOut)}</td>
-                <td className="px-4 py-3.5 text-right font-mono">{taka(cardOut)}</td>
+                <td className="px-4 py-3.5 text-right font-mono">{taka(lentTotal)}</td>
+                <td className="px-4 py-3.5 text-right font-mono">{taka(paidTotal)}</td>
                 <td className="money px-4 py-3.5 text-right">+ {taka(owed)}</td>
                 <td className="px-4 py-3.5">—</td>
                 <td className="money px-4 py-3.5 text-right text-base">{taka(after)}</td>

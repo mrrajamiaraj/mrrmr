@@ -9,7 +9,9 @@ Supabase (`@supabase/ssr`). Amounts are Bangladeshi Taka with Indian grouping (�
 | Overview | `/` | `design/Main.dc.html` |
 | Bank Account | `/account` | `design/Accounts.dc.html` |
 | Debtors & Loans | `/debtors` | `design/Lending.dc.html` |
-| Credit Card 1 / 2 | `/cards/1`, `/cards/2` | `design/Cards.dc.html`, `design/Card2.dc.html` |
+| City Bank Credit Card | `/cards/1` | `design/Cards.dc.html` |
+| Community Bank Credit Card | `/cards/2` | `design/Card2.dc.html` |
+| Research Finance Ledger | `/research` | screenshots of the Google Sheets dashboard |
 | Admin password dialog | header, every page | `design/AdminButton.dc.html` |
 | CSV backup | `/export` (“Export CSV” in the nav) | — |
 
@@ -23,6 +25,8 @@ kept for reference — don't run it again).
    `add_card_use`, `record_repayment`, `find_or_create_person`) and changes no tables. They let the app insert a
    row and move a balance in a single transaction, so balances never drift. They run as the signed-in user, so RLS
    still applies.
+   Then do the same with `supabase/migrations/0003_research_ledger.sql`, which creates the two Research tables
+   (`research_expenses`, `research_contributions`) with the same owner-only RLS.
 2. **Create your login.** Authentication → Users → Add user → enter your email and a password, tick
    “Auto Confirm User”. Then Authentication → Sign In / Providers → turn **off** “Allow new users to sign up”, so
    nobody else can create an account on your deployed site.
@@ -70,9 +74,11 @@ You can run it by hand from the Actions tab (“Run workflow”) to check it wor
 
 ## How the money logic works
 
-- **Bank Account:** money now + what people owe = balance after everyone pays back. “Add Debtor” finds or
-  creates the person, inserts a loan, and (if ticked) takes the amount out of the account balance — all in one
-  `add_loan` call. Repayments recorded here are added to the account balance.
+- **Bank account and cards are kept separate.** The bank page only counts loans; card use and card
+  repayments only ever touch that card's balance, never the bank balance.
+- **Bank Account:** money now + what people owe on loans = balance after everyone pays back. “Add Debtor”
+  finds or creates the person, inserts a loan, and (if ticked) takes the amount out of the account balance — all
+  in one `add_loan` call. Loan repayments recorded here are added to the account balance.
 - **Credit cards:** card balance − what people owe for this card = your own share. “Add Debtor” inserts a
   `card_use` (type **Me** as the name for your own spending) and optionally adds it to the card balance.
   Repayments can optionally lower the card balance.

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { createAccount, createCard, updateCardDetails } from "@/lib/actions";
 import { ErrorBox, Modal, btnGhost, btnPrimary } from "@/components/modal";
+import { CARD_NAMES } from "@/lib/ledger";
 import type { Card } from "@/lib/types";
 
 function Panel({ title, sub, children }: { title: string; sub: string; children: React.ReactNode }) {
@@ -58,7 +59,7 @@ export function SetupCard({ slot }: { slot: 1 | 2 }) {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   return (
-    <Panel title={`Set up Credit Card ${slot}`} sub="This card is not in the database yet. Add it once and the page fills in.">
+    <Panel title={`Set up your ${CARD_NAMES[slot]}`} sub="This card is not in the database yet. Add it once and the page fills in.">
       <form
         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
         onSubmit={(e) => {

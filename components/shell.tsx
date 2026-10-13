@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminButton } from "@/components/admin-button";
 import { DownloadIcon } from "@/components/icons";
+import { CARD_NAMES } from "@/lib/ledger";
 
 type AdminInfo = { email: string; lastChanged: string };
 const AdminContext = createContext<AdminInfo>({ email: "", lastChanged: "—" });
@@ -17,8 +18,9 @@ const TABS = [
   { href: "/", label: "Overview" },
   { href: "/account", label: "Bank Account" },
   { href: "/debtors", label: "Debtors & Loans" },
-  { href: "/cards/1", label: "Credit Card 1" },
-  { href: "/cards/2", label: "Credit Card 2" },
+  { href: "/cards/1", label: CARD_NAMES[1] },
+  { href: "/cards/2", label: CARD_NAMES[2] },
+  { href: "/research", label: "Research Finance" },
 ];
 
 /** Gradient header + section nav from the designs. Each page supplies its icon, subtitle and buttons. */

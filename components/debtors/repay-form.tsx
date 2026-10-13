@@ -61,8 +61,11 @@ export function RepayForm({
       return setError(
         `${first} only owes ${taka(target.max)}${mode === "card" ? " for this card" : target.appliesTo === "loan" ? " on loans" : " for that card"}.`
       );
-    const addToAccount = !!account && (mode === "bank" || (mode === "all" && toAccount));
-    const lowerCard = mode === "card" && toBill;
+    // Bank and cards are kept separate: loan repayments can go into the bank,
+    // card repayments can only lower that card's balance.
+    const forLoan = target.appliesTo === "loan";
+    const addToAccount = forLoan && !!account && (mode === "bank" || (mode === "all" && toAccount));
+    const lowerCard = !forLoan && (mode === "card" || mode === "all") && toBill;
     start(async () => {
       const r = await recordRepayment({
         personId, amount: n, via, paidOn: date,
@@ -113,13 +116,13 @@ export function RepayForm({
         </button>
       </div>
       {mode === "bank" && account && <div className="text-[13px] text-slate-600">The amount is added to your {account.name} balance.</div>}
-      {mode === "all" && account && (
+      {mode === "all" && account && target.appliesTo === "loan" && (
         <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-sm">
           <input type="checkbox" checked={toAccount} onChange={() => setToAccount(!toAccount)} className="size-[18px] accent-brand-2" />
           Add this money to my {account.name} balance
         </label>
       )}
-      {mode === "card" && (
+      {(mode === "card" || (mode === "all" && target.appliesTo === "card")) && (
         <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-sm">
           <input type="checkbox" checked={toBill} onChange={() => setToBill(!toBill)} className="size-[18px] accent-brand-2" />
           Put this money toward the card bill (lowers the card balance)
