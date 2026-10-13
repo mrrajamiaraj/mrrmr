@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal, CloseButton } from "@/components/modal";
-import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
+import { ClearHistoryDialog, DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
 import type { RecordKind } from "@/lib/actions";
 import { Avatar, StatusPill } from "@/components/debtors/bits";
 import { RepayForm, repayTargets, type RepayTarget } from "@/components/debtors/repay-form";
@@ -55,6 +55,7 @@ export function ProfileModal({
   const isBank = variant === "bank";
   const scoped = isCard || isBank;
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
+  const [clearing, setClearing] = useState(false);
   const bankName = account?.name ?? "the bank account";
   const cardName = isCard ? CARD_NAMES[card!.slot] : "the card";
   const KIND: Record<EventKind, RecordKind> = { "Took loan": "loan", "Used my card": "card_use", "Paid back": "repayment" };
@@ -75,6 +76,13 @@ export function ProfileModal({
     return (
       <DeleteRecordDialog target={deleting} onClose={() => setDeleting(null)}
         onDone={(text) => { setDeleting(null); onSaved(text); }} />
+    );
+  }
+  if (clearing) {
+    return (
+      <ClearHistoryDialog name={p.name} records={p.events.map((e) => ({ kind: KIND[e.kind], id: e.id }))}
+        onClose={() => setClearing(false)}
+        onDone={(text) => { setClearing(false); onSaved(text); }} />
     );
   }
 
@@ -150,7 +158,15 @@ export function ProfileModal({
         )}
 
         <div className="flex flex-col gap-2">
-          <h3 className="m-0 text-[15px] font-bold uppercase tracking-[0.04em]">Full history</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="m-0 text-[15px] font-bold uppercase tracking-[0.04em]">Full history</h3>
+            {p.events.length > 0 && (
+              <button type="button" onClick={() => setClearing(true)}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 text-sm font-semibold text-[#B91C1C] hover:bg-[#FEE2E2]">
+                Clear history
+              </button>
+            )}
+          </div>
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full min-w-[620px] border-collapse text-sm">
               <thead>

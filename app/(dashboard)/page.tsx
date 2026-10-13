@@ -1,8 +1,6 @@
-import { loadFinance } from "@/lib/data";
-import { todayIso } from "@/lib/format";
-import { OverviewView } from "./overview-view";
+import { redirect } from "next/navigation";
 
-export default async function OverviewPage() {
-  const data = await loadFinance();
-  return <OverviewView data={data} today={todayIso()} />;
+// There is no Overview page any more: the Bank Account page is the home page.
+export default function HomePage() {
+  redirect("/account");
 }

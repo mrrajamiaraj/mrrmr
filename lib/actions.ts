@@ -230,6 +230,28 @@ export async function deleteRecord(kind: RecordKind, id: string, undoBalance: bo
   return done(error);
 }
 
+/**
+ * Permanently deletes several records (e.g. a person's whole history), each via delete_record.
+ * Every record is its own transaction, so a failure part-way leaves the ones already deleted consistent.
+ */
+export async function deleteRecords(
+  records: { kind: RecordKind; id: string }[],
+  undoBalance: boolean
+): Promise<ActionResult> {
+  if (records.some((r) => !["loan", "card_use", "repayment"].includes(r.kind))) return { error: "Unknown record type." };
+  const supabase = await createClient();
+  let deleted = 0;
+  for (const r of records) {
+    const { error } = await supabase.rpc("delete_record", { p_kind: r.kind, p_id: r.id, p_undo_balance: undoBalance });
+    if (error) {
+      revalidatePath("/", "layout");
+      return { error: `${deleted} of ${records.length} records were deleted, then: ${friendly(error)}` };
+    }
+    deleted++;
+  }
+  return done(null);
+}
+
 // ---- admin password ---------------------------------------------------------
 
 export async function changePassword(current: string, next: string, confirm: string): Promise<ActionResult> {

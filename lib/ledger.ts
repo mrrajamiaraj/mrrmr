@@ -56,7 +56,6 @@ export const STATUS_PILL: Record<Status, string> = {
   Pending: "bg-[#DBEAFE] text-[#1D4ED8]",
   "Partially Paid": "bg-[#FEF3C7] text-[#92400E]",
   Repaid: "bg-[#D1FAE5] text-[#065F46]",
-  Overdue: "bg-[#FEE2E2] text-[#B91C1C]",
 };
 
 export const DUE_PILL: Record<DueKind, string> = {
@@ -139,7 +138,7 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
       })
       .reverse();
 
-    const status: Status = s?.status ?? (owes <= 0 ? "Repaid" : paid > 0 ? "Partially Paid" : "Pending");
+    const status: Status = s && s.status !== "Overdue" ? s.status : owes <= 0 ? "Repaid" : paid > 0 ? "Partially Paid" : "Pending";
     const due = owes > 0 ? s?.next_due ?? null : null;
 
     return {
@@ -214,7 +213,7 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
       const dues = U.map((u) => u.due).filter((d): d is string => !!d).sort();
       const late = dues.filter((d) => d < today);
       const due = owes > 0 ? (late.length ? late[late.length - 1] : dues[0] ?? null) : null;
-      const status: Status = owes <= 0 ? "Repaid" : due && due < today ? "Overdue" : paid > 0 ? "Partially Paid" : "Pending";
+      const status: Status = owes <= 0 ? "Repaid" : paid > 0 ? "Partially Paid" : "Pending";
 
       const raw = [
         ...U.map((x) => ({

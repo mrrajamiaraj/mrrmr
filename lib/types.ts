@@ -1,4 +1,4 @@
-export type Status = "Pending" | "Partially Paid" | "Repaid" | "Overdue";
+export type Status = "Pending" | "Partially Paid" | "Repaid";
 
 export type Account = {
   id: string;
@@ -80,7 +80,8 @@ export type DebtorSummary = {
   last_paid_on: string | null;
   still_owes: number;
   next_due: string | null;
-  status: Status;
+  /** The view can still return 'Overdue'; the app shows those people as Pending / Partially Paid. */
+  status: Status | "Overdue";
 };
 
 export type FinanceData = {

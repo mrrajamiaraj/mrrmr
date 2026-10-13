@@ -15,7 +15,6 @@ export function AdminProvider({ value, children }: { value: AdminInfo; children:
 }
 
 const TABS = [
-  { href: "/", label: "Overview" },
   { href: "/account", label: "Bank Account" },
   { href: "/debtors", label: "Debtors & Loans" },
   { href: "/cards/1", label: CARD_NAMES[1] },
@@ -61,7 +60,7 @@ export function Shell({
       <nav aria-label="Sections" className="border-b border-line bg-white px-[clamp(16px,4vw,48px)]">
         <div className="mx-auto flex max-w-[1240px] items-center gap-2 overflow-x-auto py-2.5">
           {TABS.map((t) => {
-            const on = t.href === "/" ? path === "/" : path.startsWith(t.href);
+            const on = path.startsWith(t.href);
             return (
               <Link
                 key={t.href}

@@ -15,7 +15,7 @@ import type { FinanceData, Status } from "@/lib/types";
 
 type Tab = "portfolio" | "table" | "ledger";
 type TypeF = "ALL" | "LENT" | "REPAID";
-const STATUSES: ("All" | Status)[] = ["All", "Pending", "Partially Paid", "Repaid", "Overdue"];
+const STATUSES: ("All" | Status)[] = ["All", "Pending", "Partially Paid", "Repaid"];
 const LEDGER_TYPE: Record<EventKind, { label: string; color: string; bg: string }> = {
   "Took loan": { label: "Money lent", color: "#B45309", bg: "#FEF3C7" },
   "Used my card": { label: "Card use", color: "#1D4ED8", bg: "#DBEAFE" },
@@ -59,8 +59,6 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
   const totLent = all.reduce((s, p) => s + p.taken, 0);
   const totRepaid = all.reduce((s, p) => s + p.paid, 0);
   const totOwes = all.reduce((s, p) => s + p.owes, 0);
-  const overdue = all.filter((p) => p.status === "Overdue");
-  const overdueAmt = overdue.reduce((s, p) => s + p.owes, 0);
   const pTot = people.reduce(
     (s, p) => ({ lent: s.lent + p.taken, rep: s.rep + p.paid, left: s.left + p.owes, loans: s.loans + p.loanCount + p.cardCount }),
     { lent: 0, rep: 0, left: 0, loans: 0 }
@@ -69,9 +67,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
   const kpis = [
     { label: "Money lent", value: taka(totLent), sub: "Loans + card use by others", glyph: "↗", line: "#6366F1", soft: "#E0E7FF", ink: "#4338CA", bg: "#FFFFFF", border: "#E5E7EB", val: "#0F172A", subC: "#64748B" },
     { label: "Repaid back", value: taka(totRepaid), sub: `${pct(totRepaid, totLent, 1)}% recovered`, glyph: "↙", line: "#14B8A6", soft: "#CCFBF1", ink: "#0F766E", bg: "#FFFFFF", border: "#E5E7EB", val: "#0F172A", subC: "#0F766E" },
-    { label: "Outstanding due", value: taka(totOwes), sub: `● ${all.filter((p) => p.owes > 0).length} people still owe`, glyph: "!", line: "#F59E0B", soft: "#FEF3C7", ink: "#B45309", bg: "#FFFBEB", border: "#FDE68A", val: "#92400E", subC: "#92400E" },
-    { label: "Overdue", value: taka(overdueAmt), sub: `${overdue.length} ${overdue.length === 1 ? "person" : "people"} past due date`, glyph: "!!", line: "#EF4444", soft: "#FEE2E2", ink: "#B91C1C", bg: "#FFF5F5", border: "#FECACA", val: "#991B1B", subC: "#B91C1C" },
-  ];
+    { label: "Outstanding due", value: taka(totOwes), sub: `● ${all.filter((p) => p.owes > 0).length} people still owe`, glyph: "!", line: "#F59E0B", soft: "#FEF3C7", ink: "#B45309", bg: "#FFFBEB", border: "#FDE68A", val: "#92400E", subC: "#92400E" },  ];
 
   const tabs: [Tab, string][] = [
     ["portfolio", "Debtor Portfolio"],

@@ -6,8 +6,7 @@ Supabase (`@supabase/ssr`). Amounts are Bangladeshi Taka with Indian grouping (�
 
 | Page | Route | Design |
 | --- | --- | --- |
-| Overview | `/` | `design/Main.dc.html` |
-| Bank Account | `/account` | `design/Accounts.dc.html` |
+| Bank Account (home; `/` redirects here) | `/account` | `design/Accounts.dc.html` |
 | Debtors & Loans | `/debtors` | `design/Lending.dc.html` |
 | City Bank Credit Card | `/cards/1` | `design/Cards.dc.html` |
 | Community Bank Credit Card | `/cards/2` | `design/Card2.dc.html` |
@@ -85,7 +84,7 @@ You can run it by hand from the Actions tab (“Run workflow”) to check it wor
 - **Credit cards:** card balance − what people owe for this card = your own share. “Add Debtor” inserts a
   `card_use` (type **Me** as the name for your own spending) and optionally adds it to the card balance.
   Repayments can optionally lower the card balance.
-- **Debtors & Loans:** totals, status (Pending / Partially Paid / Repaid / Overdue) and next due date come from
+- **Debtors & Loans:** totals, status (Pending / Partially Paid / Repaid — the view's 'Overdue' is shown as Pending or Partially Paid) and next due date come from
   the `debtor_summary` view. “Borrowed” there means loans + card use by that person.
 - **Overview → monthly summary:** there is no income/expense table, so the monthly table shows what the data
   does have: money lent, others' card use, your own card spending, money recovered, and the net per month.

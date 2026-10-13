@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Shell, HeaderButton } from "@/components/shell";
 import { CardIcon, PencilIcon, PersonIcon } from "@/components/icons";
 import { BalanceEditor, EqSign } from "@/components/balance-editor";
+import { ProfileSlider } from "@/components/debtors/profile-slider";
 import { ProfileModal } from "@/components/debtors/profile-modal";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow } from "@/components/debtors/bits";
@@ -121,6 +122,15 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       )}
 
       <Flash text={flash.text} />
+
+      <ProfileSlider
+        title="Debtor profiles"
+        sub={`Everyone who has used your ${CARD_NAMES[slot]}. Open a profile to see their full history.`}
+        tookLabel="USED"
+        items={profiles.map((p) => ({ ...p, took: p.used }))}
+        onOpen={setOpenId}
+        onAdd={() => openAdd()}
+      />
 
       <SectionCard>
         <SectionHead id="owe-h" title="Who will bring money back"

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Modal, ErrorBox, btnGhost } from "@/components/modal";
 import { TrashIcon } from "@/components/icons";
-import { deleteRecord, type RecordKind } from "@/lib/actions";
+import { deleteRecord, deleteRecords, type RecordKind } from "@/lib/actions";
 import { dateLong, taka } from "@/lib/format";
 
 export type DeleteTarget = {
@@ -78,6 +78,57 @@ export function DeleteRecordDialog({ target: t, onClose, onDone }: {
             </span>
           </label>
         )}
+        {error && <ErrorBox>{error}</ErrorBox>}
+      </div>
+    </Modal>
+  );
+}
+
+/** Deletes every record in one person's history at once. */
+export function ClearHistoryDialog({ name, records, onClose, onDone }: {
+  name: string;
+  records: { kind: RecordKind; id: string }[];
+  onClose: () => void;
+  onDone: (msg: string) => void;
+}) {
+  const [undo, setUndo] = useState(false);
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const n = records.length;
+
+  function run() {
+    start(async () => {
+      const r = await deleteRecords(records, undo);
+      if (r.error) return setError(r.error);
+      onDone(`Cleared ${n} record${n === 1 ? "" : "s"} from ${name}'s history${undo ? " and updated the balances" : ""}.`);
+    });
+  }
+
+  return (
+    <Modal title="Clear all history?" onClose={onClose} maxWidth={500}
+      footer={<>
+        <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
+        <button type="button" disabled={pending} onClick={run}
+          className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-[#B91C1C] px-5 text-[15px] font-semibold text-white">
+          <TrashIcon size={16} />
+          {pending ? "Clearing…" : `Clear ${n} record${n === 1 ? "" : "s"}`}
+        </button>
+      </>}>
+      <div className="flex flex-col gap-3.5 p-5 text-[15px]">
+        <p className="m-0">
+          This permanently deletes all <strong>{n}</strong> record{n === 1 ? "" : "s"} shown in {name}&apos;s history and
+          removes them from every page and every total. {name} stays in your list so you can add new records later.{" "}
+          <strong>It cannot be undone</strong> — export a CSV first if you want a copy.
+        </p>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-3.5">
+          <input type="checkbox" checked={undo} onChange={(e) => setUndo(e.target.checked)} className="mt-1 size-5 flex-none accent-[#B91C1C]" />
+          <span>
+            <span className="block font-semibold">Also undo their effect on the bank and card balances</span>
+            <span className="block text-sm text-[#92400E]">
+              Tick this only if the balances changed when you saved these records. Leave it unticked to just remove them from history.
+            </span>
+          </span>
+        </label>
         {error && <ErrorBox>{error}</ErrorBox>}
       </div>
     </Modal>
