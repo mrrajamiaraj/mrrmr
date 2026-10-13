@@ -46,6 +46,10 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const owing = profiles.filter((p) => p.owes > 0);
   const owed = owing.reduce((s, p) => s + p.owes, 0);
   const availAfter = availNow != null ? Math.min(availNow + owed, limit!) : null;
+  let run = availNow ?? 0;
+  const owingRows = owing.map((p) => ({ ...p, run: availNow != null ? Math.min((run += p.owes), limit!) : null }));
+  const usedTotal = owing.reduce((s, p) => s + p.used, 0);
+  const paidTotal = owing.reduce((s, p) => s + p.paid, 0);
 
   const peopleById = new Map(data.people.map((p) => [p.id, p]));
   const uses = data.cardUses.filter((u) => u.card_id === card.id);
@@ -69,22 +73,11 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
         </HeaderButton>
       }
     >
-      <section aria-label="Card summary" className="flex flex-wrap items-stretch gap-3.5">
-        <div className="flex flex-[1_1_220px] flex-col gap-2.5 rounded-2xl border border-line border-b-4 border-b-slate-500 bg-white p-[22px]">
-          <div className="flex items-center justify-between gap-2">
-            <span className={label}>Credit limit</span>
-            <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-semibold text-slate-700">
-              <PencilIcon size={14} />
-              {limit != null ? "Change" : "Set limit"}
-            </button>
-          </div>
-          <div className={big}>{limit != null ? taka(limit) : "Not set"}</div>
-        </div>
-
+      <section aria-label="Available now and after repayment" className="flex flex-wrap items-stretch gap-3.5">
         {limit != null ? (
           <BalanceEditor
             tone="bank"
-            label="Available now"
+            label={`${CARD_NAMES[slot]} — available now`}
             inputLabel="Available balance now (৳)"
             value={availNow!}
             footnote={`Updated ${timestampLong(card.updated_at)}`}
@@ -94,59 +87,85 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
             }}
           />
         ) : (
-          <div className="flex flex-[1_1_220px] flex-col gap-2.5 rounded-2xl border border-line bg-white p-[22px]">
-            <span className={label}>Available now</span>
+          <div className="flex flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border border-line bg-white p-[22px]">
+            <span className={label}>{CARD_NAMES[slot]} — available now</span>
             <div className={`${big} text-slate-400`}>—</div>
-            <div className="text-sm text-slate-600">Set the credit limit first</div>
+            <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 w-fit items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-semibold text-slate-700">
+              <PencilIcon size={14} />
+              Set credit limit first
+            </button>
           </div>
         )}
-
         <EqSign>+</EqSign>
-        <div className="flex flex-[1_1_220px] flex-col gap-2.5 rounded-2xl border border-[#FDE68A] border-b-4 border-b-[#F59E0B] bg-[#FFFBEB] p-[22px]">
-          <span className={label}>People will give back</span>
+        <div className="flex flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border border-[#FDE68A] border-b-4 border-b-[#F59E0B] bg-[#FFFBEB] p-[22px]">
+          <span className={label}>People owe you</span>
           <div className={`${big} text-[#92400E]`}>{taka(owed)}</div>
-          <div className="text-sm text-[#92400E]">{owing.length} {owing.length === 1 ? "person" : "people"}</div>
+          <div className="text-sm text-[#92400E]">{owing.length} people still owe on this card</div>
         </div>
         <EqSign>=</EqSign>
-        <div className="flex flex-[1_1_240px] flex-col gap-2.5 rounded-2xl bg-brand p-[22px] text-white">
-          <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-mint">Available after</span>
+        <div className="flex flex-[1_1_300px] flex-col gap-2.5 rounded-2xl bg-brand p-[22px] text-white">
+          <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-mint">After everyone pays you back</span>
           <div className={big}>{availAfter != null ? taka(availAfter) : "—"}</div>
-          <div className="text-sm text-mint">Once everyone pays you back</div>
+          <div className="text-sm text-mint">Your available balance once all money comes back</div>
         </div>
       </section>
+
+      {limit != null && (
+        <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-600">
+          Credit limit: <span className="money text-slate-800">{taka(limit)}</span>
+          <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line px-3 font-semibold text-slate-700">
+            <PencilIcon size={14} />
+            Change
+          </button>
+        </div>
+      )}
 
       <Flash text={flash.text} />
 
       <SectionCard>
-        <SectionHead id="owe-h" title="Who will give money back" sub="Tap a name to record a repayment or see their history." />
+        <SectionHead id="owe-h" title="Who will bring money back"
+          sub="Each person's amount still owed, and what your available balance becomes as each one pays — biggest first. Tap a name to record a repayment." />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] border-collapse text-[14.5px]">
+          <table className="w-full min-w-[820px] border-collapse text-[14.5px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Person</th>
-                <th scope="col" className={`${th} text-right`}>Will give back</th>
-                <th scope="col" className={th}>Pay back by</th>
+                <th scope="col" className={`${th} text-right`}>Used</th>
+                <th scope="col" className={`${th} text-right`}>Paid back</th>
+                <th scope="col" className={`${th} bg-[#FEFCE8] text-right text-[#92400E]`}>Will give back</th>
+                <th scope="col" className={th}>Due</th>
+                <th scope="col" className={`${th} text-right`}>Available after</th>
               </tr>
             </thead>
             <tbody>
-              {owing.map((p) => (
+              <tr className="border-b border-soft bg-[#F0FDF4]">
+                <th scope="row" className={`${td} text-left font-semibold text-[#047857]`}>Now</th>
+                <td className={`${td} text-right`}>—</td>
+                <td className={`${td} text-right`}>—</td>
+                <td className={`${td} bg-[#FEFCE8] text-right`}>—</td>
+                <td className={td}>Today</td>
+                <td className={`${td} money text-right`}>{availNow != null ? taka(availNow) : "—"}</td>
+              </tr>
+              {owingRows.map((p) => (
                 <tr key={p.id} className="border-b border-soft">
                   <th scope="row" className="px-4 py-1.5 text-left">
                     <PersonButton name={p.name} initials={p.initials} size={30} onClick={() => setOpenId(p.id)} />
                   </th>
-                  <td className={`${td} money text-right text-[#92400E]`}>{taka(p.owes)}</td>
+                  <td className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
+                  <td className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
+                  <td className={`${td} money bg-[#FEFCE8] text-right text-[#78350F]`}>+ {taka(p.owes)}</td>
                   <td className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
+                  <td className={`${td} money text-right text-brand-2`}>{p.run != null ? taka(p.run) : "—"}</td>
                 </tr>
               ))}
-              {owing.length === 0 ? (
-                <tr><td colSpan={3} className="px-4 py-6 text-center text-slate-500">Nobody owes money on this card.</td></tr>
-              ) : (
-                <tr className="bg-brand text-white">
-                  <th scope="row" className="px-4 py-3.5 text-left font-bold">TOTAL</th>
-                  <td className="money px-4 py-3.5 text-right">{taka(owed)}</td>
-                  <td className="px-4 py-3.5" />
-                </tr>
-              )}
+              <tr className="bg-brand text-white">
+                <th scope="row" className="px-4 py-3.5 text-left font-bold">AFTER EVERYONE PAYS</th>
+                <td className="px-4 py-3.5 text-right font-mono">{taka(usedTotal)}</td>
+                <td className="px-4 py-3.5 text-right font-mono">{taka(paidTotal)}</td>
+                <td className="money px-4 py-3.5 text-right">+ {taka(owed)}</td>
+                <td className="px-4 py-3.5">—</td>
+                <td className="money px-4 py-3.5 text-right text-base">{availAfter != null ? taka(availAfter) : "Set limit"}</td>
+              </tr>
             </tbody>
           </table>
         </div>
