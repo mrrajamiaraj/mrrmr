@@ -51,17 +51,17 @@ Open http://localhost:3000 and sign in.
 
 | Name | Where to find it |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API Keys → Publishable key |
+| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API Keys → Publishable key |
 
-Both are safe to expose to the browser — every table is protected by row-level security. **Never** put the
-`service_role` / secret key in this app.
+Only server code (`proxy.ts`, `lib/supabase/server.ts`) reads them, so they have no `NEXT_PUBLIC_` prefix and
+never reach the browser. **Never** put the `service_role` / secret key in this app.
 
 ## Deploy to Vercel
 
 1. Push this repo to GitHub.
 2. In Vercel: Add New → Project → import the repo. The framework is detected as Next.js; keep the defaults.
-3. Under Environment Variables add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+3. Under Environment Variables add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
 4. Deploy, then add the Vercel URL to Supabase's URL Configuration (step 3 above).
 
 ## Keep the free Supabase project awake
@@ -69,8 +69,7 @@ Both are safe to expose to the browser — every table is protected by row-level
 Free projects pause after a week with no activity. `.github/workflows/keep-supabase-awake.yml` sends one tiny
 request every day. In GitHub → Settings → Secrets and variables → Actions, add:
 
-- `SUPABASE_URL` — same value as `NEXT_PUBLIC_SUPABASE_URL`
-- `SUPABASE_PUBLISHABLE_KEY` — same value as `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` — the same values as in `.env.local`
 
 You can run it by hand from the Actions tab (“Run workflow”) to check it works.
 
