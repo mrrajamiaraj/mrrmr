@@ -1,18 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
-// Landing point for email links (password reset): swaps the one-time code for a session.
+// Landing point for email links (password reset). Handles both link styles:
+//  - ?token_hash=…&type=recovery  (works in any browser — needs the email template from the README)
+//  - ?code=…                      (PKCE: only works in the same browser that asked for the email)
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
-  const code = searchParams.get("code");
   const nextParam = searchParams.get("next") ?? "/";
   const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+  const fail = (text: string) => NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(text)}`);
 
-  if (code) {
-    const supabase = await createClient();
+  const tokenHash = searchParams.get("token_hash");
+  const type = searchParams.get("type") as EmailOtpType | null;
+  const code = searchParams.get("code");
+  const supabase = await createClient();
+
+  if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    if (!error) return NextResponse.redirect(`${origin}${next}`);
+  } else if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (/code verifier/i.test(error.message))
+      return fail("Open the reset link in the same browser where you pressed “Forgot password?”, or request a new link here.");
   }
-  const message = encodeURIComponent("That link is invalid or has expired. Try again.");
-  return NextResponse.redirect(`${origin}/login?error=${message}`);
+
+  if (searchParams.get("error_code") === "otp_expired")
+    return fail("That reset link was already used or is too old. Each link works once — request a new one and use only the newest email.");
+  return fail("That link is invalid or has expired. Try again.");
 }

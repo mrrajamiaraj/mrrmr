@@ -34,6 +34,10 @@ kept for reference — don't run it again).
    nobody else can create an account on your deployed site.
 3. **Allow the reset link.** Authentication → URL Configuration: set Site URL to your Vercel URL and add
    `http://localhost:3000/auth/callback` and `https://<your-vercel-domain>/auth/callback` to Redirect URLs.
+4. **Make reset links work in any browser** (optional but recommended). Authentication → Emails → Templates →
+   Reset Password: change the link to
+   `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset`.
+   Without this, a reset link only works in the same browser where you pressed “Forgot password?”.
 
 ## Run locally
 
