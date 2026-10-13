@@ -9,6 +9,7 @@ import { ProfileModal } from "@/components/debtors/profile-modal";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow } from "@/components/debtors/bits";
 import { EditCardDialog, SetupCard } from "@/components/setup-forms";
+import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
 import { setCardBalance } from "@/lib/actions";
 import { buildCardProfiles, byOwesThenName, CARD_NAMES, cardTitle } from "@/lib/ledger";
 import { dateLong, dateShort, daysBetween, initials, taka, timestampLong } from "@/lib/format";
@@ -25,6 +26,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const [adding, setAdding] = useState<{ prefill: string } | null>(null);
   const [editingCard, setEditingCard] = useState(false);
   const [flash, setFlash] = useState({ text: "", at: "" });
+  const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
 
   const profiles = useMemo(
     () => (card ? buildCardProfiles(data, card.id, today).sort(byOwesThenName) : []),
@@ -253,6 +255,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                 <th scope="col" className={th}>Category</th>
                 <th scope="col" className={`${th} text-right`}>Amount</th>
                 <th scope="col" className={th}>Pay back by</th>
+                <th scope="col" className={th}><span className="sr-only">Delete</span></th>
               </tr>
             </thead>
             <tbody>
@@ -278,11 +281,18 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                     <td className={td}><span className="rounded-md bg-soft px-2 py-0.5 text-[13px]">#{u.category}</span></td>
                     <td className={`${td} money text-right`} style={{ color: me ? "#334155" : "#B45309" }}>{taka(u.amount)}</td>
                     <td className={`${td} whitespace-nowrap`}>{me ? "—" : dateLong(u.due_on, "—")}</td>
+                    <td className="px-2 text-right">
+                      <DeleteButton label={`Delete ${name}'s card use, ${taka(u.amount)}`} onClick={() => setDeleting({
+                        kind: "card_use", id: u.id, amount: u.amount, iso: u.used_on,
+                        what: `${me ? "My spending" : `${name} used the card`} — ${u.reason_or_place}`,
+                        undo: undoText("card_use", u.amount, CARD_NAMES[slot]),
+                      })} />
+                    </td>
                   </tr>
                 );
               })}
               {uses.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">Nothing recorded on this card yet.</td></tr>
+                <tr><td colSpan={7}className="px-4 py-6 text-center text-slate-500">Nothing recorded on this card yet.</td></tr>
               )}
             </tbody>
           </table>
@@ -328,6 +338,11 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       )}
 
       {editingCard && <EditCardDialog card={card} onClose={() => setEditingCard(false)} />}
+
+      {deleting && (
+        <DeleteRecordDialog target={deleting} onClose={() => setDeleting(null)}
+          onDone={(text) => { setDeleting(null); setFlash({ text, at: "" }); }} />
+      )}
     </Shell>
   );
 }

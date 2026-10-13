@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Modal, CloseButton } from "@/components/modal";
+import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
+import type { RecordKind } from "@/lib/actions";
 import { Avatar, StatusPill } from "@/components/debtors/bits";
 import { RepayForm, repayTargets, type RepayTarget } from "@/components/debtors/repay-form";
 import { dateLong, taka } from "@/lib/format";
-import { amountSigned, cardTitle, type CardProfile, type EventKind, type Profile } from "@/lib/ledger";
+import { amountSigned, CARD_NAMES, cardTitle, type CardProfile, type EventKind, type HistoryEvent, type Profile } from "@/lib/ledger";
 import type { Card } from "@/lib/types";
 
 const CHIP: Record<EventKind, [string, string, string]> = {
@@ -51,6 +54,30 @@ export function ProfileModal({
   const isCard = variant === "card" && !!card;
   const isBank = variant === "bank";
   const scoped = isCard || isBank;
+  const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
+  const bankName = account?.name ?? "the bank account";
+  const cardName = isCard ? CARD_NAMES[card!.slot] : "the card";
+  const KIND: Record<EventKind, RecordKind> = { "Took loan": "loan", "Used my card": "card_use", "Paid back": "repayment" };
+
+  function askDelete(e: HistoryEvent) {
+    const kind = KIND[e.kind];
+    const onCard = kind === "card_use" || e.paidFor === "card";
+    const place = onCard ? cardName : bankName;
+    setDeleting({
+      kind, id: e.id, amount: e.amount, iso: e.iso,
+      what: `${p.name} — ${e.kind.toLowerCase()} · ${e.detail}`,
+      undo: undoText(kind, e.amount, place, e.paidFor),
+    });
+  }
+
+  // Shown instead of the profile so only one dialog is open; Cancel returns to the profile.
+  if (deleting) {
+    return (
+      <DeleteRecordDialog target={deleting} onClose={() => setDeleting(null)}
+        onDone={(text) => { setDeleting(null); onSaved(text); }} />
+    );
+  }
+
   const targets: RepayTarget[] = isCard
     ? [{ key: card!.id, label: "This card", appliesTo: "card", cardId: card!.id, max: p.owes }]
     : isBank
@@ -133,6 +160,7 @@ export function ProfileModal({
                   <th scope="col" className="px-3 py-2.5 font-semibold">Details</th>
                   <th scope="col" className="px-3 py-2.5 text-right font-semibold">Amount</th>
                   <th scope="col" className="px-3 py-2.5 text-right font-semibold">Owes after</th>
+                  <th scope="col" className="px-1"><span className="sr-only">Delete</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -147,11 +175,14 @@ export function ProfileModal({
                       <td className="px-3 py-2.5 text-slate-700">{e.detail}</td>
                       <td className="money whitespace-nowrap px-3 py-2.5 text-right" style={{ color: c[2] }}>{amountSigned(e.sign, e.amount)}</td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono">{taka(e.owesAfter)}</td>
+                      <td className="px-1 text-right">
+                        <DeleteButton label={`Delete ${e.kind.toLowerCase()} of ${taka(e.amount)} on ${dateLong(e.iso)}`} onClick={() => askDelete(e)} />
+                      </td>
                     </tr>
                   );
                 })}
                 {p.events.length === 0 && (
-                  <tr><td colSpan={5} className="px-3 py-4 text-center text-slate-500">No records yet.</td></tr>
+                  <tr><td colSpan={6}className="px-3 py-4 text-center text-slate-500">No records yet.</td></tr>
                 )}
               </tbody>
             </table>

@@ -233,7 +233,7 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
           run += e.sign * e.amount;
           return {
             id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: Math.max(run, 0),
-            paidFor: e.sign < 0 ? (isCard ? "card" : "loan") : undefined,
+            paidFor: e.sign < 0 ? (isCard ? ("card" as const) : ("loan" as const)) : undefined,
           };
         })
         .reverse();

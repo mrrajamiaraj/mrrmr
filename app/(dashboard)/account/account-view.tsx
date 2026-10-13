@@ -9,6 +9,7 @@ import { ProfileModal } from "@/components/debtors/profile-modal";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow } from "@/components/debtors/bits";
 import { SetupAccount } from "@/components/setup-forms";
+import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
 import { setAccountBalance } from "@/lib/actions";
 import { buildLoanProfiles, byOwesThenName } from "@/lib/ledger";
 import { dateLong, initials, pct, taka, timestampLong } from "@/lib/format";
@@ -19,6 +20,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState<{ prefill: string } | null>(null);
   const [flash, setFlash] = useState({ text: "", personId: "" });
+  const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
 
   // Loans only: credit-card use and its repayments live on the card pages, not in the bank balance.
   const profiles = useMemo(() => buildLoanProfiles(data, today).sort(byOwesThenName), [data, today]);
@@ -120,6 +122,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                 <th scope="col" className={th}>How</th>
                 <th scope="col" className={`${th} text-right`}>Amount</th>
                 <th scope="col" className={th}>Pay back by</th>
+                <th scope="col" className={th}><span className="sr-only">Delete</span></th>
               </tr>
             </thead>
             <tbody>
@@ -137,11 +140,17 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                     <td className={`${td} text-slate-600`}>{l.method}</td>
                     <td className={`${td} money text-right text-[#B45309]`}>− {taka(l.amount)}</td>
                     <td className={`${td} whitespace-nowrap`}>{dateLong(l.due_on)}</td>
+                    <td className="px-2 text-right">
+                      <DeleteButton label={`Delete loan to ${name}, ${taka(l.amount)}`} onClick={() => setDeleting({
+                        kind: "loan", id: l.id, amount: l.amount, iso: l.taken_on, what: `Loan to ${name} — ${l.reason}`,
+                        undo: l.account_id ? undoText("loan", l.amount, account.name) : null,
+                      })} />
+                    </td>
                   </tr>
                 );
               })}
               {loans.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">No loans from this account yet.</td></tr>
+                <tr><td colSpan={7}className="px-4 py-6 text-center text-slate-500">No loans from this account yet.</td></tr>
               )}
             </tbody>
           </table>
@@ -223,6 +232,11 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
           onMore={() => { setOpenId(null); setAdding({ prefill: pv.name }); }}
           onSaved={(text) => setFlash({ text, personId: "" })}
         />
+      )}
+
+      {deleting && (
+        <DeleteRecordDialog target={deleting} onClose={() => setDeleting(null)}
+          onDone={(text) => { setDeleting(null); setFlash({ text, personId: "" }); }} />
       )}
     </Shell>
   );

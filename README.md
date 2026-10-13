@@ -27,6 +27,9 @@ kept for reference — don't run it again).
    still applies.
    Then do the same with `supabase/migrations/0003_research_ledger.sql`, which creates the two Research tables
    (`research_expenses`, `research_contributions`) with the same owner-only RLS.
+   Finally run `supabase/migrations/0004_delete_records.sql` (one function, `delete_record`, no table changes). It
+   powers the 🗑 Delete buttons: it permanently deletes a loan, card use or repayment and, if you tick the box,
+   undoes its balance change in the same transaction.
 2. **Create your login.** Authentication → Users → Add user → enter your email and a password, tick
    “Auto Confirm User”. Then Authentication → Sign In / Providers → turn **off** “Allow new users to sign up”, so
    nobody else can create an account on your deployed site.
