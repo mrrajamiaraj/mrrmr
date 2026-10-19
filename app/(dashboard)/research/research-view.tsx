@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Shell } from "@/components/shell";
+import { HeaderButton, Shell } from "@/components/shell";
+import { Figure, Statement } from "@/components/balance-editor";
 import { PlusIcon } from "@/components/icons";
 import { ErrorBox, Modal, btnGhost, btnPrimary } from "@/components/modal";
 import { Flash } from "@/components/debtors/bits";
@@ -14,12 +15,6 @@ import { dateLong, taka, todayIso } from "@/lib/format";
 import { AnalyticsTab, ContributionsTab, LedgerTab, MonthlyTab, SettlementTab, takaDec, type DialogState } from "./research-tabs";
 
 type Tab = "ledger" | "contributions" | "settlement" | "analytics" | "monthly";
-
-const FlaskIcon = () => (
-  <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3" /><path d="M7 15h10" />
-  </svg>
-);
 
 export function ResearchView({ data }: { data: ResearchData }) {
   const [tab, setTab] = useState<Tab>("ledger");
@@ -36,39 +31,32 @@ export function ResearchView({ data }: { data: ResearchData }) {
   const avg = expenses.length ? totalExp / expenses.length : 0;
   const peak = expenses.reduce((m, e) => Math.max(m, e.amount), 0);
 
-  const kpis = [
-    { label: "Total expenses", value: taka(totalExp), sub: `${expenses.length} total transactions`, glyph: "$", line: "#10B981", soft: "#D1FAE5", ink: "#047857", val: "#0F172A" },
-    { label: "Total contributions", value: taka(totalCon), sub: `${contributions.length} member payments`, glyph: "⇄", line: "#6366F1", soft: "#E0E7FF", ink: "#4338CA", val: "#4338CA" },
-    { label: "Net settlement balance", value: `${net < 0 ? "-" : ""}${taka(net)}`, sub: net < 0 ? `Deficit of ${taka(net)}` : `Surplus of ${taka(net)}`, glyph: "±", line: net < 0 ? "#F43F5E" : "#10B981", soft: net < 0 ? "#FFE4E6" : "#D1FAE5", ink: net < 0 ? "#BE123C" : "#047857", val: net < 0 ? "#BE123C" : "#047857" },
-    { label: "Average expense", value: takaDec(Math.round(avg * 100) / 100), sub: `Peak: ${taka(peak)}`, glyph: "↗", line: "#F59E0B", soft: "#FEF3C7", ink: "#B45309", val: "#0F172A" },
-  ];
-
-  const tabs: [Tab, string][] = [
-    ["ledger", `Expense Ledger (${expenses.length})`],
-    ["contributions", `Member Contributions (${contributions.length})`],
-    ["settlement", "Settlement & Balances"],
-    ["analytics", "Facility & Team Analytics"],
-    ["monthly", "Monthly Trends"],
+  const tabs: [Tab, string, number | null][] = [
+    ["ledger", "Expenses", expenses.length],
+    ["contributions", "Contributions", contributions.length],
+    ["settlement", "Settlement", null],
+    ["analytics", "By facility & member", null],
+    ["monthly", "By month", null],
   ];
 
   const actions = (
     <>
-      <button type="button" onClick={() => setDialog({ kind: "contribution", row: null })}
-        className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-[#4F46E5] px-4 text-[15px] font-semibold text-white">
-        <PlusIcon size={16} />Record Contribution
-      </button>
-      <button type="button" onClick={() => setDialog({ kind: "expense", row: null })}
-        className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-[#10B981] px-4 text-[15px] font-semibold text-[#04241B]">
-        <PlusIcon size={16} />Add Expense
-      </button>
+      <HeaderButton variant="outline" onClick={() => setDialog({ kind: "contribution", row: null })}>
+        <PlusIcon size={15} />Record contribution
+      </HeaderButton>
+      <HeaderButton onClick={() => setDialog({ kind: "expense", row: null })}>
+        <PlusIcon size={15} />Add expense
+      </HeaderButton>
     </>
   );
 
+  const subtitle = "Clinical research spending, who paid for it, and how the team settles up.";
+
   if (data.missingTables) {
     return (
-      <Shell icon={<FlaskIcon />} subtitle="Research Finance Ledger — clinical research expense & finance management">
-        <section className="mx-auto w-full max-w-[720px] rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-6">
-          <h2 className="m-0 text-xl font-bold text-[#92400E]">One-time setup needed</h2>
+      <Shell subtitle={subtitle}>
+        <section className="mx-auto w-full max-w-[720px] rounded-lg border border-[#E6D7B5] bg-[#FAF6EC] p-6">
+          <h2 className="m-0 text-xl font-semibold text-[#85570F]">One-time setup needed</h2>
           <p className="mb-0 mt-2 text-[15px] text-slate-700">
             The research tables don&apos;t exist in Supabase yet. Open the Supabase dashboard → SQL Editor → New query, paste the
             contents of <code className="rounded bg-white px-1.5 py-0.5 font-mono text-sm">supabase/migrations/0003_research_ledger.sql</code>,
@@ -80,25 +68,20 @@ export function ResearchView({ data }: { data: ResearchData }) {
   }
 
   return (
-    <Shell icon={<FlaskIcon />} subtitle="Research Finance Ledger — clinical research expense & finance management" actions={actions}>
-      <section aria-label="Key figures" className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3.5">
-        {kpis.map((k) => (
-          <div key={k.label} className="flex flex-col gap-3 rounded-[14px] border border-line border-b-4 bg-white p-[18px]" style={{ borderBottomColor: k.line }}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-slate-700">{k.label}</span>
-              <span aria-hidden="true" className="flex size-[30px] flex-none items-center justify-center rounded-lg font-bold" style={{ background: k.soft, color: k.ink }}>{k.glyph}</span>
-            </div>
-            <div className="money text-2xl" style={{ color: k.val }}>{k.value}</div>
-            <div className="text-[13px] text-slate-500">{k.sub}</div>
-          </div>
-        ))}
-      </section>
+    <Shell subtitle={subtitle} actions={actions}>
+      <Statement label="Key figures" cols={4}>
+        <Figure label="Spent" value={taka(totalExp)} note={`${expenses.length} expenses`} />
+        <Figure label="Contributed" value={taka(totalCon)} note={`${contributions.length} member payments`} />
+        <Figure label={net < 0 ? "Short by" : "Left over"} value={taka(net)} tone={net < 0 ? "owed" : "good"}
+          note={net < 0 ? "Contributions don't cover spending yet" : "Contributions cover all spending"} />
+        <Figure label="Average expense" value={takaDec(Math.round(avg * 100) / 100)} note={`Largest ${taka(peak)}`} />
+      </Statement>
 
-      <div role="tablist" aria-label="Research views" className="flex gap-2 overflow-x-auto rounded-2xl border border-line bg-white p-2">
-        {tabs.map(([key, label]) => (
+      <div role="tablist" aria-label="Research views" className="flex gap-5 overflow-x-auto shadow-[inset_0_-1px_0_#E3E1DA]">
+        {tabs.map(([key, label, count]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-            className={`min-h-11 whitespace-nowrap rounded-[10px] px-4 text-[15px] font-semibold ${tab === key ? "bg-brand text-white" : "text-slate-700 hover:bg-soft"}`}>
-            {label}
+            className={`whitespace-nowrap border-b-2 pb-2.5 pt-1 text-[14px] ${tab === key ? "border-ink font-medium text-ink" : "border-transparent text-slate-500 hover:text-ink"}`}>
+            {label}{count != null && <span className="ml-1.5 text-slate-400">{count}</span>}
           </button>
         ))}
       </div>
@@ -169,7 +152,7 @@ function ExpenseDialog({ row, facilities, members, onClose, onSaved }: {
         <label className="field-label">Date<input type="date" className="field-input" value={f.spent_on} onChange={set("spent_on")} /></label>
         <label className="field-label">Amount (৳) *<input type="number" min="1" inputMode="decimal" className="field-input font-mono" value={f.amount} onChange={set("amount")} placeholder="0" /></label>
         <label className="field-label">Facility / center *
-          <input list="research-facilities" className="field-input border-2 border-[#14B8A6]" value={f.facility} onChange={set("facility")} autoComplete="off" />
+          <input list="research-facilities" className="field-input border-2 border-[#3D7D61]" value={f.facility} onChange={set("facility")} autoComplete="off" />
           <datalist id="research-facilities">{facilities.map((x) => <option key={x} value={x} />)}</datalist>
         </label>
         <label className="field-label">Paid by *
@@ -205,7 +188,7 @@ function ContributionDialog({ row, member, members, onClose, onSaved }: {
     <Modal title={row ? "Edit contribution" : "Record contribution"} onClose={onClose} maxWidth={520}
       footer={<>
         <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
-        <button type="button" disabled={pending} className="min-h-11 rounded-[10px] bg-[#4F46E5] px-5 text-[15px] font-semibold text-white"
+        <button type="button" disabled={pending} className={btnPrimary}
           onClick={() => start(async () => {
             const r = await saveContribution(row?.id ?? null, { ...f, amount: Number(f.amount) });
             if (r.error) setError(r.error);
@@ -216,7 +199,7 @@ function ContributionDialog({ row, member, members, onClose, onSaved }: {
       </>}>
       <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
         <label className="field-label sm:col-span-2">Member *
-          <input list="research-members-c" className="field-input border-2 border-[#6366F1]" value={f.member} onChange={set("member")} autoComplete="off" placeholder="e.g. Adnan, Somik" />
+          <input list="research-members-c" className="field-input border-2 border-[#5A7397]" value={f.member} onChange={set("member")} autoComplete="off" placeholder="e.g. Adnan, Somik" />
           <datalist id="research-members-c">{members.map((x) => <option key={x} value={x} />)}</datalist>
         </label>
         <label className="field-label">Amount (৳) *<input type="number" min="1" inputMode="decimal" className="field-input font-mono" value={f.amount} onChange={set("amount")} placeholder="0" /></label>
@@ -240,7 +223,7 @@ function ConfirmDelete({ what, run, onClose, onDone }: {
     <Modal title="Delete this entry?" onClose={onClose} maxWidth={480}
       footer={<>
         <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
-        <button type="button" disabled={pending} className="min-h-11 rounded-[10px] bg-[#B91C1C] px-5 text-[15px] font-semibold text-white"
+        <button type="button" disabled={pending} className="min-h-10 rounded-md bg-[#9B3426] px-4 text-[14px] font-medium text-white hover:bg-[#7E2A1F]"
           onClick={() => start(async () => { const r = await run(); if (r.error) setError(r.error); else onDone("Entry deleted."); })}>
           {pending ? "Deleting…" : "Delete"}
         </button>

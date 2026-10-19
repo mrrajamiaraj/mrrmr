@@ -28,94 +28,90 @@ const TABS = [
   { href: "/research", label: "Research Finance" },
 ];
 
-/** Gradient header + section nav from the designs. Each page supplies its icon, subtitle and buttons. */
+const pad = "px-[clamp(16px,4vw,40px)]";
+
+/** Top bar with the section links, then the page title, its one-line description and the page's buttons. */
 export function Shell({
-  icon,
   subtitle,
   actions,
   children,
 }: {
-  icon: React.ReactNode;
   subtitle: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const admin = useContext(AdminContext);
   const path = usePathname();
+  const title = TABS.find((t) => path.startsWith(t.href))?.label ?? "Finance";
 
   return (
     <div className="min-h-screen">
-      <header className="bg-[linear-gradient(100deg,#0F5A50_0%,#0B3D38_100%)] px-[clamp(16px,4vw,48px)] py-[22px] text-white">
-        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3.5">
-            <div className="flex size-[46px] flex-none items-center justify-center rounded-xl bg-[#1D6E63]">{icon}</div>
-            <div className="min-w-0">
-              <div className="text-[clamp(18px,2.2vw,26px)] font-bold uppercase tracking-[-0.01em]">
-                Personal Finance &amp; Loan Recovery Workspace
-              </div>
-              <div className="text-[14.5px] text-mint">{subtitle}</div>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2.5">
+      <header className={`border-b border-line bg-white ${pad}`}>
+        <div className="mx-auto flex max-w-[1200px] items-center gap-6">
+          <Link href="/account" className="flex-none py-3 text-[15px] font-semibold text-ink">
+            Ledger<span className="text-brand-2">.</span>
+          </Link>
+          <nav aria-label="Sections" className="-mb-px flex min-w-0 flex-auto gap-5 overflow-x-auto">
+            {TABS.map((t) => {
+              const on = path.startsWith(t.href);
+              return (
+                <Link
+                  key={t.href}
+                  href={t.href}
+                  aria-current={on ? "page" : undefined}
+                  className={`whitespace-nowrap border-b-2 py-3.5 text-[13.5px] ${
+                    on ? "border-ink font-medium text-ink" : "border-transparent text-slate-500 hover:text-ink"
+                  }`}
+                >
+                  {t.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="flex flex-none items-center gap-3">
+            <a href="/export" download className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13.5px] text-slate-600 hover:text-ink">
+              <DownloadIcon size={15} />
+              <span className="hidden sm:inline">Export CSV</span>
+            </a>
             {admin.viewer ? (
-              <>
-                <span className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[10px] bg-[#1D6E63] px-3.5 font-semibold text-white">
-                  <EyeIcon size={16} />
-                  View only
-                </span>
-                <form action={exitViewMode}>
-                  <button type="submit" className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[10px] border border-[#5EEAD4] bg-[#0B3D38] px-3.5 font-semibold text-white">
-                    <LogoutIcon size={16} />
-                    Exit
-                  </button>
-                </form>
-              </>
+              <form action={exitViewMode}>
+                <button type="submit" className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 text-[13.5px] text-slate-700 hover:bg-soft">
+                  <LogoutIcon size={15} />
+                  Exit
+                </button>
+              </form>
             ) : (
-              <>
-                {actions}
-                <AdminButton email={admin.email} lastChanged={admin.lastChanged} />
-              </>
+              <AdminButton email={admin.email} lastChanged={admin.lastChanged} />
             )}
           </div>
         </div>
       </header>
 
-      <nav aria-label="Sections" className="border-b border-line bg-white px-[clamp(16px,4vw,48px)]">
-        <div className="mx-auto flex max-w-[1240px] items-center gap-2 overflow-x-auto py-2.5">
-          {TABS.map((t) => {
-            const on = path.startsWith(t.href);
-            return (
-              <Link
-                key={t.href}
-                href={t.href}
-                aria-current={on ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center whitespace-nowrap rounded-[10px] px-4 ${
-                  on ? "bg-brand font-semibold text-white" : "bg-soft font-medium text-slate-800"
-                }`}
-              >
-                {t.label}
-              </Link>
-            );
-          })}
-          <a
-            href="/export"
-            download
-            className="ml-auto inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[10px] border border-line px-4 font-medium text-slate-700"
-          >
-            <DownloadIcon size={16} />
-            Export CSV
-          </a>
+      <main className={`${pad} pb-20 pt-8`}>
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0 max-w-[720px]">
+              <h1 className="m-0 flex items-center gap-2.5 text-[26px] font-semibold leading-tight">
+                {title}
+                {admin.viewer && (
+                  <span className="inline-flex items-center gap-1 rounded border border-line bg-white px-1.5 py-0.5 text-[11.5px] font-medium text-slate-600">
+                    <EyeIcon size={12} />
+                    View only
+                  </span>
+                )}
+              </h1>
+              <p className="m-0 mt-1 text-[14px] text-slate-500">{subtitle}</p>
+            </div>
+            {!admin.viewer && actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+          </div>
+          {children}
         </div>
-      </nav>
-
-      <main className="px-[clamp(16px,4vw,48px)] pb-[72px] pt-7">
-        <div className="mx-auto flex max-w-[1240px] flex-col gap-[22px]">{children}</div>
       </main>
     </div>
   );
 }
 
-/** Green "Add Debtor"-style header button. */
+/** Page-level button next to the title: solid for the main action, outlined for the rest. */
 export function HeaderButton({
   onClick,
   children,
@@ -129,8 +125,8 @@ export function HeaderButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex min-h-11 items-center gap-2 rounded-[10px] px-4 text-[15px] font-semibold ${
-        variant === "green" ? "bg-[#10B981] text-[#04241B]" : "border border-[#5EEAD4] bg-brand-3 text-white"
+      className={`inline-flex min-h-10 items-center gap-2 rounded-md px-3.5 text-[14px] font-medium ${
+        variant === "green" ? "bg-brand text-white hover:bg-[#173D2E]" : "border border-[#D6D3CB] bg-white text-ink hover:bg-soft"
       }`}
     >
       {children}

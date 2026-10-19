@@ -31,7 +31,7 @@ export function DeleteButton({ onClick, label }: { onClick: () => void; label: s
   if (viewer) return null;
   return (
     <button type="button" onClick={onClick} aria-label={label} title="Delete permanently"
-      className="inline-flex size-9 items-center justify-center rounded-lg text-slate-400 hover:bg-[#FEE2E2] hover:text-[#B91C1C]">
+      className="inline-flex size-9 items-center justify-center rounded-lg text-slate-400 hover:bg-[#F5E4E0] hover:text-[#9B3426]">
       <TrashIcon size={16} />
     </button>
   );
@@ -59,23 +59,23 @@ export function DeleteRecordDialog({ target: t, onClose, onDone }: {
       footer={<>
         <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
         <button type="button" disabled={pending} onClick={run}
-          className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-[#B91C1C] px-5 text-[15px] font-semibold text-white">
+          className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#9B3426] px-4 text-[14px] font-medium text-white hover:bg-[#7E2A1F]">
           <TrashIcon size={16} />
           {pending ? "Deleting…" : "Delete forever"}
         </button>
       </>}>
       <div className="flex flex-col gap-3.5 p-5 text-[15px]">
-        <div className="rounded-xl border border-line bg-[#F8FAFC] p-3.5">
+        <div className="rounded-lg border border-line bg-[#FAF9F6] p-3.5">
           <div className="font-semibold">{t.what}</div>
           <div className="text-sm text-slate-600">{dateLong(t.iso)} · <span className="money">{taka(t.amount)}</span></div>
         </div>
         <p className="m-0">This removes it from every page and every total. <strong>It cannot be undone</strong> — export a CSV first if you want a copy.</p>
         {t.undo && (
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-3.5">
-            <input type="checkbox" checked={undo} onChange={(e) => setUndo(e.target.checked)} className="mt-1 size-5 flex-none accent-[#B91C1C]" />
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#E6D7B5] bg-[#FAF6EC] p-3.5">
+            <input type="checkbox" checked={undo} onChange={(e) => setUndo(e.target.checked)} className="mt-1 size-5 flex-none accent-[#9B3426]" />
             <span>
               <span className="block font-semibold">{t.undo}</span>
-              <span className="block text-sm text-[#92400E]">
+              <span className="block text-sm text-[#85570F]">
                 Tick this only if the balance changed when you saved this record. Leave it unticked to just remove it from history.
               </span>
             </span>
@@ -112,7 +112,7 @@ export function ClearHistoryDialog({ name, records, onClose, onDone }: {
       footer={<>
         <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
         <button type="button" disabled={pending} onClick={run}
-          className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-[#B91C1C] px-5 text-[15px] font-semibold text-white">
+          className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#9B3426] px-4 text-[14px] font-medium text-white hover:bg-[#7E2A1F]">
           <TrashIcon size={16} />
           {pending ? "Clearing…" : `Clear ${n} record${n === 1 ? "" : "s"}`}
         </button>
@@ -123,11 +123,11 @@ export function ClearHistoryDialog({ name, records, onClose, onDone }: {
           removes them from every page and every total. {name} stays in your list so you can add new records later.{" "}
           <strong>It cannot be undone</strong> — export a CSV first if you want a copy.
         </p>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] p-3.5">
-          <input type="checkbox" checked={undo} onChange={(e) => setUndo(e.target.checked)} className="mt-1 size-5 flex-none accent-[#B91C1C]" />
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#E6D7B5] bg-[#FAF6EC] p-3.5">
+          <input type="checkbox" checked={undo} onChange={(e) => setUndo(e.target.checked)} className="mt-1 size-5 flex-none accent-[#9B3426]" />
           <span>
             <span className="block font-semibold">Also undo their effect on the bank and card balances</span>
-            <span className="block text-sm text-[#92400E]">
+            <span className="block text-sm text-[#85570F]">
               Tick this only if the balances changed when you saved these records. Leave it unticked to just remove them from history.
             </span>
           </span>

@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { Shell, HeaderButton } from "@/components/shell";
-import { BankIcon, PersonIcon } from "@/components/icons";
-import { BalanceEditor, EqSign } from "@/components/balance-editor";
+import { PersonIcon } from "@/components/icons";
+import { BalanceEditor, Figure, Statement } from "@/components/balance-editor";
 import { ProfileSlider } from "@/components/debtors/profile-slider";
 import { ProfileModal } from "@/components/debtors/profile-modal";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
-import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow } from "@/components/debtors/bits";
+import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow, totalRow } from "@/components/debtors/bits";
 import { SetupAccount } from "@/components/setup-forms";
 import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
 import { setAccountBalance } from "@/lib/actions";
@@ -27,7 +27,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
 
   if (!account) {
     return (
-      <Shell icon={<BankIcon />} subtitle="Bank account">
+      <Shell subtitle="Bank account">
         <SetupAccount />
       </Shell>
     );
@@ -56,64 +56,50 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
 
   return (
     <Shell
-      icon={<BankIcon />}
-      subtitle={`${account.name} — money there now, who took money from it, debtor profiles, and the balance once everyone pays back`}
+      subtitle={`What is in ${account.name} now, who has borrowed from it, and what the balance will be once they pay back.`}
       actions={
         <HeaderButton onClick={() => setAdding({ prefill: "" })}>
-          <PersonIcon size={16} />
-          Add Debtor
+          <PersonIcon size={15} />
+          Add debtor
         </HeaderButton>
       }
     >
-      <section aria-label="Balance now and after repayment" className="flex flex-wrap items-stretch gap-3.5">
-        <BalanceEditor
-          tone="bank"
-          label={`${account.name} — money now`}
-          inputLabel={`New ${account.name} balance (৳)`}
-          value={now}
-          footnote={`Updated ${timestampLong(account.updated_at)}`}
-          onSave={(n) => setAccountBalance(account.id, n)}
-        />
-        <EqSign>+</EqSign>
-        <div className="flex flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border border-[#FDE68A] border-b-4 border-b-[#F59E0B] bg-[#FFFBEB] p-[22px]">
-          <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700">People owe you</div>
-          <div className="money text-[clamp(28px,3.4vw,38px)] text-[#92400E]">{taka(owed)}</div>
-          <div className="text-sm text-[#92400E]">{owing.length} people still owe on loans from this account</div>
+      <div className="flex flex-col gap-2.5">
+        <Statement label="Balance now and after repayment">
+          <BalanceEditor
+            label={`In ${account.name} now`}
+            inputLabel={`New ${account.name} balance (৳)`}
+            value={now}
+            footnote={`Updated ${timestampLong(account.updated_at)}`}
+            onSave={(n) => setAccountBalance(account.id, n)}
+          />
+          <Figure label="+ Owed to you" value={taka(owed)} tone="owed" note={`${owing.length} ${owing.length === 1 ? "person" : "people"} on loans from this account`} />
+          <Figure label="= Once everyone pays" value={taka(after)} tone="good" note={`Your ${account.name} balance after repayment`} />
+        </Statement>
+        <div className="flex items-center gap-3 px-0.5 text-[12.5px] text-slate-500">
+          <div className="flex h-1.5 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]" aria-hidden="true">
+            <div className="bg-brand-2" style={{ width: `${inHand}%` }} />
+            <div className="bg-[#B9852F]" style={{ width: `${outPct}%` }} />
+          </div>
+          <span className="whitespace-nowrap">{inHand}% in the bank · {outPct}% lent out</span>
         </div>
-        <EqSign>=</EqSign>
-        <div className="flex flex-[1_1_300px] flex-col gap-2.5 rounded-2xl bg-brand p-[22px] text-white">
-          <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-mint">After everyone pays you back</div>
-          <div className="money text-[clamp(28px,3.4vw,38px)]">{taka(after)}</div>
-          <div className="text-sm text-mint">Your {account.name} balance once all money comes back</div>
-        </div>
-      </section>
-
-      <section aria-label="Progress" className="flex flex-col gap-2.5 rounded-2xl border border-line bg-white px-5 py-[18px]">
-        <div className="flex flex-wrap justify-between gap-2 text-[14.5px]">
-          <span><strong>{inHand}%</strong> of your money is in the bank now</span>
-          <span className="text-[#92400E]"><strong>{outPct}%</strong> is still with other people</span>
-        </div>
-        <div className="flex h-3.5 overflow-hidden rounded-[7px] bg-soft">
-          <div className="bg-[#10B981]" style={{ width: `${inHand}%` }} />
-          <div className="bg-[#F59E0B]" style={{ width: `${outPct}%` }} />
-        </div>
-      </section>
+      </div>
 
       <Flash text={flash.text} />
 
       <ProfileSlider
-        title="Debtor profiles"
-        sub="Everyone who has taken money from you. Open a profile to see their full history."
+        title="People"
+        sub="Everyone who has borrowed from this account."
         items={profiles.map((p) => ({ ...p, took: p.used }))}
         onOpen={open}
         onAdd={() => setAdding({ prefill: "" })}
       />
 
       <SectionCard>
-        <SectionHead id="deb-h" title="Debtors from this account"
-          sub={`Who took money from ${account.name}, when, why, how, and when they will pay it back. Tap a name to open their profile.`} />
+        <SectionHead id="deb-h" title="Loans from this account"
+          sub="Tap a name to open their profile." />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-[14.5px]">
+          <table className="w-full min-w-[900px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Date taken</th>
@@ -130,15 +116,15 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                 const name = peopleById.get(l.person_id)?.name ?? "Unknown";
                 const isNew = l.id === newestForFlash;
                 return (
-                  <tr key={l.id} className={`border-b border-soft ${isNew ? "bg-[#F0FDF4]" : ""}`}>
+                  <tr key={l.id} className={`border-b border-soft ${isNew ? "bg-[#F2F6F3]" : ""}`}>
                     <td className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(l.taken_on)}</td>
                     <th scope="row" className="px-4 py-1.5 text-left">
                       <PersonButton name={name} initials={initials(name)} onClick={() => open(l.person_id)} />
-                      {isNew && <> <span className="rounded-md bg-[#D1FAE5] px-[7px] py-px text-xs font-semibold text-[#065F46]">New</span></>}
+                      {isNew && <> <span className="text-xs font-medium text-brand-2">new</span></>}
                     </th>
-                    <td className={td}><span className="rounded-md bg-soft px-2 py-0.5 text-[13px]">#{l.reason}</span></td>
+                    <td className={td}>{l.reason}</td>
                     <td className={`${td} text-slate-600`}>{l.method}</td>
-                    <td className={`${td} money text-right text-[#B45309]`}>− {taka(l.amount)}</td>
+                    <td className={`${td} money text-right`}>{taka(l.amount)}</td>
                     <td className={`${td} whitespace-nowrap`}>{dateLong(l.due_on)}</td>
                     <td className="px-2 text-right">
                       <DeleteButton label={`Delete loan to ${name}, ${taka(l.amount)}`} onClick={() => setDeleting({
@@ -158,27 +144,27 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
       </SectionCard>
 
       <SectionCard>
-        <SectionHead id="owe-h" title="Who will bring money back"
-          sub={`Each person's amount still owed, and what your ${account.name} balance becomes as each one pays — biggest first`} />
+        <SectionHead id="owe-h" title="Repayment outlook"
+          sub={`What each person still owes, biggest first, and your ${account.name} balance as each one pays.`} />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-[14.5px]">
+          <table className="w-full min-w-[820px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Person</th>
                 <th scope="col" className={`${th} text-right`}>Took</th>
                 <th scope="col" className={`${th} text-right`}>Paid back</th>
-                <th scope="col" className={`${th} bg-[#FEFCE8] text-right text-[#92400E]`}>Will give back</th>
+                <th scope="col" className={`${th} text-right`}>Still owes</th>
                 <th scope="col" className={th}>Due</th>
-                <th scope="col" className={`${th} text-right`}>Bank balance after</th>
+                <th scope="col" className={`${th} text-right`}>Balance after</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-soft bg-[#F0FDF4]">
-                <th scope="row" className={`${td} text-left font-semibold text-[#047857]`}>Now</th>
-                <td className={`${td} text-right`}>—</td>
-                <td className={`${td} text-right`}>—</td>
-                <td className={`${td} bg-[#FEFCE8] text-right`}>—</td>
-                <td className={td}>Today</td>
+              <tr className="border-b border-soft">
+                <th scope="row" className={`${td} text-left font-medium text-slate-500`}>Today</th>
+                <td className={`${td} text-right text-slate-400`}>—</td>
+                <td className={`${td} text-right text-slate-400`}>—</td>
+                <td className={`${td} text-right text-slate-400`}>—</td>
+                <td className={`${td} text-slate-400`}>—</td>
                 <td className={`${td} money text-right`}>{taka(now)}</td>
               </tr>
               {owingRows.map((p) => (
@@ -188,18 +174,18 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                   </th>
                   <td className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
                   <td className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
-                  <td className={`${td} money bg-[#FEFCE8] text-right text-[#78350F]`}>+ {taka(p.owes)}</td>
+                  <td className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
                   <td className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
-                  <td className={`${td} money text-right text-brand-2`}>{taka(p.run)}</td>
+                  <td className={`${td} money text-right`}>{taka(p.run)}</td>
                 </tr>
               ))}
-              <tr className="bg-brand text-white">
-                <th scope="row" className="px-4 py-3.5 text-left font-bold">AFTER EVERYONE PAYS</th>
-                <td className="px-4 py-3.5 text-right font-mono">{taka(lentTotal)}</td>
-                <td className="px-4 py-3.5 text-right font-mono">{taka(paidTotal)}</td>
-                <td className="money px-4 py-3.5 text-right">+ {taka(owed)}</td>
-                <td className="px-4 py-3.5">—</td>
-                <td className="money px-4 py-3.5 text-right text-base">{taka(after)}</td>
+              <tr className={totalRow}>
+                <th scope="row" className={`${td} text-left`}>Once everyone pays</th>
+                <td className={`${td} money text-right`}>{taka(lentTotal)}</td>
+                <td className={`${td} money text-right`}>{taka(paidTotal)}</td>
+                <td className={`${td} money text-right text-[#85570F]`}>{taka(owed)}</td>
+                <td className={td} />
+                <td className={`${td} money text-right text-brand-2`}>{taka(after)}</td>
               </tr>
             </tbody>
           </table>

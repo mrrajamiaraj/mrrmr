@@ -4,9 +4,9 @@ import type { Status } from "@/lib/types";
 export function Avatar({ text, size = 42, me = false }: { text: string; size?: number; me?: boolean }) {
   return (
     <span
-      style={{ width: size, height: size, fontSize: size <= 30 ? 11.5 : size >= 50 ? 18 : 15 }}
-      className={`inline-flex flex-none items-center justify-center rounded-full font-bold ${
-        me ? "bg-[#E2E8F0] text-slate-800" : "bg-[#CCFBF1] text-[#115E59]"
+      style={{ width: size, height: size, fontSize: size <= 30 ? 11 : size >= 50 ? 17 : 13.5 }}
+      className={`inline-flex flex-none items-center justify-center rounded-full font-medium ${
+        me ? "bg-[#E3E1DA] text-slate-700" : "bg-[#E9EEEA] text-[#1F4D3A]"
       }`}
     >
       {text}
@@ -14,67 +14,70 @@ export function Avatar({ text, size = 42, me = false }: { text: string; size?: n
   );
 }
 
+/** Status as a coloured dot and a word, not a filled badge. */
 export function StatusPill({ status, className = "" }: { status: Status; className?: string }) {
   return (
-    <span className={`whitespace-nowrap rounded-full px-2.5 py-[3px] text-[12.5px] font-semibold ${STATUS_PILL[status]} ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[12.5px] font-medium ${STATUS_PILL[status]} ${className}`}>
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {status}
     </span>
   );
 }
 
 export function DuePill({ kind, children }: { kind: DueKind; children: React.ReactNode }) {
-  return <span className={`whitespace-nowrap rounded-full px-2.5 py-[3px] text-[13px] font-semibold ${DUE_PILL[kind]}`}>{children}</span>;
+  return <span className={`whitespace-nowrap text-[13px] ${DUE_PILL[kind]}`}>{children}</span>;
 }
 
 export function Tag({ children, white = false }: { children: React.ReactNode; white?: boolean }) {
   return (
-    <span className={`rounded-md px-2 py-0.5 text-[13px] ${white ? "border border-[#E2E8F0] bg-white" : "bg-soft"}`}>#{children}</span>
+    <span className={`rounded px-1.5 py-px text-[12.5px] text-slate-600 ${white ? "border border-line bg-white" : "bg-soft"}`}>{children}</span>
   );
 }
 
-/** Underlined name button that opens a profile, used in tables. */
+/** Name button that opens a profile, used in tables. */
 export function PersonButton({ name, initials, onClick, size = 28 }: { name: string; initials: string; onClick: () => void; size?: number }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex min-h-11 items-center gap-2.5 p-0 text-left text-[14.5px] font-semibold text-ink underline decoration-[#99F6E4] underline-offset-4"
+      className="group inline-flex min-h-10 items-center gap-2.5 p-0 text-left text-[14px] font-medium text-ink"
     >
       <Avatar text={initials} size={size} />
-      {name}
+      <span className="decoration-[#A8A49A] underline-offset-4 group-hover:underline">{name}</span>
     </button>
   );
 }
 
 export function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`overflow-hidden rounded-2xl border border-line bg-white ${className}`}>{children}</section>;
+  return <section className={`overflow-hidden rounded-lg border border-line bg-white ${className}`}>{children}</section>;
 }
 
 export function SectionHead({ id, title, sub, action }: { id: string; title: string; sub?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 p-[18px]">
+    <div className="flex flex-wrap items-end justify-between gap-3 px-4 pb-3 pt-4">
       <div>
-        <h2 id={id} className="m-0 text-[19px] font-bold uppercase">{title}</h2>
-        {sub && <div className="text-sm text-slate-500">{sub}</div>}
+        <h2 id={id} className="m-0 text-[16px] font-semibold">{title}</h2>
+        {sub && <div className="mt-0.5 text-[13px] text-slate-500">{sub}</div>}
       </div>
       {action}
     </div>
   );
 }
 
-export const th = "px-4 py-3 font-semibold";
-export const td = "px-4 py-3";
-export const theadRow = "border-y border-line bg-[#F8FAFC] text-left";
+export const th = "px-4 py-2 text-[12.5px] font-medium text-slate-500";
+export const td = "px-4 py-2.5";
+export const theadRow = "border-y border-line bg-[#FAF9F6] text-left";
+export const totalRow = "border-t border-[#D6D3CB] bg-[#FAF9F6] font-medium";
 
 export function Flash({ text }: { text: string }) {
   if (!text) return null;
   return (
-    <div role="status" className="rounded-xl border border-[#A7F3D0] bg-[#D1FAE5] px-4 py-3 text-[14.5px] font-medium text-[#065F46]">
+    <div role="status" className="rounded-md border-l-2 border-brand-2 bg-white px-4 py-2.5 text-[14px] text-ink shadow-[0_0_0_1px_#E3E1DA]">
       {text}
     </div>
   );
 }
 
 export function EmptyNote({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl border border-dashed border-[#CBD5E1] bg-white p-7 text-center text-slate-500">{children}</div>;
+  return <div className="rounded-lg border border-dashed border-[#D6D3CB] px-6 py-8 text-center text-[14px] text-slate-500">{children}</div>;
 }

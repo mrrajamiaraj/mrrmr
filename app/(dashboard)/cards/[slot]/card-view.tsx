@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { Shell, HeaderButton, useViewer } from "@/components/shell";
-import { CardIcon, PencilIcon, PersonIcon } from "@/components/icons";
-import { BalanceEditor, EqSign } from "@/components/balance-editor";
+import { PersonIcon } from "@/components/icons";
+import { BalanceEditor, Figure, Statement } from "@/components/balance-editor";
 import { ProfileSlider } from "@/components/debtors/profile-slider";
 import { ProfileModal } from "@/components/debtors/profile-modal";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
-import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow } from "@/components/debtors/bits";
+import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow, totalRow } from "@/components/debtors/bits";
 import { EditCardDialog, SetupCard } from "@/components/setup-forms";
 import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
 import { setCardBalance } from "@/lib/actions";
@@ -35,13 +35,12 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
 
   if (!card) {
     return (
-      <Shell icon={<CardIcon />} subtitle={CARD_NAMES[slot]}>
+      <Shell subtitle={CARD_NAMES[slot]}>
         <SetupCard slot={slot} />
       </Shell>
     );
   }
 
-  const title = `${CARD_NAMES[slot]} — ${card.name}`;
   const limit = card.credit_limit;
   // Available = limit − card balance. Each repayment that lowers the card balance frees that much again.
   const availNow = limit != null ? Math.max(limit - card.balance, 0) : null;
@@ -61,100 +60,80 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const account = data.accounts[0] ? { id: data.accounts[0].id, name: data.accounts[0].name } : null;
 
   const openAdd = (prefill = "") => setAdding({ prefill });
-  const big = "money text-[clamp(28px,3.4vw,38px)]";
-  const label = "text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700";
+  const linkBtn = "rounded px-1.5 py-0.5 text-[12.5px] font-medium text-brand-2 underline decoration-[#CADBD0] underline-offset-2 hover:bg-soft";
 
   return (
     <Shell
-      icon={<CardIcon />}
-      subtitle={`${title} — limit, available now, money people will give back, and available after`}
+      subtitle={`${card.name}: what you can spend now, what people owe on it, and what frees up once they pay.`}
       actions={
         <HeaderButton onClick={() => openAdd()}>
-          <PersonIcon size={16} />
-          Add Debtor
+          <PersonIcon size={15} />
+          Add debtor
         </HeaderButton>
       }
     >
-      <section aria-label="Available now and after repayment" className="flex flex-wrap items-stretch gap-3.5">
-        {limit != null ? (
-          <BalanceEditor
-            tone="bank"
-            label={`${CARD_NAMES[slot]} — available now`}
-            inputLabel="Available balance now (৳)"
-            value={availNow!}
-            footnote={`Updated ${timestampLong(card.updated_at)}`}
-            onSave={async (n) => {
-              if (n > limit) return { error: `Available can't be more than the limit (${taka(limit)}).` };
-              return setCardBalance(card.id, limit - n);
-            }}
-          />
-        ) : (
-          <div className="flex flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border border-line bg-white p-[22px]">
-            <span className={label}>{CARD_NAMES[slot]} — available now</span>
-            <div className={`${big} text-slate-400`}>—</div>
-            {!viewer && <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 w-fit items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-semibold text-slate-700">
-              <PencilIcon size={14} />
-              Set credit limit first
-            </button>}
+      <div className="flex flex-col gap-2.5">
+        <Statement label="Available now and after repayment">
+          {limit != null ? (
+            <BalanceEditor
+              label="Available now"
+              inputLabel="Available balance now (৳)"
+              value={availNow!}
+              footnote={`Updated ${timestampLong(card.updated_at)}`}
+              onSave={async (n) => {
+                if (n > limit) return { error: `Available can't be more than the limit (${taka(limit)}).` };
+                return setCardBalance(card.id, limit - n);
+              }}
+            />
+          ) : (
+            <Figure label="Available now" value="—" tone="muted" note="Set the credit limit to see this"
+              action={!viewer && <button type="button" onClick={() => setEditingCard(true)} className={linkBtn}>Set limit</button>} />
+          )}
+          <Figure label="+ Owed to you" value={taka(owed)} tone="owed" note={`${owing.length} ${owing.length === 1 ? "person" : "people"} on this card`} />
+          <Figure label="= Once everyone pays" value={availAfter != null ? taka(availAfter) : "—"} tone="good" note="Available balance after repayment" />
+        </Statement>
+        {limit != null && (
+          <div className="flex flex-wrap items-center gap-1.5 px-0.5 text-[12.5px] text-slate-500">
+            Credit limit <span className="money text-slate-700">{taka(limit)}</span>
+            {card.pay_by && <> · pay by {dateLong(card.pay_by)}</>}
+            {!viewer && <button type="button" onClick={() => setEditingCard(true)} className={linkBtn}>Edit</button>}
           </div>
         )}
-        <EqSign>+</EqSign>
-        <div className="flex flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border border-[#FDE68A] border-b-4 border-b-[#F59E0B] bg-[#FFFBEB] p-[22px]">
-          <span className={label}>People owe you</span>
-          <div className={`${big} text-[#92400E]`}>{taka(owed)}</div>
-          <div className="text-sm text-[#92400E]">{owing.length} people still owe on this card</div>
-        </div>
-        <EqSign>=</EqSign>
-        <div className="flex flex-[1_1_300px] flex-col gap-2.5 rounded-2xl bg-brand p-[22px] text-white">
-          <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-mint">After everyone pays you back</span>
-          <div className={big}>{availAfter != null ? taka(availAfter) : "—"}</div>
-          <div className="text-sm text-mint">Your available balance once all money comes back</div>
-        </div>
-      </section>
-
-      {limit != null && (
-        <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-600">
-          Credit limit: <span className="money text-slate-800">{taka(limit)}</span>
-          {!viewer && <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line px-3 font-semibold text-slate-700">
-            <PencilIcon size={14} />
-            Change
-          </button>}
-        </div>
-      )}
+      </div>
 
       <Flash text={flash.text} />
 
       <ProfileSlider
-        title="Debtor profiles"
-        sub={`Everyone who has used your ${CARD_NAMES[slot]}. Open a profile to see their full history.`}
-        tookLabel="USED"
+        title="People"
+        sub={`Everyone who has used your ${CARD_NAMES[slot]}.`}
+        tookLabel="Used"
         items={profiles.map((p) => ({ ...p, took: p.used }))}
         onOpen={setOpenId}
         onAdd={() => openAdd()}
       />
 
       <SectionCard>
-        <SectionHead id="owe-h" title="Who will bring money back"
-          sub={`Each person's amount still owed, and what your available balance becomes as each one pays — biggest first. Tap a name to ${viewer ? "open their profile" : "record a repayment"}.`} />
+        <SectionHead id="owe-h" title="Repayment outlook"
+          sub={`What each person still owes, biggest first, and your available balance as each one pays. Tap a name to ${viewer ? "open their profile" : "record a repayment"}.`} />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-[14.5px]">
+          <table className="w-full min-w-[820px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Person</th>
                 <th scope="col" className={`${th} text-right`}>Used</th>
                 <th scope="col" className={`${th} text-right`}>Paid back</th>
-                <th scope="col" className={`${th} bg-[#FEFCE8] text-right text-[#92400E]`}>Will give back</th>
+                <th scope="col" className={`${th} text-right`}>Still owes</th>
                 <th scope="col" className={th}>Due</th>
                 <th scope="col" className={`${th} text-right`}>Available after</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-soft bg-[#F0FDF4]">
-                <th scope="row" className={`${td} text-left font-semibold text-[#047857]`}>Now</th>
-                <td className={`${td} text-right`}>—</td>
-                <td className={`${td} text-right`}>—</td>
-                <td className={`${td} bg-[#FEFCE8] text-right`}>—</td>
-                <td className={td}>Today</td>
+              <tr className="border-b border-soft">
+                <th scope="row" className={`${td} text-left font-medium text-slate-500`}>Today</th>
+                <td className={`${td} text-right text-slate-400`}>—</td>
+                <td className={`${td} text-right text-slate-400`}>—</td>
+                <td className={`${td} text-right text-slate-400`}>—</td>
+                <td className={`${td} text-slate-400`}>—</td>
                 <td className={`${td} money text-right`}>{availNow != null ? taka(availNow) : "—"}</td>
               </tr>
               {owingRows.map((p) => (
@@ -164,18 +143,18 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                   </th>
                   <td className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
                   <td className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
-                  <td className={`${td} money bg-[#FEFCE8] text-right text-[#78350F]`}>+ {taka(p.owes)}</td>
+                  <td className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
                   <td className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
-                  <td className={`${td} money text-right text-brand-2`}>{p.run != null ? taka(p.run) : "—"}</td>
+                  <td className={`${td} money text-right`}>{p.run != null ? taka(p.run) : "—"}</td>
                 </tr>
               ))}
-              <tr className="bg-brand text-white">
-                <th scope="row" className="px-4 py-3.5 text-left font-bold">AFTER EVERYONE PAYS</th>
-                <td className="px-4 py-3.5 text-right font-mono">{taka(usedTotal)}</td>
-                <td className="px-4 py-3.5 text-right font-mono">{taka(paidTotal)}</td>
-                <td className="money px-4 py-3.5 text-right">+ {taka(owed)}</td>
-                <td className="px-4 py-3.5">—</td>
-                <td className="money px-4 py-3.5 text-right text-base">{availAfter != null ? taka(availAfter) : "Set limit"}</td>
+              <tr className={totalRow}>
+                <th scope="row" className={`${td} text-left`}>Once everyone pays</th>
+                <td className={`${td} money text-right`}>{taka(usedTotal)}</td>
+                <td className={`${td} money text-right`}>{taka(paidTotal)}</td>
+                <td className={`${td} money text-right text-[#85570F]`}>{taka(owed)}</td>
+                <td className={td} />
+                <td className={`${td} money text-right text-brand-2`}>{availAfter != null ? taka(availAfter) : "Set limit"}</td>
               </tr>
             </tbody>
           </table>
@@ -183,9 +162,9 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       </SectionCard>
 
       <SectionCard>
-        <SectionHead id="log-h" title="Card transactions" sub="Every use of this card. Tap a name to open their profile." />
+        <SectionHead id="log-h" title="Transactions" sub="Every use of this card. Tap a name to open their profile." />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse text-[14.5px]">
+          <table className="w-full min-w-[640px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Date</th>
@@ -201,17 +180,17 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                 const name = me ? "Me" : peopleById.get(u.person_id!)?.name ?? "Unknown";
                 const isNew = u.id === newestId;
                 return (
-                  <tr key={u.id} className={`border-b border-soft ${isNew ? "bg-[#F0FDF4]" : ""}`}>
+                  <tr key={u.id} className={`border-b border-soft ${isNew ? "bg-[#F2F6F3]" : ""}`}>
                     <td className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(u.used_on)}</td>
                     <th scope="row" className="px-4 py-1.5 text-left">
                       {me ? (
-                        <span className="inline-flex min-h-11 items-center font-semibold text-slate-600">Me</span>
+                        <span className="inline-flex min-h-10 items-center text-slate-500">Me</span>
                       ) : (
                         <PersonButton name={name} initials={initials(name)} onClick={() => setOpenId(u.person_id!)} />
                       )}
                     </th>
-                    <td className={`${td} font-medium`}>{u.reason_or_place}</td>
-                    <td className={`${td} money text-right`} style={{ color: me ? "#334155" : "#B45309" }}>{taka(u.amount)}</td>
+                    <td className={td}>{u.reason_or_place}</td>
+                    <td className={`${td} money text-right ${me ? "text-slate-500" : ""}`}>{taka(u.amount)}</td>
                     <td className="px-2 text-right">
                       <DeleteButton label={`Delete ${name}'s card use, ${taka(u.amount)}`} onClick={() => setDeleting({
                         kind: "card_use", id: u.id, amount: u.amount, iso: u.used_on,

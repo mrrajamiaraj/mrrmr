@@ -2,11 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Shell, HeaderButton, useViewer } from "@/components/shell";
-import { HistoryIcon, PencilIcon, PeopleIcon, PersonIcon, PlusIcon, SearchIcon, TrashIcon, WalletIcon } from "@/components/icons";
+import { PencilIcon, PersonIcon, SearchIcon, TrashIcon } from "@/components/icons";
+import { Figure, Statement } from "@/components/balance-editor";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { ProfileModal } from "@/components/debtors/profile-modal";
 import { RepayForm, repayTargets } from "@/components/debtors/repay-form";
-import { Avatar, EmptyNote, Flash, SectionCard, SectionHead, StatusPill, td, th, theadRow } from "@/components/debtors/bits";
+import { Avatar, EmptyNote, Flash, SectionCard, StatusPill, td, th, totalRow } from "@/components/debtors/bits";
 import { ErrorBox, Modal, btnGhost, btnPrimary } from "@/components/modal";
 import { deletePerson, updatePerson } from "@/lib/actions";
 import { amountSigned, buildProfiles, byOwesThenName, type EventKind, type Profile } from "@/lib/ledger";
@@ -16,11 +17,12 @@ import type { FinanceData, Status } from "@/lib/types";
 type Tab = "portfolio" | "table" | "ledger";
 type TypeF = "ALL" | "LENT" | "REPAID";
 const STATUSES: ("All" | Status)[] = ["All", "Pending", "Partially Paid", "Repaid"];
-const LEDGER_TYPE: Record<EventKind, { label: string; color: string; bg: string }> = {
-  "Took loan": { label: "Money lent", color: "#B45309", bg: "#FEF3C7" },
-  "Used my card": { label: "Card use", color: "#1D4ED8", bg: "#DBEAFE" },
-  "Paid back": { label: "Repayment received", color: "#0F766E", bg: "#CCFBF1" },
+const LEDGER_TYPE: Record<EventKind, { label: string; color: string }> = {
+  "Took loan": { label: "Loan", color: "text-ink" },
+  "Used my card": { label: "Card use", color: "text-ink" },
+  "Paid back": { label: "Repayment", color: "text-brand-2" },
 };
+const textBtn = "min-h-8 rounded-md px-2 text-brand-2 hover:bg-soft disabled:text-slate-400";
 
 type Dialog =
   | { kind: "new" }
@@ -65,15 +67,12 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
     { lent: 0, rep: 0, left: 0, loans: 0 }
   );
 
-  const kpis = [
-    { label: "Money lent", value: taka(totLent), sub: "Loans + card use by others", glyph: "↗", line: "#6366F1", soft: "#E0E7FF", ink: "#4338CA", bg: "#FFFFFF", border: "#E5E7EB", val: "#0F172A", subC: "#64748B" },
-    { label: "Repaid back", value: taka(totRepaid), sub: `${pct(totRepaid, totLent, 1)}% recovered`, glyph: "↙", line: "#14B8A6", soft: "#CCFBF1", ink: "#0F766E", bg: "#FFFFFF", border: "#E5E7EB", val: "#0F172A", subC: "#0F766E" },
-    { label: "Outstanding due", value: taka(totOwes), sub: `● ${all.filter((p) => p.owes > 0).length} people still owe`, glyph: "!", line: "#F59E0B", soft: "#FEF3C7", ink: "#B45309", bg: "#FFFBEB", border: "#FDE68A", val: "#92400E", subC: "#92400E" },  ];
+  const owingCount = all.filter((p) => p.owes > 0).length;
 
-  const tabs: [Tab, string][] = [
-    ["portfolio", "Debtor Portfolio"],
-    ["table", `Receivables Table (${people.length})`],
-    ["ledger", `Loan & Repayment Ledger (${ledgerAll.length})`],
+  const tabs: [Tab, string, number | null][] = [
+    ["portfolio", "People", null],
+    ["table", "Summary", people.length],
+    ["ledger", "Ledger", ledgerAll.length],
   ];
 
   const pv = openId ? all.find((p) => p.id === openId) : undefined;
@@ -84,211 +83,169 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
 
   return (
     <Shell
-      icon={<WalletIcon />}
-      subtitle="Debtor receivables, multiple loan tracking, settlement dates & repayment ledger"
+      subtitle="Everyone who owes you, across loans and card use, with every repayment."
       actions={
-        <>
-          <HeaderButton onClick={() => setDialog({ kind: "new" })}><PlusIcon size={16} />Log Loan / Repayment</HeaderButton>
-          <HeaderButton variant="outline" onClick={() => setDialog({ kind: "new" })}><PersonIcon size={16} />Add Debtor</HeaderButton>
-        </>
+        <HeaderButton onClick={() => setDialog({ kind: "new" })}><PersonIcon size={15} />Add debtor</HeaderButton>
       }
     >
-      <section aria-label="Loan figures" className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3.5">
-        {kpis.map((k) => (
-          <div key={k.label} className="flex flex-col gap-3 rounded-[14px] border border-b-4 p-[18px]" style={{ background: k.bg, borderColor: k.border, borderBottomColor: k.line }}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-slate-700">{k.label}</span>
-              <span aria-hidden="true" className="flex size-[30px] flex-none items-center justify-center rounded-lg font-bold" style={{ background: k.soft, color: k.ink }}>{k.glyph}</span>
-            </div>
-            <div className="money text-2xl" style={{ color: k.val }}>{k.value}</div>
-            <div className="text-[13px]" style={{ color: k.subC }}>{k.sub}</div>
-          </div>
-        ))}
-      </section>
+      <Statement label="Loan figures">
+        <Figure label="Lent out" value={taka(totLent)} note="Loans and card use by others" />
+        <Figure label="Paid back" value={taka(totRepaid)} tone="good" note={`${pct(totRepaid, totLent, 1)}% recovered`} />
+        <Figure label="Still owed" value={taka(totOwes)} tone="owed" note={`${owingCount} ${owingCount === 1 ? "person" : "people"} still owe`} />
+      </Statement>
 
-      <section aria-label="Workspace controls" className="flex flex-col gap-3.5 rounded-2xl border border-line bg-white px-[18px] py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div role="tablist" aria-label="Views" className="flex flex-wrap gap-2">
-            {tabs.map(([key, label]) => (
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line">
+          <div role="tablist" aria-label="Views" className="-mb-px flex gap-5">
+            {tabs.map(([key, label, count]) => (
               <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-                className={`min-h-11 rounded-[10px] border px-4 text-[15.5px] font-semibold ${tab === key ? "border-brand bg-brand text-white" : "border-[#E2E8F0] bg-soft text-slate-800"}`}>
-                {label}
+                className={`border-b-2 pb-2.5 pt-1 text-[14px] ${tab === key ? "border-ink font-medium text-ink" : "border-transparent text-slate-500 hover:text-ink"}`}>
+                {label}{count != null && <span className="ml-1.5 text-slate-400">{count}</span>}
               </button>
             ))}
           </div>
-          <label className="flex min-h-11 min-w-[200px] flex-[0_1_300px] items-center gap-2 rounded-[10px] border border-[#CBD5E1] px-3.5">
-            <SearchIcon size={16} className="text-slate-500" />
+          <label className="mb-2 flex min-h-9 min-w-[200px] flex-[0_1_280px] items-center gap-2 rounded-md border border-[#D6D3CB] bg-white px-2.5 focus-within:border-brand-2">
+            <SearchIcon size={15} className="text-slate-500" />
             <span className="sr-only">Search</span>
-            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search person, reason, notes…" className="min-w-0 flex-auto bg-transparent text-[15px] outline-none" />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, reason, notes" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
           </label>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-soft pt-3">
-          <div role="group" aria-label="Filter by status" className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-sm text-slate-500">Filter:</span>
-            {STATUSES.map((s) => (
-              <button key={s} type="button" aria-pressed={statusF === s} onClick={() => setStatusF(s)}
-                className={`min-h-9 rounded-lg border px-3 text-sm font-medium ${statusF === s ? "border-[#5EEAD4] bg-[#CCFBF1] text-[#115E59]" : "border-soft bg-soft text-slate-700"}`}>
-                {s === "All" ? "All Statuses" : s}
-              </button>
-            ))}
-          </div>
-          <div role="group" aria-label="Filter ledger by type" className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-sm text-slate-500">Ledger type:</span>
-            {([["ALL", "ALL"], ["LENT", "Money Lent"], ["REPAID", "Repayment Received"]] as [TypeF, string][]).map(([key, label]) => (
-              <button key={key} type="button" aria-pressed={typeF === key} onClick={() => { setTypeF(key); setTab("ledger"); }}
-                className={`min-h-9 rounded-lg px-3 text-sm font-semibold ${typeF === key ? "bg-ink text-white" : "bg-soft text-slate-700"}`}>
-                {label}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
+          {tab !== "ledger" ? (
+            <div role="group" aria-label="Filter by status" className="flex flex-wrap items-center gap-1">
+              <span className="mr-1.5 text-slate-500">Status</span>
+              {STATUSES.map((s) => (
+                <button key={s} type="button" aria-pressed={statusF === s} onClick={() => setStatusF(s)}
+                  className={`min-h-8 rounded-md px-2.5 ${statusF === s ? "bg-ink text-white" : "text-slate-600 hover:bg-soft"}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div role="group" aria-label="Filter ledger by type" className="flex flex-wrap items-center gap-1">
+              <span className="mr-1.5 text-slate-500">Show</span>
+              {([["ALL", "Everything"], ["LENT", "Money out"], ["REPAID", "Repayments"]] as [TypeF, string][]).map(([key, label]) => (
+                <button key={key} type="button" aria-pressed={typeF === key} onClick={() => setTypeF(key)}
+                  className={`min-h-8 rounded-md px-2.5 ${typeF === key ? "bg-ink text-white" : "text-slate-600 hover:bg-soft"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      </section>
+      </div>
 
       <Flash text={flash} />
 
       {tab === "portfolio" && (
-        <section aria-labelledby="port-h" className="flex flex-col gap-3.5">
-          <div className="flex flex-wrap items-center justify-between gap-2.5">
-            <h2 id="port-h" className="m-0 flex items-center gap-2.5 text-xl font-bold">
-              <PeopleIcon size={20} className="text-brand-2" />
-              Borrower profiles &amp; reason breakdown
-            </h2>
-            {!viewer && <button type="button" onClick={() => setDialog({ kind: "new" })} className={btnPrimary}>+ Add Debtor</button>}
-          </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(340px,100%),1fr))] items-start gap-4">
+        <section aria-label="People" className="flex flex-col gap-3">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(320px,100%),1fr))] items-start gap-3">
             {people.map((p) => {
               const isOpen = expanded === p.id;
-              const badge = [p.loanCount && `${p.loanCount} ${p.loanCount === 1 ? "Loan" : "Loans"}`, p.cardCount && `${p.cardCount} card ${p.cardCount === 1 ? "use" : "uses"}`].filter(Boolean).join(" · ") || "No records";
+              const records = [p.loanCount && `${p.loanCount} ${p.loanCount === 1 ? "loan" : "loans"}`, p.cardCount && `${p.cardCount} card ${p.cardCount === 1 ? "use" : "uses"}`].filter(Boolean).join(", ") || "No records";
               return (
-                <article key={p.id} className="flex flex-col gap-3.5 rounded-2xl border border-line bg-white p-[18px]">
+                <article key={p.id} className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4">
                   <div className="flex items-start gap-3">
-                    <Avatar text={p.initials} />
+                    <Avatar text={p.initials} size={36} />
                     <div className="min-w-0 flex-auto">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={() => setOpenId(p.id)} className="text-left text-[17px] font-bold underline decoration-[#99F6E4] underline-offset-4">{p.name}</button>
-                        <span className="rounded-md border border-[#C7D2FE] bg-[#EEF2FF] px-[7px] py-px text-xs text-[#4338CA]">{badge}</span>
-                      </div>
-                      <div className="text-[13.5px] text-slate-500">Due: {p.owes > 0 ? dateLong(p.due) : "—"}</div>
+                      <button type="button" onClick={() => setOpenId(p.id)} className="text-left text-[15px] font-medium decoration-[#A8A49A] underline-offset-4 hover:underline">{p.name}</button>
+                      <div className="text-[12.5px] text-slate-500">{records}{p.owes > 0 && <> · due {dateLong(p.due)}</>}</div>
                     </div>
-                    <StatusPill status={p.status} className="text-[13px]" />
+                    <StatusPill status={p.status} />
                   </div>
-                  <div className="flex flex-col gap-2 rounded-xl border border-soft bg-[#F8FAFC] px-3 py-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12.5px] font-semibold tracking-[0.06em] text-slate-600">REASONS ({p.reasons.length})</span>
-                      <button type="button" onClick={() => setExpanded(isOpen ? null : p.id)} aria-expanded={isOpen} className="min-h-8 px-1 text-[13.5px] font-semibold text-brand-2">
-                        {isOpen ? "Hide history" : "Full history"}
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {p.reasons.map((r, i) => <span key={i} className="rounded-md border border-[#E2E8F0] bg-white px-2 py-0.5 text-[13px]">#{r}</span>)}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 border-y border-soft py-2.5 text-center">
-                    <div><div className="text-xs tracking-[0.06em] text-slate-500">BORROWED</div><div className="money">{taka(p.taken)}</div></div>
-                    <div><div className="text-xs tracking-[0.06em] text-slate-500">REPAID</div><div className="money text-brand-2">{taka(p.paid)}</div></div>
-                    <div><div className="text-xs tracking-[0.06em] text-[#B45309]">LEFT</div><div className="money text-[#92400E]">{taka(p.owes)}</div></div>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex justify-between text-sm"><span>Recovery progress</span><span className="font-mono">{pct(p.paid, p.taken, 1).toFixed(1)}%</span></div>
-                    <div className="h-2 overflow-hidden rounded bg-soft"><div className="h-full bg-[#14B8A6]" style={{ width: `${Math.min(p.pct, 100)}%` }} /></div>
+                  {p.reasons.length > 0 && <p className="m-0 line-clamp-2 text-[13px] text-slate-600">{p.reasons.join(", ")}</p>}
+                  <dl className="m-0 grid grid-cols-3 gap-2 border-t border-soft pt-3 text-[12px]">
+                    <div><dt className="text-slate-500">Borrowed</dt><dd className="money m-0 text-[14px]">{taka(p.taken)}</dd></div>
+                    <div><dt className="text-slate-500">Repaid</dt><dd className="money m-0 text-[14px]">{taka(p.paid)}</dd></div>
+                    <div><dt className="text-slate-500">Left</dt><dd className="money m-0 text-[14px] text-[#85570F]">{taka(p.owes)}</dd></div>
+                  </dl>
+                  <div className="flex items-center gap-2.5 text-[12px] text-slate-500">
+                    <div className="h-1 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]"><div className="h-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%` }} /></div>
+                    {pct(p.paid, p.taken, 1).toFixed(0)}%
                   </div>
                   {isOpen && (
-                    <ol className="m-0 flex list-none flex-col gap-2.5 rounded-xl bg-[#F8FAFC] p-3">
-                      {p.events.map((e) => {
-                        const t = LEDGER_TYPE[e.kind];
-                        return (
-                          <li key={e.id} className="flex items-center gap-2.5">
-                            <span className="size-2.5 flex-none rounded-full" style={{ background: t.color }} />
-                            <div className="min-w-0 flex-auto">
-                              <div className="text-sm font-semibold">{e.kind === "Paid back" ? "Gave money back" : e.kind === "Took loan" ? "Took money" : "Used my card"}</div>
-                              <div className="text-[13px] text-slate-500">{dateLong(e.iso)} · {e.detail}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="money text-sm" style={{ color: t.color }}>{amountSigned(e.sign, e.amount)}</div>
-                              <div className="text-[12.5px] text-slate-500">left {taka(e.owesAfter)}</div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                      {p.events.length === 0 && <li className="text-sm text-slate-500">No records yet.</li>}
+                    <ol className="m-0 flex list-none flex-col divide-y divide-soft rounded-md border border-soft p-0">
+                      {p.events.map((e) => (
+                        <li key={e.id} className="flex items-baseline gap-3 px-3 py-2 text-[13px]">
+                          <div className="min-w-0 flex-auto">
+                            <div>{e.kind === "Paid back" ? "Paid back" : e.kind === "Took loan" ? "Borrowed" : "Used my card"}</div>
+                            <div className="text-[12px] text-slate-500">{dateLong(e.iso)} · {e.detail}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`money ${LEDGER_TYPE[e.kind].color}`}>{amountSigned(e.sign, e.amount)}</div>
+                            <div className="text-[11.5px] text-slate-500">left {taka(e.owesAfter)}</div>
+                          </div>
+                        </li>
+                      ))}
+                      {p.events.length === 0 && <li className="px-3 py-2 text-[13px] text-slate-500">No records yet.</li>}
                     </ol>
                   )}
-                  {viewer ? (
-                    <button type="button" onClick={() => setOpenId(p.id)} className="min-h-11 rounded-[10px] border border-[#99F6E4] bg-[#F0FDFA] text-[14.5px] font-semibold text-brand-2">Open profile →</button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setDialog({ kind: "loan", p })} className="min-h-11 rounded-[10px] border border-[#C7D2FE] bg-[#EEF2FF] px-3.5 text-[14.5px] font-semibold text-[#3730A3]">+ Loan</button>
-                      <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className="min-h-11 flex-auto rounded-[10px] border border-[#99F6E4] bg-[#F0FDFA] text-[14.5px] font-semibold text-brand-2">↙ Repay</button>
-                      <IconBtn label="Show history" onClick={() => setExpanded(isOpen ? null : p.id)}><HistoryIcon size={18} /></IconBtn>
-                      <IconBtn label="Edit debtor" onClick={() => setDialog({ kind: "edit", p })}><PencilIcon size={18} /></IconBtn>
-                      <IconBtn label="Delete debtor" muted onClick={() => setDialog({ kind: "delete", p })}><TrashIcon size={18} /></IconBtn>
-                    </div>
-                  )}
+                  <div className="-mx-1 flex flex-wrap items-center gap-1 border-t border-soft pt-2 text-[13px]">
+                    {!viewer && <button type="button" onClick={() => setDialog({ kind: "loan", p })} className={textBtn}>Add loan</button>}
+                    {!viewer && <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className={textBtn}>Record repayment</button>}
+                    <button type="button" onClick={() => setExpanded(isOpen ? null : p.id)} aria-expanded={isOpen} className={textBtn}>{isOpen ? "Hide history" : "History"}</button>
+                    {!viewer && (
+                      <span className="ml-auto flex">
+                        <IconBtn label="Edit debtor" onClick={() => setDialog({ kind: "edit", p })}><PencilIcon size={15} /></IconBtn>
+                        <IconBtn label="Delete debtor" muted onClick={() => setDialog({ kind: "delete", p })}><TrashIcon size={15} /></IconBtn>
+                      </span>
+                    )}
+                  </div>
                 </article>
               );
             })}
           </div>
-          {people.length === 0 && <EmptyNote>{all.length ? "No borrowers match this filter." : viewer ? "No debtors yet." : "No debtors yet. Use “+ Add Debtor” to record the first one."}</EmptyNote>}
+          {people.length === 0 && <EmptyNote>{all.length ? "Nobody matches this filter." : viewer ? "No debtors yet." : "No debtors yet. Use “Add debtor” to record the first one."}</EmptyNote>}
         </section>
       )}
 
       {tab === "table" && (
         <SectionCard>
-          <SectionHead id="tbl-h" title="Loan receivables & debtor settlement summary"
-            sub="Multiple loans per person, every borrowing reason, and what is left to collect"
-            action={viewer ? undefined : <button type="button" onClick={() => setDialog({ kind: "new" })} className={btnPrimary}>+ Add Debtor</button>} />
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1080px] border-collapse text-[14.5px]">
+            <table className="w-full min-w-[1000px] border-collapse text-[14px]">
               <thead>
-                <tr className={theadRow}>
-                  <th scope="col" className={th}>Person name</th>
-                  <th scope="col" className={th}>Records</th>
-                  <th scope="col" className={`${th} text-right`}>Total borrowed</th>
-                  <th scope="col" className={`${th} text-right`}>Total repaid</th>
-                  <th scope="col" className={`${th} bg-[#FEFCE8] text-right text-[#92400E]`}>Balance left</th>
+                <tr className="border-b border-line bg-[#FAF9F6] text-left">
+                  <th scope="col" className={th}>Person</th>
+                  <th scope="col" className={`${th} text-right`}>Records</th>
+                  <th scope="col" className={`${th} text-right`}>Borrowed</th>
+                  <th scope="col" className={`${th} text-right`}>Repaid</th>
+                  <th scope="col" className={`${th} text-right`}>Left</th>
                   <th scope="col" className={th}>Status</th>
-                  <th scope="col" className={th}>Borrowing reasons</th>
+                  <th scope="col" className={th}>Reasons</th>
                   <th scope="col" className={th}>Next due</th>
-                  <th scope="col" className={`${th} text-right`}>Repaid %</th>
-                  {!viewer && <th scope="col" className={th}>Actions</th>}
+                  <th scope="col" className={`${th} text-right`}>Repaid</th>
+                  {!viewer && <th scope="col" className={th}><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody>
                 {people.map((p) => (
                   <tr key={p.id} className="border-b border-soft">
-                    <th scope="row" className={`${td} text-left font-semibold`}>
-                      <button type="button" onClick={() => setOpenId(p.id)} className="inline-flex items-center gap-2.5 text-left underline decoration-[#99F6E4] underline-offset-4">
-                        <span className="inline-flex size-7 items-center justify-center rounded-full bg-[#CCFBF1] text-xs font-bold text-[#115E59] no-underline">{p.name[0]}</span>
-                        {p.name}
-                      </button>
+                    <th scope="row" className={`${td} text-left font-medium`}>
+                      <button type="button" onClick={() => setOpenId(p.id)} className="text-left decoration-[#A8A49A] underline-offset-4 hover:underline">{p.name}</button>
                     </th>
-                    <td className={td}><span className="rounded-md border border-[#C7D2FE] bg-[#EEF2FF] px-2 py-0.5 font-mono text-[13px] text-[#4338CA]">{p.loanCount + p.cardCount}</span></td>
-                    <td className={`${td} text-right font-mono`}>{taka(p.taken)}</td>
-                    <td className={`${td} text-right font-mono text-brand-2`}>{taka(p.paid)}</td>
-                    <td className={`${td} money bg-[#FEFCE8] text-right text-[#78350F]`}>{taka(p.owes)}</td>
-                    <td className={td}><StatusPill status={p.status} className="text-[13px]" /></td>
-                    <td className={td}><span className="inline-flex flex-wrap gap-1">{p.reasons.map((r, i) => <span key={i} className="rounded-md bg-soft px-[7px] py-px text-[12.5px]">#{r}</span>)}</span></td>
+                    <td className={`${td} money text-right text-slate-600`}>{p.loanCount + p.cardCount}</td>
+                    <td className={`${td} money text-right`}>{taka(p.taken)}</td>
+                    <td className={`${td} money text-right`}>{taka(p.paid)}</td>
+                    <td className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
+                    <td className={td}><StatusPill status={p.status} /></td>
+                    <td className={`${td} max-w-[260px] truncate text-slate-600`} title={p.reasons.join(", ")}>{p.reasons.join(", ")}</td>
                     <td className={`${td} whitespace-nowrap`}>{p.owes > 0 ? dateLong(p.due) : "—"}</td>
-                    <td className={`${td} text-right font-mono`}>{pct(p.paid, p.taken, 1).toFixed(1)}%</td>
-                    {!viewer && <td className="px-4 py-2">
-                      <span className="inline-flex gap-1.5">
-                        <button type="button" onClick={() => setDialog({ kind: "loan", p })} className="min-h-9 rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-2.5 text-[13.5px] font-semibold text-[#3730A3]">+ Loan</button>
-                        <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className="min-h-9 rounded-lg border border-[#99F6E4] bg-[#F0FDFA] px-2.5 text-[13.5px] font-semibold text-brand-2">Repay</button>
-                      </span>
+                    <td className={`${td} money text-right text-slate-600`}>{pct(p.paid, p.taken, 1).toFixed(1)}%</td>
+                    {!viewer && <td className="whitespace-nowrap px-3 py-1.5 text-right text-[13px]">
+                      <button type="button" onClick={() => setDialog({ kind: "loan", p })} className={textBtn}>Loan</button>
+                      <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className={textBtn}>Repay</button>
                     </td>}
                   </tr>
                 ))}
-                <tr className="border-t-2 border-line bg-[#F8FAFC]">
-                  <th scope="row" className="px-4 py-3.5 text-left font-bold">TOTAL SUMMARY</th>
-                  <td className="px-4 py-3.5 font-mono">{pTot.loans}</td>
-                  <td className="money px-4 py-3.5 text-right">{taka(pTot.lent)}</td>
-                  <td className="money px-4 py-3.5 text-right text-brand-2">{taka(pTot.rep)}</td>
-                  <td className="money bg-[#FEF9C3] px-4 py-3.5 text-right text-[#78350F]">{taka(pTot.left)}</td>
-                  <td className="px-4 py-3.5">—</td>
-                  <td className="px-4 py-3.5 text-slate-500">Active receivables</td>
-                  <td className="px-4 py-3.5">—</td>
-                  <td className="money px-4 py-3.5 text-right">{pct(pTot.rep, pTot.lent, 1).toFixed(1)}%</td>
-                  {!viewer && <td className="px-4 py-3.5">—</td>}
+                <tr className={totalRow}>
+                  <th scope="row" className={`${td} text-left`}>Total</th>
+                  <td className={`${td} money text-right`}>{pTot.loans}</td>
+                  <td className={`${td} money text-right`}>{taka(pTot.lent)}</td>
+                  <td className={`${td} money text-right`}>{taka(pTot.rep)}</td>
+                  <td className={`${td} money text-right text-[#85570F]`}>{taka(pTot.left)}</td>
+                  <td className={td} colSpan={3} />
+                  <td className={`${td} money text-right`}>{pct(pTot.rep, pTot.lent, 1).toFixed(1)}%</td>
+                  {!viewer && <td className={td} />}
                 </tr>
               </tbody>
             </table>
@@ -298,17 +255,16 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
 
       {tab === "ledger" && (
         <SectionCard>
-          <SectionHead id="led-h" title="Loan & repayment ledger" sub="Every time someone took money from you, and every time they gave it back" />
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse text-[14.5px]">
+            <table className="w-full min-w-[820px] border-collapse text-[14px]">
               <thead>
-                <tr className={theadRow}>
+                <tr className="border-b border-line bg-[#FAF9F6] text-left">
                   <th scope="col" className={th}>Date</th>
                   <th scope="col" className={th}>Person</th>
                   <th scope="col" className={th}>Type</th>
                   <th scope="col" className={th}>Reason / method</th>
                   <th scope="col" className={`${th} text-right`}>Amount</th>
-                  <th scope="col" className={`${th} text-right`}>Their balance after</th>
+                  <th scope="col" className={`${th} text-right`}>Owes after</th>
                 </tr>
               </thead>
               <tbody>
@@ -317,13 +273,13 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                   return (
                     <tr key={e.id} className="border-b border-soft">
                       <td className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(e.iso)}</td>
-                      <td className={`${td} font-semibold`}>
-                        <button type="button" onClick={() => setOpenId(e.personId)} className="text-left underline decoration-[#99F6E4] underline-offset-4">{e.person}</button>
+                      <td className={`${td} font-medium`}>
+                        <button type="button" onClick={() => setOpenId(e.personId)} className="text-left decoration-[#A8A49A] underline-offset-4 hover:underline">{e.person}</button>
                       </td>
-                      <td className={td}><span className="rounded-full px-2.5 py-[3px] text-[13px] font-semibold" style={{ background: t.bg, color: t.color }}>{t.label}</span></td>
+                      <td className={`${td} whitespace-nowrap text-slate-600`}>{t.label}</td>
                       <td className={`${td} text-slate-600`}>{e.detail}</td>
-                      <td className={`${td} money text-right`} style={{ color: t.color }}>{amountSigned(e.sign, e.amount)}</td>
-                      <td className={`${td} text-right font-mono`}>{taka(e.owesAfter)}</td>
+                      <td className={`${td} money text-right ${t.color}`}>{amountSigned(e.sign, e.amount)}</td>
+                      <td className={`${td} money text-right text-slate-600`}>{taka(e.owesAfter)}</td>
                     </tr>
                   );
                 })}
@@ -344,7 +300,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
       {dialog?.kind === "repay" && (
         <Modal title="Record repayment" onClose={close} maxWidth={620}>
           <div className="flex flex-col gap-4 p-5">
-            <div className="flex items-center gap-2.5 rounded-[10px] border border-[#99F6E4] bg-[#F0FDFA] px-3.5 py-2.5">
+            <div className="flex items-center gap-2.5 rounded-md border border-[#CADBD0] bg-[#F2F6F3] px-3.5 py-2.5">
               <Avatar text={dialog.p.initials} size={32} />
               <div><div className="font-semibold">{dialog.p.name}</div><div className="text-[13px] text-slate-600">Currently owes {taka(fresh(dialog.p).owes)}</div></div>
             </div>
@@ -378,7 +334,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
 function IconBtn({ label, onClick, muted = false, children }: { label: string; onClick: () => void; muted?: boolean; children: React.ReactNode }) {
   return (
     <button type="button" aria-label={label} title={label} onClick={onClick}
-      className={`flex size-11 items-center justify-center rounded-[10px] hover:bg-soft ${muted ? "text-slate-400" : "text-slate-600"}`}>
+      className={`flex size-8 items-center justify-center rounded-md hover:bg-soft ${muted ? "text-slate-400 hover:text-[#9B3426]" : "text-slate-500 hover:text-ink"}`}>
       {children}
     </button>
   );
@@ -420,7 +376,7 @@ function DeletePersonDialog({ p, onClose, onDone }: { p: Profile; onClose: () =>
       footer={<>
         <button type="button" onClick={onClose} className={btnGhost}>{hasRecords ? "Close" : "Cancel"}</button>
         {!hasRecords && (
-          <button type="button" disabled={pending} className="min-h-11 rounded-[10px] bg-[#B91C1C] px-5 text-[15px] font-semibold text-white"
+          <button type="button" disabled={pending} className="min-h-10 rounded-md bg-[#9B3426] px-4 text-[14px] font-medium text-white hover:bg-[#7E2A1F]"
             onClick={() => start(async () => { const r = await deletePerson(p.id); if (r.error) setError(r.error); else onDone(`${p.name} was deleted.`); })}>
             {pending ? "Deleting…" : "Delete"}
           </button>

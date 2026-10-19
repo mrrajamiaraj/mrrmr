@@ -81,37 +81,37 @@ export function RepayForm({
     });
   }
 
-  const input = "min-h-11 rounded-[10px] border border-[#CBD5E1] bg-white px-3 text-[15px]";
+  const input = "min-h-10 rounded-md border border-[#D6D3CB] bg-white px-3 text-[14px] font-normal";
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-[#99F6E4] bg-[#F0FDFA] p-3.5">
-      <div className="text-[15px] font-bold">Record a repayment from {first}</div>
+    <div className="flex flex-col gap-2.5 rounded-lg border border-line bg-[#FAF9F6] p-4">
+      <div className="text-[14.5px] font-semibold">Record a repayment from {first}</div>
       <div className="flex flex-wrap items-end gap-2.5">
-        <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-sm font-semibold">
+        <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-[13px] font-medium text-slate-700">
           Amount (৳)
           <input type="number" min="1" inputMode="decimal" value={amt} onChange={(e) => { setAmt(e.target.value); setError(""); }} placeholder="0" className={`${input} font-mono`} />
         </label>
-        <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-sm font-semibold">
+        <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-[13px] font-medium text-slate-700">
           Paid via
           <select value={via} onChange={(e) => setVia(e.target.value)} className={input}>
             {REPAY_VIA.map((v) => <option key={v}>{v}</option>)}
           </select>
         </label>
         {withDate && (
-          <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-sm font-semibold">
+          <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-[13px] font-medium text-slate-700">
             Date received
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
           </label>
         )}
         {targets.length > 1 && (
-          <label className="flex flex-[1_1_200px] flex-col gap-1.5 text-sm font-semibold">
+          <label className="flex flex-[1_1_200px] flex-col gap-1.5 text-[13px] font-medium text-slate-700">
             For
             <select value={target.key} onChange={(e) => { setTargetKey(e.target.value); setError(""); }} className={input}>
               {targets.map((t) => <option key={t.key} value={t.key}>{t.label} ({taka(t.max)})</option>)}
             </select>
           </label>
         )}
-        <button type="button" onClick={save} disabled={pending} className="min-h-11 rounded-[10px] bg-brand-2 px-[18px] text-[15px] font-semibold text-white">
+        <button type="button" onClick={save} disabled={pending} className="min-h-10 rounded-md bg-brand px-4 text-[14px] font-medium text-white hover:bg-[#173D2E]">
           {pending ? "Saving…" : "Save repayment"}
         </button>
       </div>

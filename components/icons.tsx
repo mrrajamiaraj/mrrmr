@@ -56,7 +56,7 @@ export const LogoutIcon = (p: P) => (
   <Svg strokeWidth={2} {...p}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 17l-5-5 5-5M5 12h11" /></Svg>
 );
 export const ChipIcon = () => (
-  <svg aria-hidden="true" width="40" height="30" viewBox="0 0 40 30" fill="none" stroke="#E2E8F0" strokeWidth="1.4">
+  <svg aria-hidden="true" width="40" height="30" viewBox="0 0 40 30" fill="none" stroke="#E3E1DA" strokeWidth="1.4">
     <rect x="1" y="1" width="38" height="28" rx="5" /><path d="M1 11h12M1 19h12M27 11h12M27 19h12M13 1v28M27 1v28" />
   </svg>
 );

@@ -53,15 +53,15 @@ export type Profile = {
 };
 
 export const STATUS_PILL: Record<Status, string> = {
-  Pending: "bg-[#DBEAFE] text-[#1D4ED8]",
-  "Partially Paid": "bg-[#FEF3C7] text-[#92400E]",
-  Repaid: "bg-[#D1FAE5] text-[#065F46]",
+  Pending: "text-[#9B3426]",
+  "Partially Paid": "text-[#85570F]",
+  Repaid: "text-brand-2",
 };
 
 export const DUE_PILL: Record<DueKind, string> = {
-  late: "bg-[#FEE2E2] text-[#B91C1C]",
-  soon: "bg-[#FEF3C7] text-[#92400E]",
-  later: "bg-[#DBEAFE] text-[#1D4ED8]",
+  late: "font-medium text-[#9B3426]",
+  soon: "text-[#85570F]",
+  later: "text-slate-600",
 };
 
 /** Display names for the two card slots (routes stay /cards/1 and /cards/2). */

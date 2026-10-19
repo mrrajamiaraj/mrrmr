@@ -9,8 +9,8 @@ import type { Card } from "@/lib/types";
 
 function Panel({ title, sub, children }: { title: string; sub: string; children?: React.ReactNode }) {
   return (
-    <section className="mx-auto w-full max-w-[640px] rounded-2xl border border-line bg-white p-6">
-      <h2 className="m-0 text-xl font-bold">{title}</h2>
+    <section className="mx-auto w-full max-w-[640px] rounded-lg border border-line bg-white p-6">
+      <h2 className="m-0 text-xl font-semibold">{title}</h2>
       <p className="mb-5 mt-1 text-sm text-slate-500">{sub}</p>
       {children}
     </section>

@@ -1,43 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-outfit), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-sans: var(--font-plex-sans), var(--font-bangla), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), var(--font-bangla), ui-monospace, monospace;
 
-  --color-ink: #0F172A;
-  --color-brand: #0F4C45;
-  --color-brand-2: #0F766E;
-  --color-brand-3: #12756A;
-  --color-mint: #A7F3D0;
-  --color-page: #F6F8FA;
-  --color-line: #E5E7EB;
-  --color-soft: #F1F5F9;
+  --color-ink: #1C1B18;
+  --color-brand: #1F4D3A;
+  --color-brand-2: #2E6B52;
+  --color-brand-3: #2E6B52;
+  --color-mint: #C9D9CF;
+  --color-page: #F5F4F0;
+  --color-line: #E3E1DA;
+  --color-soft: #F0EEE9;
+
+  /* Warm greys instead of Tailwind's blue-tinted slate, so every text-slate-* reads as paper and ink. */
+  --color-slate-50: #FAF9F6;
+  --color-slate-100: #F0EEE9;
+  --color-slate-200: #E3E1DA;
+  --color-slate-300: #D6D3CB;
+  --color-slate-400: #A8A49A;
+  --color-slate-500: #7A766C;
+  --color-slate-600: #5F5B53;
+  --color-slate-700: #46433D;
+  --color-slate-800: #2E2C28;
+  --color-slate-900: #1C1B18;
 }
 
 @layer base {
   body {
-    @apply bg-page text-ink font-sans text-[15px] leading-[1.45];
+    @apply bg-page text-ink font-sans text-[14.5px] leading-[1.5];
   }
+  h1, h2, h3 { letter-spacing: -0.01em; }
   button { @apply cursor-pointer; }
   button:disabled { @apply cursor-not-allowed opacity-60; }
   :where(button, a, input, select, [tabindex]):focus-visible {
-    outline: 2px solid #0D9488;
+    outline: 2px solid #2E6B52;
     outline-offset: 2px;
   }
 }
 
 @utility money {
-  font-family: var(--font-mono);
-  font-weight: 700;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 @utility field-input {
-  min-height: 46px;
-  padding: 0 14px;
-  border: 1px solid #CBD5E1;
-  border-radius: 10px;
-  font-size: 15px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #D6D3CB;
+  border-radius: 6px;
+  font-size: 14.5px;
   font-weight: 400;
   background: #FFFFFF;
   color: var(--color-ink);
@@ -48,6 +61,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-weight: 600;
-  font-size: 14.5px;
+  font-weight: 500;
+  font-size: 13.5px;
+  color: #46433D;
+}
+
+/* Small grey caption above a figure. */
+@utility caption {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #7A766C;
 }

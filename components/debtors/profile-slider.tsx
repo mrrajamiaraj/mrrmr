@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Avatar, EmptyNote, StatusPill } from "@/components/debtors/bits";
 import { useViewer } from "@/components/shell";
-import { ChevronLeft, ChevronRight, CloseIcon, PeopleIcon, SearchIcon } from "@/components/icons";
+import { ChevronLeft, ChevronRight, CloseIcon, SearchIcon } from "@/components/icons";
 import { dateShort, taka } from "@/lib/format";
 import type { Status } from "@/lib/types";
 
@@ -21,12 +21,13 @@ export type SlideItem = {
   reasons: string[];
 };
 
-const STEP = 294; // card width 280 + gap 14
+const STEP = 272; // card width 260 + gap 12
+const iconBtn = "flex size-9 items-center justify-center rounded-md border border-[#D6D3CB] bg-white text-slate-600 hover:bg-soft";
 
 export function ProfileSlider({
   title,
   sub,
-  tookLabel = "TOOK",
+  tookLabel = "Took",
   items,
   onOpen,
   onAdd,
@@ -51,84 +52,77 @@ export function ProfileSlider({
   };
 
   return (
-    <section aria-labelledby="prof-h" className="flex flex-col gap-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
+    <section aria-labelledby="prof-h" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-2.5">
         <div>
-          <h2 id="prof-h" className="m-0 flex items-center gap-2.5 text-xl font-bold">
-            <PeopleIcon size={20} className="text-brand-2" />
-            {title}
-          </h2>
-          <div className="text-sm text-slate-500">{sub}</div>
+          <h2 id="prof-h" className="m-0 text-[16px] font-semibold">{title}</h2>
+          <div className="mt-0.5 text-[13px] text-slate-500">{sub}</div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           {!searchOpen ? (
-            <button type="button" onClick={() => setSearchOpen(true)} aria-label="Search debtors"
-              className="flex size-11 items-center justify-center rounded-[10px] border border-[#CBD5E1] bg-white">
-              <SearchIcon size={18} />
+            <button type="button" onClick={() => setSearchOpen(true)} aria-label="Search debtors" className={iconBtn}>
+              <SearchIcon size={16} />
             </button>
           ) : (
-            <label className="flex min-h-11 w-[min(320px,100%)] items-center gap-2 rounded-[10px] border-2 border-[#14B8A6] bg-white pl-3 pr-1.5">
-              <SearchIcon size={16} className="text-brand-2" />
+            <label className="flex min-h-9 w-[min(280px,100%)] items-center gap-2 rounded-md border border-[#D6D3CB] bg-white pl-2.5 pr-1 focus-within:border-brand-2">
+              <SearchIcon size={15} className="text-slate-500" />
               <span className="sr-only">Search debtors</span>
               <input type="search" autoFocus value={q}
                 onChange={(e) => { setQ(e.target.value); if (track.current) track.current.scrollLeft = 0; }}
-                placeholder="Search name or reason…" className="min-w-0 flex-auto bg-transparent text-[15px] outline-none" />
+                placeholder="Name or reason" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
               <button type="button" onClick={() => { setSearchOpen(false); setQ(""); }} aria-label="Close search"
-                className="flex size-9 flex-none items-center justify-center text-slate-600">
-                <CloseIcon size={16} />
+                className="flex size-7 flex-none items-center justify-center text-slate-500">
+                <CloseIcon size={14} />
               </button>
             </label>
           )}
-          <button type="button" onClick={() => slide(-1)} aria-label="Previous debtors"
-            className="flex size-11 items-center justify-center rounded-full border border-[#CBD5E1] bg-white">
-            <ChevronLeft size={18} />
+          <button type="button" onClick={() => slide(-1)} aria-label="Previous debtors" className={iconBtn}>
+            <ChevronLeft size={16} />
           </button>
-          <button type="button" onClick={() => slide(1)} aria-label="Next debtors"
-            className="flex size-11 items-center justify-center rounded-full bg-brand text-white">
-            <ChevronRight size={18} />
+          <button type="button" onClick={() => slide(1)} aria-label="Next debtors" className={iconBtn}>
+            <ChevronRight size={16} />
           </button>
           {!viewer && (
-            <button type="button" onClick={onAdd} className="min-h-11 rounded-[10px] bg-brand px-4 text-[15px] font-semibold text-white">
-              + Add Debtor
+            <button type="button" onClick={onAdd} className="ml-1 min-h-9 rounded-md border border-[#D6D3CB] bg-white px-3 text-[13.5px] hover:bg-soft">
+              Add debtor
             </button>
           )}
         </div>
       </div>
 
       {ql && (
-        <div className="text-sm text-slate-600">
-          {shown.length} {shown.length === 1 ? "debtor matches" : "debtors match"} “{q.trim()}”
+        <div className="text-[13px] text-slate-600">
+          {shown.length} {shown.length === 1 ? "match" : "matches"} for “{q.trim()}”
         </div>
       )}
 
       <div ref={track} role="region" aria-label="Debtor profiles, scroll sideways" tabIndex={0}
-        className="-mx-0.5 flex snap-x snap-mandatory gap-3.5 overflow-x-auto scroll-smooth px-0.5 pb-3.5 pt-1">
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2">
         {shown.map((p) => (
-          <article key={p.id} className="flex flex-[0_0_280px] snap-start flex-col gap-3 rounded-2xl border border-line bg-white p-4">
-            <div className="flex items-center gap-3">
-              <Avatar text={p.initials} />
+          <button key={p.id} type="button" onClick={() => onOpen(p.id)} aria-label={`Open ${p.name}'s profile`}
+            className="flex flex-[0_0_260px] snap-start flex-col gap-3 rounded-lg border border-line bg-white p-4 text-left hover:border-[#D6D3CB] hover:shadow-[0_2px_8px_-4px_rgba(28,27,24,0.2)]">
+            <div className="flex w-full items-start gap-2.5">
+              <Avatar text={p.initials} size={34} />
               <div className="min-w-0 flex-auto">
-                <div className="truncate text-base font-bold">{p.name}</div>
-                <div className="text-[13px] text-slate-500">{p.txCount} records · last {dateShort(p.lastIso, "—")}</div>
+                <div className="truncate text-[14.5px] font-medium">{p.name}</div>
+                <div className="text-[12.5px] text-slate-500">{p.txCount} records · {dateShort(p.lastIso, "—")}</div>
               </div>
+            </div>
+            <dl className="m-0 grid w-full grid-cols-3 gap-2 text-[12px]">
+              <div><dt className="text-slate-500">{tookLabel}</dt><dd className="money m-0 text-[13.5px]">{taka(p.took)}</dd></div>
+              <div><dt className="text-slate-500">Paid</dt><dd className="money m-0 text-[13.5px]">{taka(p.paid)}</dd></div>
+              <div><dt className="text-slate-500">Owes</dt><dd className="money m-0 text-[13.5px] text-[#85570F]">{taka(p.owes)}</dd></div>
+            </dl>
+            <div className="flex w-full items-center gap-2.5">
+              <div className="h-1 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]"><div className="h-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%` }} /></div>
               <StatusPill status={p.status} />
             </div>
-            <div className="grid grid-cols-3 rounded-[10px] bg-[#F8FAFC] py-2 text-center">
-              <div><div className="text-[11.5px] tracking-[0.06em] text-slate-500">{tookLabel}</div><div className="money text-sm">{taka(p.took)}</div></div>
-              <div><div className="text-[11.5px] tracking-[0.06em] text-slate-500">PAID</div><div className="money text-sm text-brand-2">{taka(p.paid)}</div></div>
-              <div><div className="text-[11.5px] tracking-[0.06em] text-[#B45309]">OWES</div><div className="money text-sm text-[#92400E]">{taka(p.owes)}</div></div>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-[3px] bg-soft"><div className="h-full bg-[#14B8A6]" style={{ width: `${Math.min(p.pct, 100)}%` }} /></div>
-            <button type="button" onClick={() => onOpen(p.id)}
-              className="min-h-11 rounded-[10px] border border-[#99F6E4] bg-[#F0FDFA] text-[14.5px] font-semibold text-brand-2">
-              Open profile →
-            </button>
-          </article>
+          </button>
         ))}
       </div>
 
       {ql && shown.length === 0 && <EmptyNote>No debtor matches “{q.trim()}”.</EmptyNote>}
-      {!ql && items.length === 0 && <EmptyNote>{viewer ? "No debtors yet." : "No debtors yet. Use “+ Add Debtor” to record the first one."}</EmptyNote>}
+      {!ql && items.length === 0 && <EmptyNote>{viewer ? "No debtors yet." : "No debtors yet. Use “Add debtor” to record the first one."}</EmptyNote>}
     </section>
   );
 }
