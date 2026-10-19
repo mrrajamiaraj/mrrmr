@@ -17,8 +17,8 @@ export function ViewForm() {
 
       {state.error && <div className="rounded-[10px] bg-[#FEE2E2] px-3 py-2.5 text-sm text-[#B91C1C]" role="alert">{state.error}</div>}
 
-      <button type="submit" className="inline-flex min-h-[52px] items-center justify-center gap-2.5 rounded-[10px] bg-brand-2 text-[17px] font-semibold text-white" disabled={pending}>
-        <LockIcon size={18} />
+      <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-brand-2 text-[15px] font-semibold text-white" disabled={pending}>
+        <LockIcon size={16} />
         {pending ? "Unlocking…" : "Unlock"}
       </button>
     </form>

@@ -23,7 +23,7 @@ export function LoginForm({ next }: { next: string }) {
       {state.error && <div className="rounded-[10px] bg-[#FEE2E2] px-3 py-2.5 text-sm text-[#B91C1C]" role="alert">{state.error}</div>}
       {state.message && <div className="rounded-[10px] bg-[#D1FAE5] px-3 py-2.5 text-sm text-[#065F46]" role="status">{state.message}</div>}
 
-      <button type="submit" className="min-h-[46px] rounded-[10px] bg-brand font-semibold text-white" disabled={signingIn}>
+      <button type="submit" className="min-h-11 rounded-[10px] bg-brand text-[15px] font-semibold text-white" disabled={signingIn}>
         {signingIn ? "Signing in…" : "Sign in"}
       </button>
       <button
