@@ -4,14 +4,20 @@ import { createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminButton } from "@/components/admin-button";
-import { DownloadIcon } from "@/components/icons";
+import { DownloadIcon, EyeIcon, LogoutIcon } from "@/components/icons";
+import { exitViewMode } from "@/app/view/actions";
 import { CARD_NAMES } from "@/lib/ledger";
 
-type AdminInfo = { email: string; lastChanged: string };
-const AdminContext = createContext<AdminInfo>({ email: "", lastChanged: "—" });
+type AdminInfo = { email: string; lastChanged: string; viewer: boolean };
+const AdminContext = createContext<AdminInfo>({ email: "", lastChanged: "—", viewer: false });
 
 export function AdminProvider({ value, children }: { value: AdminInfo; children: React.ReactNode }) {
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
+}
+
+/** True in view mode: hide every button that adds, edits or deletes. The database refuses writes anyway. */
+export function useViewer() {
+  return useContext(AdminContext).viewer;
 }
 
 const TABS = [
@@ -51,8 +57,25 @@ export function Shell({
             </div>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            {actions}
-            <AdminButton email={admin.email} lastChanged={admin.lastChanged} />
+            {admin.viewer ? (
+              <>
+                <span className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[10px] bg-[#1D6E63] px-3.5 font-semibold text-white">
+                  <EyeIcon size={16} />
+                  View only
+                </span>
+                <form action={exitViewMode}>
+                  <button type="submit" className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[10px] border border-[#5EEAD4] bg-[#0B3D38] px-3.5 font-semibold text-white">
+                    <LogoutIcon size={16} />
+                    Exit
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                {actions}
+                <AdminButton email={admin.email} lastChanged={admin.lastChanged} />
+              </>
+            )}
           </div>
         </div>
       </header>

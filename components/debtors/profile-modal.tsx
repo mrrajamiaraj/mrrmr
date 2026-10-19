@@ -5,6 +5,7 @@ import { Modal, CloseButton } from "@/components/modal";
 import { ClearHistoryDialog, DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
 import type { RecordKind } from "@/lib/actions";
 import { Avatar, StatusPill } from "@/components/debtors/bits";
+import { useViewer } from "@/components/shell";
 import { RepayForm, repayTargets, type RepayTarget } from "@/components/debtors/repay-form";
 import { dateLong, taka } from "@/lib/format";
 import { amountSigned, CARD_NAMES, cardTitle, type CardProfile, type EventKind, type HistoryEvent, type Profile } from "@/lib/ledger";
@@ -54,6 +55,7 @@ export function ProfileModal({
   const isCard = variant === "card" && !!card;
   const isBank = variant === "bank";
   const scoped = isCard || isBank;
+  const viewer = useViewer();
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
   const [clearing, setClearing] = useState(false);
   const bankName = account?.name ?? "the bank account";
@@ -112,9 +114,11 @@ export function ProfileModal({
       )}
       footer={
         <>
-          <button type="button" onClick={onMore} className="min-h-11 rounded-[10px] border border-[#C7D2FE] bg-[#EEF2FF] px-4 text-[15px] font-semibold text-[#3730A3]">
-            {isCard ? `+ Add another use by ${p.first}` : `+ Lend more to ${p.first}`}
-          </button>
+          {!viewer && (
+            <button type="button" onClick={onMore} className="min-h-11 rounded-[10px] border border-[#C7D2FE] bg-[#EEF2FF] px-4 text-[15px] font-semibold text-[#3730A3]">
+              {isCard ? `+ Add another use by ${p.first}` : `+ Lend more to ${p.first}`}
+            </button>
+          )}
           <button type="button" onClick={onClose} className="min-h-11 rounded-[10px] bg-brand px-5 text-[15px] font-semibold text-white">Done</button>
         </>
       }
@@ -160,7 +164,7 @@ export function ProfileModal({
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="m-0 text-[15px] font-bold uppercase tracking-[0.04em]">Full history</h3>
-            {p.events.length > 0 && (
+            {p.events.length > 0 && !viewer && (
               <button type="button" onClick={() => setClearing(true)}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 text-sm font-semibold text-[#B91C1C] hover:bg-[#FEE2E2]">
                 Clear history
@@ -205,7 +209,7 @@ export function ProfileModal({
           </div>
         </div>
 
-        {p.owes > 0 && targets.length > 0 && (
+        {p.owes > 0 && targets.length > 0 && !viewer && (
           <RepayForm
             key={p.id + p.owes}
             personId={p.id}

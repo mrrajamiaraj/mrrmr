@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Avatar, EmptyNote, StatusPill } from "@/components/debtors/bits";
+import { useViewer } from "@/components/shell";
 import { ChevronLeft, ChevronRight, CloseIcon, PeopleIcon, SearchIcon } from "@/components/icons";
 import { dateShort, taka } from "@/lib/format";
 import type { Status } from "@/lib/types";
@@ -37,6 +38,7 @@ export function ProfileSlider({
   onOpen: (id: string) => void;
   onAdd: () => void;
 }) {
+  const viewer = useViewer();
   const track = useRef<HTMLDivElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -85,9 +87,11 @@ export function ProfileSlider({
             className="flex size-11 items-center justify-center rounded-full bg-brand text-white">
             <ChevronRight size={18} />
           </button>
-          <button type="button" onClick={onAdd} className="min-h-11 rounded-[10px] bg-brand px-4 text-[15px] font-semibold text-white">
-            + Add Debtor
-          </button>
+          {!viewer && (
+            <button type="button" onClick={onAdd} className="min-h-11 rounded-[10px] bg-brand px-4 text-[15px] font-semibold text-white">
+              + Add Debtor
+            </button>
+          )}
         </div>
       </div>
 
@@ -124,7 +128,7 @@ export function ProfileSlider({
       </div>
 
       {ql && shown.length === 0 && <EmptyNote>No debtor matches “{q.trim()}”.</EmptyNote>}
-      {!ql && items.length === 0 && <EmptyNote>No debtors yet. Use “+ Add Debtor” to record the first one.</EmptyNote>}
+      {!ql && items.length === 0 && <EmptyNote>{viewer ? "No debtors yet." : "No debtors yet. Use “+ Add Debtor” to record the first one."}</EmptyNote>}
     </section>
   );
 }

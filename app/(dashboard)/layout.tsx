@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AdminProvider } from "@/components/shell";
 import { timestampLong } from "@/lib/format";
+import { isViewerEmail } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       value={{
         email: user?.email ?? "",
         lastChanged: changedAt ? timestampLong(changedAt) : "— not recorded yet",
+        viewer: isViewerEmail(user?.email),
       }}
     >
       {children}

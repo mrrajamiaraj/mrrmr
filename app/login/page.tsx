@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LoginForm } from "./login-form";
 import { WalletIcon } from "@/components/icons";
 
@@ -25,6 +26,7 @@ export default async function LoginPage({
           </div>
         )}
         <LoginForm next={next ?? "/"} />
+        <Link href="/view" className="self-start px-1 text-[14.5px] font-semibold text-brand-2">Just viewing? Open view mode →</Link>
       </div>
     </main>
   );

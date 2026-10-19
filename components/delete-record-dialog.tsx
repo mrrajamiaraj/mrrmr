@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Modal, ErrorBox, btnGhost } from "@/components/modal";
 import { TrashIcon } from "@/components/icons";
+import { useViewer } from "@/components/shell";
 import { deleteRecord, deleteRecords, type RecordKind } from "@/lib/actions";
 import { dateLong, taka } from "@/lib/format";
 
@@ -26,6 +27,8 @@ export function undoText(kind: RecordKind, amount: number, place: string, paidFo
 }
 
 export function DeleteButton({ onClick, label }: { onClick: () => void; label: string }) {
+  const viewer = useViewer();
+  if (viewer) return null;
   return (
     <button type="button" onClick={onClick} aria-label={label} title="Delete permanently"
       className="inline-flex size-9 items-center justify-center rounded-lg text-slate-400 hover:bg-[#FEE2E2] hover:text-[#B91C1C]">

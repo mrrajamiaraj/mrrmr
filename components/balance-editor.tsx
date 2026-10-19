@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { PencilIcon } from "@/components/icons";
+import { useViewer } from "@/components/shell";
 import { taka } from "@/lib/format";
 
 /** Equation tile with an inline "Change" editor (bank: green, card: rose). */
@@ -25,6 +26,7 @@ export function BalanceEditor({
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const bank = tone === "bank";
+  const viewer = useViewer();
 
   function save() {
     const n = Math.round(Number(draft) * 100) / 100;
@@ -44,7 +46,7 @@ export function BalanceEditor({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-700">{label}</span>
-        {!editing && (
+        {!editing && !viewer && (
           <button
             type="button"
             onClick={() => { setDraft(String(value)); setError(""); setEditing(true); }}
