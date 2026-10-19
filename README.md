@@ -13,6 +13,7 @@ Supabase (`@supabase/ssr`). Amounts are Bangladeshi Taka with Indian grouping (�
 | Research Finance Ledger | `/research` | screenshots of the Google Sheets dashboard |
 | Admin password dialog | header, every page | `design/AdminButton.dc.html` |
 | CSV backup | `/export` (“Export CSV” in the nav) | — |
+| View mode (read-only, password `mrrmr`) | `/view` | same pages, no edit buttons |
 
 ## One-time Supabase setup
 
@@ -39,6 +40,25 @@ kept for reference — don't run it again).
    `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset`.
    Without this, a reset link only works in the same browser where you pressed “Forgot password?”.
 
+## View mode
+
+Anyone who opens `/view` (or “Just viewing?” on the sign-in page) and types the view password (`mrrmr`, or
+`VIEW_PASSCODE` if set) can see every page but change nothing. Behind the scenes they are signed in as one shared
+Supabase user, the *viewer*. Add/edit/delete buttons are hidden for that user, the server actions refuse it, and
+the database itself blocks every write from it, so view mode stays read-only even if someone calls the API directly.
+
+One-time setup:
+
+1. Run `supabase/migrations/0005_view_mode.sql` in the SQL Editor.
+2. Authentication → Users → Add user: an email such as `viewer@yourdomain.com` and a long random password, tick
+   “Auto Confirm User”. Visitors never see or type this password.
+3. Link the viewer to your account by running the `insert into public.viewers …` statement at the bottom of
+   `0005_view_mode.sql`, with both emails filled in.
+4. Add `VIEWER_EMAIL` and `VIEWER_PASSWORD` (that user's login) to `.env.local` and to Vercel. `VIEW_PASSCODE`
+   is optional; it defaults to `mrrmr`.
+
+“Exit” in the header signs the viewer out. Opening `/view` while you are signed in as admin just goes to the dashboard.
+
 ## Run locally
 
 Requires Node.js 20.9 or newer.
@@ -57,6 +77,8 @@ Open http://localhost:3000 and sign in.
 | --- | --- |
 | `SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
 | `SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API Keys → Publishable key |
+| `VIEWER_EMAIL`, `VIEWER_PASSWORD` | The read-only viewer user you create (see View mode) |
+| `VIEW_PASSCODE` | Optional; the password visitors type at `/view` (default `mrrmr`) |
 
 Only server code (`proxy.ts`, `lib/supabase/server.ts`) reads them, so they have no `NEXT_PUBLIC_` prefix and
 never reach the browser. **Never** put the `service_role` / secret key in this app.
