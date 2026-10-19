@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { AdminButton } from "@/components/admin-button";
 import { DownloadIcon, EyeIcon, LogoutIcon } from "@/components/icons";
 import { exitViewMode } from "@/app/view/actions";
+import { signOut } from "@/app/login/actions";
 import { CARD_NAMES } from "@/lib/ledger";
 
 type AdminInfo = { email: string; lastChanged: string; viewer: boolean };
@@ -77,11 +78,19 @@ export function Shell({
               <form action={exitViewMode}>
                 <button type="submit" className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 text-[13.5px] text-slate-700 hover:bg-soft">
                   <LogoutIcon size={15} />
-                  Exit
+                  Log out
                 </button>
               </form>
             ) : (
-              <AdminButton email={admin.email} lastChanged={admin.lastChanged} />
+              <>
+                <AdminButton email={admin.email} lastChanged={admin.lastChanged} />
+                <form action={signOut}>
+                  <button type="submit" className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 text-[13.5px] text-slate-700 hover:bg-soft">
+                    <LogoutIcon size={15} />
+                    Log out
+                  </button>
+                </form>
+              </>
             )}
           </div>
         </div>
