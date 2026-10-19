@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { LockIcon } from "@/components/icons";
 import type { AuthState } from "@/app/login/actions";
 import { enterViewMode } from "./actions";
 
@@ -10,14 +11,15 @@ export function ViewForm() {
   return (
     <form className="flex flex-col gap-3.5" action={action}>
       <label className="field-label">
-        View password
+        Viewer key
         <input className="field-input focus:border-[#0D9488]" name="passcode" type="password" autoComplete="off" autoFocus required />
       </label>
 
       {state.error && <div className="rounded-[10px] bg-[#FEE2E2] px-3 py-2.5 text-sm text-[#B91C1C]" role="alert">{state.error}</div>}
 
-      <button type="submit" className="min-h-[46px] rounded-[10px] bg-brand font-semibold text-white" disabled={pending}>
-        {pending ? "Opening…" : "View pages"}
+      <button type="submit" className="inline-flex min-h-[52px] items-center justify-center gap-2.5 rounded-[10px] bg-brand-2 text-[17px] font-semibold text-white" disabled={pending}>
+        <LockIcon size={18} />
+        {pending ? "Unlocking…" : "Unlock"}
       </button>
     </form>
   );
