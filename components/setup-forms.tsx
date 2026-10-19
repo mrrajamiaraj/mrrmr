@@ -3,10 +3,11 @@
 import { useState, useTransition } from "react";
 import { createAccount, createCard, updateCardDetails } from "@/lib/actions";
 import { ErrorBox, Modal, btnGhost, btnPrimary } from "@/components/modal";
+import { useViewer } from "@/components/shell";
 import { CARD_NAMES } from "@/lib/ledger";
 import type { Card } from "@/lib/types";
 
-function Panel({ title, sub, children }: { title: string; sub: string; children: React.ReactNode }) {
+function Panel({ title, sub, children }: { title: string; sub: string; children?: React.ReactNode }) {
   return (
     <section className="mx-auto w-full max-w-[640px] rounded-2xl border border-line bg-white p-6">
       <h2 className="m-0 text-xl font-bold">{title}</h2>
@@ -17,10 +18,13 @@ function Panel({ title, sub, children }: { title: string; sub: string; children:
 }
 
 export function SetupAccount() {
+  const viewer = useViewer();
   const [f, setF] = useState({ name: "City Bank", holder_name: "", balance: "" });
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+
+  if (viewer) return <Panel title="No bank account yet" sub="The bank account has not been set up yet, so there is nothing to show here." />;
 
   return (
     <Panel title="Set up your bank account" sub="There is no bank account in the database yet. Add it once and the page fills in.">
@@ -53,10 +57,13 @@ const CARD_DEFAULTS: Record<1 | 2, { bank: string; name: string; network: string
 
 export function SetupCard({ slot }: { slot: 1 | 2 }) {
   const d = CARD_DEFAULTS[slot];
+  const viewer = useViewer();
   const [f, setF] = useState({ ...d, last4: "", credit_limit: "", balance: "", pay_by: "" });
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+
+  if (viewer) return <Panel title={`No ${CARD_NAMES[slot]} yet`} sub="This card has not been set up yet, so there is nothing to show here." />;
 
   return (
     <Panel title={`Set up your ${CARD_NAMES[slot]}`} sub="This card is not in the database yet. Add it once and the page fills in.">

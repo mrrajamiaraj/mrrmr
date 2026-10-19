@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { writer } from "@/lib/viewer";
 import { passwordProblems } from "@/lib/password";
 
 export type ActionResult = { error?: string; personId?: string | null };
@@ -39,7 +39,7 @@ const orNull = (s: string | null | undefined) => (s && s.trim() ? s.trim() : nul
 export async function setAccountBalance(accountId: string, balance: number): Promise<ActionResult> {
   const b = money(balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase.from("accounts").update({ balance: b }).eq("id", accountId);
   return done(error);
 }
@@ -47,7 +47,7 @@ export async function setAccountBalance(accountId: string, balance: number): Pro
 export async function setCardBalance(cardId: string, balance: number): Promise<ActionResult> {
   const b = money(balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase.from("cards").update({ balance: b }).eq("id", cardId);
   return done(error);
 }
@@ -58,7 +58,7 @@ export async function createAccount(input: { name: string; holder_name: string; 
   if (!input.name.trim()) return { error: "Enter the account name." };
   const b = money(input.balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase
     .from("accounts")
     .insert({ name: input.name.trim(), holder_name: orNull(input.holder_name), balance: b });
@@ -79,7 +79,7 @@ export async function createCard(input: {
   if (input.last4 && !/^\d{4}$/.test(input.last4)) return { error: "Last 4 digits must be 4 numbers." };
   const b = money(input.balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase.from("cards").insert({
     slot: input.slot,
     bank: input.bank.trim(),
@@ -97,7 +97,7 @@ export async function updateCardDetails(
   cardId: string,
   input: { credit_limit: number | null; pay_by: string }
 ): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase
     .from("cards")
     .update({ credit_limit: input.credit_limit == null ? null : money(input.credit_limit), pay_by: orNull(input.pay_by) })
@@ -123,7 +123,7 @@ export async function addLoan(input: {
   if (!input.name.trim()) return { error: "Enter who took the money." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
   if (!input.reason.trim()) return { error: "Enter why they took it." };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { data, error } = await supabase.rpc("add_loan", {
     p_person_name: input.name.trim(),
     p_amount: amount,
@@ -153,7 +153,7 @@ export async function addCardUse(input: {
   if (!input.name.trim()) return { error: "Enter who used the card (or “Me” for your own spending)." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
   if (!input.reason.trim()) return { error: "Enter why or where it was used." };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { data, error } = await supabase.rpc("add_card_use", {
     p_card_id: input.cardId,
     p_person_name: input.name.trim(),
@@ -182,7 +182,7 @@ export async function recordRepayment(input: {
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
   if (input.appliesTo === "card" && !input.cardId) return { error: "Pick which card this repayment is for." };
 
-  const supabase = await createClient();
+  const supabase = await writer();
   const { data: s } = await supabase.from("debtor_summary").select("still_owes").eq("person_id", input.personId).maybeSingle();
   if (s && amount > Number(s.still_owes)) return { error: `They only owe ৳${Number(s.still_owes).toLocaleString("en-IN")}.` };
 
@@ -205,7 +205,7 @@ export async function updatePerson(
   input: { name: string; relation: string; phone: string; notes: string }
 ): Promise<ActionResult> {
   if (!input.name.trim()) return { error: "Enter a name." };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase
     .from("people")
     .update({ name: input.name.trim(), relation: orNull(input.relation), phone: orNull(input.phone), notes: orNull(input.notes) })
@@ -215,7 +215,7 @@ export async function updatePerson(
 
 /** Only succeeds for people with no records: the foreign keys are ON DELETE RESTRICT. */
 export async function deletePerson(personId: string): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase.from("people").delete().eq("id", personId);
   return done(error);
 }
@@ -225,7 +225,7 @@ export type RecordKind = "loan" | "card_use" | "repayment";
 /** Permanently deletes one loan, card use or repayment; optionally undoes its balance change in the same transaction. */
 export async function deleteRecord(kind: RecordKind, id: string, undoBalance: boolean): Promise<ActionResult> {
   if (!["loan", "card_use", "repayment"].includes(kind)) return { error: "Unknown record type." };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase.rpc("delete_record", { p_kind: kind, p_id: id, p_undo_balance: undoBalance });
   return done(error);
 }
@@ -239,7 +239,7 @@ export async function deleteRecords(
   undoBalance: boolean
 ): Promise<ActionResult> {
   if (records.some((r) => !["loan", "card_use", "repayment"].includes(r.kind))) return { error: "Unknown record type." };
-  const supabase = await createClient();
+  const supabase = await writer();
   let deleted = 0;
   for (const r of records) {
     const { error } = await supabase.rpc("delete_record", { p_kind: r.kind, p_id: r.id, p_undo_balance: undoBalance });
@@ -260,7 +260,7 @@ export async function changePassword(current: string, next: string, confirm: str
   if (next === current) return { error: "The new password must be different from the current one." };
   if (next !== confirm) return { error: "The two new passwords do not match." };
 
-  const supabase = await createClient();
+  const supabase = await writer();
   const { data: claims } = await supabase.auth.getClaims();
   const email = claims?.claims?.email as string | undefined;
   if (!email) return { error: "Your session has expired. Sign in again." };
@@ -277,7 +277,7 @@ export async function changePassword(current: string, next: string, confirm: str
 }
 
 export async function sendPasswordReset(): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = await writer();
   const { data: claims } = await supabase.auth.getClaims();
   const email = claims?.claims?.email as string | undefined;
   if (!email) return { error: "Your session has expired. Sign in again." };

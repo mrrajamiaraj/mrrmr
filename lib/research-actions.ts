@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { writer } from "@/lib/viewer";
 
 export type Result = { error?: string };
 
@@ -35,7 +35,7 @@ export async function saveExpense(
     tag: clean(input.tag) || null,
     amount: Math.round(input.amount * 100) / 100,
   };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = id
     ? await supabase.from("research_expenses").update(row).eq("id", id)
     : await supabase.from("research_expenses").insert(row);
@@ -43,7 +43,7 @@ export async function saveExpense(
 }
 
 export async function deleteExpense(id: string): Promise<Result> {
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase.from("research_expenses").delete().eq("id", id);
   return done(error);
 }
@@ -60,7 +60,7 @@ export async function saveContribution(
     note: clean(input.note) || null,
     amount: Math.round(input.amount * 100) / 100,
   };
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = id
     ? await supabase.from("research_contributions").update(row).eq("id", id)
     : await supabase.from("research_contributions").insert(row);
@@ -68,7 +68,7 @@ export async function saveContribution(
 }
 
 export async function deleteContribution(id: string): Promise<Result> {
-  const supabase = await createClient();
+  const supabase = await writer();
   const { error } = await supabase.from("research_contributions").delete().eq("id", id);
   return done(error);
 }
