@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PencilIcon, SearchIcon, TrashIcon } from "@/components/icons";
 import { EmptyNote } from "@/components/debtors/bits";
+import { useViewer } from "@/components/shell";
 import { facilityLook, memberLook, type ResearchContribution, type ResearchExpense } from "@/lib/research";
 import { dateLong, monthLabel, taka } from "@/lib/format";
 
@@ -56,6 +57,7 @@ function Search({ value, onChange, placeholder }: { value: string; onChange: (v:
 export function LedgerTab({ expenses, facilities, members, setDialog }: {
   expenses: ResearchExpense[]; facilities: string[]; members: string[]; setDialog: (d: DialogState) => void;
 }) {
+  const viewer = useViewer();
   const [q, setQ] = useState("");
   const [fac, setFac] = useState("");
   const [mem, setMem] = useState("");
@@ -117,7 +119,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
               <th scope="col" className="px-4 py-3 font-semibold">Personnel</th>
               <th scope="col" className="px-4 py-3 font-semibold">Description &amp; Note</th>
               <th scope="col" className="px-4 py-3 text-right font-semibold">Amount (৳)</th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>
+              {!viewer && <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -131,13 +133,13 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
                   {e.tag && <span className="ml-2 rounded border border-line bg-[#F8FAFC] px-1.5 py-0.5 text-[11.5px] text-slate-600">{e.tag}</span>}
                 </td>
                 <td className="money px-4 py-2.5 text-right">{taka(e.amount)}</td>
-                <td className="px-4 py-1.5 text-right">
+                {!viewer && <td className="px-4 py-1.5 text-right">
                   <RowActions onEdit={() => setDialog({ kind: "expense", row: e })} onDelete={() => setDialog({ kind: "delete-expense", row: e })} />
-                </td>
+                </td>}
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">{expenses.length ? "No expenses match these filters." : "No expenses yet. Use “+ Add Expense” to log the first one."}</td></tr>
+              <tr><td colSpan={viewer ? 5 : 6} className="px-4 py-8 text-center text-slate-500">{expenses.length ? "No expenses match these filters." : viewer ? "No expenses yet." : "No expenses yet. Use “+ Add Expense” to log the first one."}</td></tr>
             )}
           </tbody>
         </table>
@@ -151,6 +153,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
 export function ContributionsTab({ contributions, members, setDialog }: {
   contributions: ResearchContribution[]; members: string[]; setDialog: (d: DialogState) => void;
 }) {
+  const viewer = useViewer();
   const [q, setQ] = useState("");
   const [mem, setMem] = useState("");
   const ql = q.trim().toLowerCase();
@@ -169,8 +172,8 @@ export function ContributionsTab({ contributions, members, setDialog }: {
               <option value="">All Contributors</option>
               {members.map((m) => <option key={m}>{m}</option>)}
             </select>
-            <button type="button" onClick={() => setDialog({ kind: "contribution", row: null })}
-              className="min-h-10 rounded-[10px] bg-[#4F46E5] px-4 text-sm font-semibold text-white">+ Add Contribution</button>
+            {!viewer && <button type="button" onClick={() => setDialog({ kind: "contribution", row: null })}
+              className="min-h-10 rounded-[10px] bg-[#4F46E5] px-4 text-sm font-semibold text-white">+ Add Contribution</button>}
           </div>
         </div>
         <div className="flex flex-wrap justify-between gap-2 text-[13px] text-slate-600">
@@ -186,7 +189,7 @@ export function ContributionsTab({ contributions, members, setDialog }: {
               <th scope="col" className="px-4 py-3 font-semibold">Member Contributor</th>
               <th scope="col" className="px-4 py-3 font-semibold">Notes &amp; Reference</th>
               <th scope="col" className="px-4 py-3 text-right font-semibold">Amount (৳)</th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>
+              {!viewer && <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -196,13 +199,13 @@ export function ContributionsTab({ contributions, members, setDialog }: {
                 <td className="px-4 py-2.5"><MemberChip name={c.member} dot /></td>
                 <td className="px-4 py-2.5 text-slate-700">{c.note ?? "—"}</td>
                 <td className="money px-4 py-2.5 text-right text-[#4338CA]">{taka(c.amount)}</td>
-                <td className="px-4 py-1.5 text-right">
+                {!viewer && <td className="px-4 py-1.5 text-right">
                   <RowActions onEdit={() => setDialog({ kind: "contribution", row: c })} onDelete={() => setDialog({ kind: "delete-contribution", row: c })} />
-                </td>
+                </td>}
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-500">{contributions.length ? "No contributions match." : "No contributions yet."}</td></tr>
+              <tr><td colSpan={viewer ? 4 : 5} className="px-4 py-8 text-center text-slate-500">{contributions.length ? "No contributions match." : "No contributions yet."}</td></tr>
             )}
           </tbody>
         </table>
@@ -217,6 +220,7 @@ export function SettlementTab({ expenses, contributions, members, totalExp, tota
   expenses: ResearchExpense[]; contributions: ResearchContribution[]; members: string[];
   totalExp: number; totalCon: number; setDialog: (d: DialogState) => void;
 }) {
+  const viewer = useViewer();
   const net = totalCon - totalExp;
   const rows = members.map((m) => {
     const C = contributions.filter((c) => c.member === m);
@@ -265,8 +269,8 @@ export function SettlementTab({ expenses, contributions, members, totalExp, tota
                 <dd className={`m-0 font-mono font-bold ${r.net < 0 ? "text-[#BE123C]" : "text-[#047857]"}`}>{sign(r.net)}{taka(r.net)}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-600">Contribution Share:</dt><dd className="m-0 font-mono">{r.share.toFixed(1)}%</dd></div>
             </dl>
-            <button type="button" onClick={() => setDialog({ kind: "contribution", row: null, member: r.name })}
-              className="min-h-10 rounded-[10px] border border-line bg-[#F8FAFC] text-sm font-semibold text-slate-700">+ Record Contribution</button>
+            {!viewer && <button type="button" onClick={() => setDialog({ kind: "contribution", row: null, member: r.name })}
+              className="min-h-10 rounded-[10px] border border-line bg-[#F8FAFC] text-sm font-semibold text-slate-700">+ Record Contribution</button>}
           </div>
         ))}
       </div>

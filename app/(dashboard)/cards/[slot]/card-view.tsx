@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Shell, HeaderButton } from "@/components/shell";
+import { Shell, HeaderButton, useViewer } from "@/components/shell";
 import { CardIcon, PencilIcon, PersonIcon } from "@/components/icons";
 import { BalanceEditor, EqSign } from "@/components/balance-editor";
 import { ProfileSlider } from "@/components/debtors/profile-slider";
@@ -21,6 +21,7 @@ import type { FinanceData } from "@/lib/types";
  */
 export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2; today: string }) {
   const card = data.cards.find((c) => c.slot === slot);
+  const viewer = useViewer();
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState<{ prefill: string } | null>(null);
   const [editingCard, setEditingCard] = useState(false);
@@ -91,10 +92,10 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
           <div className="flex flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border border-line bg-white p-[22px]">
             <span className={label}>{CARD_NAMES[slot]} — available now</span>
             <div className={`${big} text-slate-400`}>—</div>
-            <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 w-fit items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-semibold text-slate-700">
+            {!viewer && <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 w-fit items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-semibold text-slate-700">
               <PencilIcon size={14} />
               Set credit limit first
-            </button>
+            </button>}
           </div>
         )}
         <EqSign>+</EqSign>
@@ -114,10 +115,10 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       {limit != null && (
         <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-600">
           Credit limit: <span className="money text-slate-800">{taka(limit)}</span>
-          <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line px-3 font-semibold text-slate-700">
+          {!viewer && <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-line px-3 font-semibold text-slate-700">
             <PencilIcon size={14} />
             Change
-          </button>
+          </button>}
         </div>
       )}
 
@@ -134,7 +135,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
 
       <SectionCard>
         <SectionHead id="owe-h" title="Who will bring money back"
-          sub="Each person's amount still owed, and what your available balance becomes as each one pays — biggest first. Tap a name to record a repayment." />
+          sub={`Each person's amount still owed, and what your available balance becomes as each one pays — biggest first. Tap a name to ${viewer ? "open their profile" : "record a repayment"}.`} />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] border-collapse text-[14.5px]">
             <thead>

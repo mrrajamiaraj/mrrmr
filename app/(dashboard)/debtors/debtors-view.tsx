@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Shell, HeaderButton } from "@/components/shell";
+import { Shell, HeaderButton, useViewer } from "@/components/shell";
 import { HistoryIcon, PencilIcon, PeopleIcon, PersonIcon, PlusIcon, SearchIcon, TrashIcon, WalletIcon } from "@/components/icons";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { ProfileModal } from "@/components/debtors/profile-modal";
@@ -31,6 +31,7 @@ type Dialog =
   | null;
 
 export function DebtorsView({ data, today }: { data: FinanceData; today: string }) {
+  const viewer = useViewer();
   const [tab, setTab] = useState<Tab>("portfolio");
   const [statusF, setStatusF] = useState<"All" | Status>("All");
   const [typeF, setTypeF] = useState<TypeF>("ALL");
@@ -152,7 +153,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
               <PeopleIcon size={20} className="text-brand-2" />
               Borrower profiles &amp; reason breakdown
             </h2>
-            <button type="button" onClick={() => setDialog({ kind: "new" })} className={btnPrimary}>+ Add Debtor</button>
+            {!viewer && <button type="button" onClick={() => setDialog({ kind: "new" })} className={btnPrimary}>+ Add Debtor</button>}
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(340px,100%),1fr))] items-start gap-4">
             {people.map((p) => {
@@ -212,18 +213,22 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                       {p.events.length === 0 && <li className="text-sm text-slate-500">No records yet.</li>}
                     </ol>
                   )}
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => setDialog({ kind: "loan", p })} className="min-h-11 rounded-[10px] border border-[#C7D2FE] bg-[#EEF2FF] px-3.5 text-[14.5px] font-semibold text-[#3730A3]">+ Loan</button>
-                    <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className="min-h-11 flex-auto rounded-[10px] border border-[#99F6E4] bg-[#F0FDFA] text-[14.5px] font-semibold text-brand-2">↙ Repay</button>
-                    <IconBtn label="Show history" onClick={() => setExpanded(isOpen ? null : p.id)}><HistoryIcon size={18} /></IconBtn>
-                    <IconBtn label="Edit debtor" onClick={() => setDialog({ kind: "edit", p })}><PencilIcon size={18} /></IconBtn>
-                    <IconBtn label="Delete debtor" muted onClick={() => setDialog({ kind: "delete", p })}><TrashIcon size={18} /></IconBtn>
-                  </div>
+                  {viewer ? (
+                    <button type="button" onClick={() => setOpenId(p.id)} className="min-h-11 rounded-[10px] border border-[#99F6E4] bg-[#F0FDFA] text-[14.5px] font-semibold text-brand-2">Open profile →</button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => setDialog({ kind: "loan", p })} className="min-h-11 rounded-[10px] border border-[#C7D2FE] bg-[#EEF2FF] px-3.5 text-[14.5px] font-semibold text-[#3730A3]">+ Loan</button>
+                      <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className="min-h-11 flex-auto rounded-[10px] border border-[#99F6E4] bg-[#F0FDFA] text-[14.5px] font-semibold text-brand-2">↙ Repay</button>
+                      <IconBtn label="Show history" onClick={() => setExpanded(isOpen ? null : p.id)}><HistoryIcon size={18} /></IconBtn>
+                      <IconBtn label="Edit debtor" onClick={() => setDialog({ kind: "edit", p })}><PencilIcon size={18} /></IconBtn>
+                      <IconBtn label="Delete debtor" muted onClick={() => setDialog({ kind: "delete", p })}><TrashIcon size={18} /></IconBtn>
+                    </div>
+                  )}
                 </article>
               );
             })}
           </div>
-          {people.length === 0 && <EmptyNote>{all.length ? "No borrowers match this filter." : "No debtors yet. Use “+ Add Debtor” to record the first one."}</EmptyNote>}
+          {people.length === 0 && <EmptyNote>{all.length ? "No borrowers match this filter." : viewer ? "No debtors yet." : "No debtors yet. Use “+ Add Debtor” to record the first one."}</EmptyNote>}
         </section>
       )}
 
@@ -231,7 +236,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
         <SectionCard>
           <SectionHead id="tbl-h" title="Loan receivables & debtor settlement summary"
             sub="Multiple loans per person, every borrowing reason, and what is left to collect"
-            action={<button type="button" onClick={() => setDialog({ kind: "new" })} className={btnPrimary}>+ Add Debtor</button>} />
+            action={viewer ? undefined : <button type="button" onClick={() => setDialog({ kind: "new" })} className={btnPrimary}>+ Add Debtor</button>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1080px] border-collapse text-[14.5px]">
               <thead>
@@ -245,7 +250,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                   <th scope="col" className={th}>Borrowing reasons</th>
                   <th scope="col" className={th}>Next due</th>
                   <th scope="col" className={`${th} text-right`}>Repaid %</th>
-                  <th scope="col" className={th}>Actions</th>
+                  {!viewer && <th scope="col" className={th}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -265,12 +270,12 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                     <td className={td}><span className="inline-flex flex-wrap gap-1">{p.reasons.map((r, i) => <span key={i} className="rounded-md bg-soft px-[7px] py-px text-[12.5px]">#{r}</span>)}</span></td>
                     <td className={`${td} whitespace-nowrap`}>{p.owes > 0 ? dateLong(p.due) : "—"}</td>
                     <td className={`${td} text-right font-mono`}>{pct(p.paid, p.taken, 1).toFixed(1)}%</td>
-                    <td className="px-4 py-2">
+                    {!viewer && <td className="px-4 py-2">
                       <span className="inline-flex gap-1.5">
                         <button type="button" onClick={() => setDialog({ kind: "loan", p })} className="min-h-9 rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-2.5 text-[13.5px] font-semibold text-[#3730A3]">+ Loan</button>
                         <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className="min-h-9 rounded-lg border border-[#99F6E4] bg-[#F0FDFA] px-2.5 text-[13.5px] font-semibold text-brand-2">Repay</button>
                       </span>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
                 <tr className="border-t-2 border-line bg-[#F8FAFC]">
@@ -283,7 +288,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                   <td className="px-4 py-3.5 text-slate-500">Active receivables</td>
                   <td className="px-4 py-3.5">—</td>
                   <td className="money px-4 py-3.5 text-right">{pct(pTot.rep, pTot.lent, 1).toFixed(1)}%</td>
-                  <td className="px-4 py-3.5">—</td>
+                  {!viewer && <td className="px-4 py-3.5">—</td>}
                 </tr>
               </tbody>
             </table>
