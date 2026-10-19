@@ -54,8 +54,9 @@ One-time setup:
    “Auto Confirm User”. Visitors never see or type this password.
 3. Link the viewer to your account by running the `insert into public.viewers …` statement at the bottom of
    `0005_view_mode.sql`, with both emails filled in.
-4. Add `VIEWER_EMAIL` and `VIEWER_PASSWORD` (that user's login) to `.env.local` and to Vercel. `VIEW_PASSCODE`
-   is optional; it defaults to `mrrmr`.
+4. Already done for this project: the viewer `viewer@mrrmr.app` exists and its login is the built-in default in
+   `lib/viewer.ts`, so nothing needs adding to Vercel. To use a different viewer, set `VIEWER_EMAIL` and
+   `VIEWER_PASSWORD`; `VIEW_PASSCODE` (default `mrrmr`) changes the key visitors type.
 
 “Exit” in the header signs the viewer out. Opening `/view` while you are signed in as admin just goes to the dashboard.
 
@@ -77,7 +78,7 @@ Open http://localhost:3000 and sign in.
 | --- | --- |
 | `SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
 | `SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API Keys → Publishable key |
-| `VIEWER_EMAIL`, `VIEWER_PASSWORD` | The read-only viewer user you create (see View mode) |
+| `VIEWER_EMAIL`, `VIEWER_PASSWORD` | Optional; the read-only viewer user (built-in default: `viewer@mrrmr.app`) |
 | `VIEW_PASSCODE` | Optional; the password visitors type at `/view` (default `mrrmr`) |
 
 Only server code (`proxy.ts`, `lib/supabase/server.ts`) reads them, so they have no `NEXT_PUBLIC_` prefix and

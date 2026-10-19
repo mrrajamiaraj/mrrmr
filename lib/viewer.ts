@@ -5,9 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 // 0005_view_mode.sql lets that user read the owner's rows and blocks every write at the database level.
 export const VIEW_PASSCODE = process.env.VIEW_PASSCODE || "mrrmr";
 
+// Built-in defaults so view mode works without any hosting settings. The viewer account can only read, which is
+// exactly what the passcode already grants, so keeping its login here exposes nothing extra. Env vars override.
+export const VIEWER_EMAIL = process.env.VIEWER_EMAIL || "viewer@mrrmr.app";
+export const VIEWER_PASSWORD = process.env.VIEWER_PASSWORD || "WwNYGryJM2vEHxKag7hgSqZpLa7w";
+
 export function isViewerEmail(email: string | null | undefined) {
-  const viewer = process.env.VIEWER_EMAIL;
-  return Boolean(viewer && email && email.toLowerCase() === viewer.toLowerCase());
+  return Boolean(email && email.toLowerCase() === VIEWER_EMAIL.toLowerCase());
 }
 
 /** Supabase client for server actions that write; refuses in view mode. */
