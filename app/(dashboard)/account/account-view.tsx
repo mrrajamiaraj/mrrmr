@@ -76,8 +76,8 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
           <Figure label="+ Owed to you" value={taka(owed)} tone="owed" note={`${owing.length} ${owing.length === 1 ? "person" : "people"} on loans from this account`} />
           <Figure label="= Once everyone pays" value={taka(after)} tone="good" note={`Your ${account.name} balance after repayment`} />
         </Statement>
-        <div className="flex items-center gap-3 px-0.5 text-[12.5px] text-slate-500">
-          <div className="flex h-1.5 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]" aria-hidden="true">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-0.5 text-[12.5px] text-slate-500">
+          <div className="flex h-1.5 min-w-[160px] flex-auto overflow-hidden rounded-full bg-[#E3E1DA]" aria-hidden="true">
             <div className="bg-brand-2" style={{ width: `${inHand}%` }} />
             <div className="bg-[#B9852F]" style={{ width: `${outPct}%` }} />
           </div>

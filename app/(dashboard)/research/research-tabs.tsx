@@ -19,7 +19,7 @@ export const takaDec = (n: number) =>
   `${n < 0 ? "-" : ""}৳${Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 const pct1 = (part: number, whole: number) => (whole ? Math.round((part / whole) * 1000) / 10 : 0);
-const select = "min-h-9 rounded-md border border-[#D6D3CB] bg-white px-2.5 text-[13.5px]";
+const select = "min-h-9 min-w-0 flex-auto rounded-md border border-[#D6D3CB] bg-white px-2.5 text-[13.5px] sm:flex-none";
 const card = "overflow-hidden rounded-lg border border-line bg-white";
 const hth = "px-4 py-2 text-[12.5px] font-medium text-slate-500";
 
@@ -50,7 +50,7 @@ function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => 
 }
 function Search({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <label className="flex min-h-11 min-w-[220px] flex-[1_1_320px] items-center gap-2 rounded-md border border-[#D6D3CB] bg-white px-3.5 sm:max-w-[460px]">
+    <label className="flex min-h-11 w-full items-center sm:w-auto sm:min-w-[220px] sm:flex-[1_1_320px] gap-2 rounded-md border border-[#D6D3CB] bg-white px-3.5 sm:max-w-[460px]">
       <SearchIcon size={16} className="text-slate-500" />
       <span className="sr-only">Search</span>
       <input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="min-w-0 flex-auto bg-transparent text-[15px] outline-none" />
@@ -94,7 +94,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
       <div className="flex flex-col gap-3 border-b border-line p-4">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <Search value={q} onChange={setQ} placeholder="Search by facility, person, note, date or amount…" />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <select aria-label="Facility" value={fac} onChange={(e) => setFac(e.target.value)} className={select}>
               <option value="">All Facilities</option>
               {facilities.map((f) => <option key={f}>{f}</option>)}
@@ -173,7 +173,7 @@ export function ContributionsTab({ contributions, members, setDialog }: {
       <div className="flex flex-col gap-3 border-b border-line p-4">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <Search value={q} onChange={setQ} placeholder="Search by contributor, note, date or amount…" />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <select aria-label="Contributor" value={mem} onChange={(e) => setMem(e.target.value)} className={select}>
               <option value="">All Contributors</option>
               {members.map((m) => <option key={m}>{m}</option>)}
@@ -385,7 +385,7 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
     <section className={`${card} flex flex-col gap-5 p-5`}>
       <div>
         <h2 className="m-0 text-[16px] font-semibold">Spending by month, {years.join("–")}</h2>
-        <div className="mt-0.5 text-[13px] text-slate-500">{monthLabel(months[0].key)} to {monthLabel(months[months.length - 1].key)}. Hover a bar for details.</div>
+        <div className="mt-0.5 text-[13px] text-slate-500">{monthLabel(months[0].key)} to {monthLabel(months[months.length - 1].key)}. Hover or tap a bar for details.</div>
       </div>
 
       {/* Single-series bar chart: one hue, no legend; hover a bar for its values. Cards below double as the table view. */}
@@ -394,7 +394,8 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
           aria-label={`Monthly spending: ${months.map((m) => `${monthLabel(m.key)} ${taka(m.total)}`).join(", ")}`}>
           {months.map((m) => (
             <div key={m.key} className="relative flex h-full flex-1 flex-col items-center justify-end"
-              onMouseEnter={() => setHover(m.key)} onMouseLeave={() => setHover(null)}>
+              onMouseEnter={() => setHover(m.key)} onMouseLeave={() => setHover(null)}
+              onClick={() => setHover((h) => (h === m.key ? null : m.key))}>
               {hover === m.key && (
                 <div className="pointer-events-none absolute z-10 -translate-y-2 whitespace-nowrap rounded-md bg-ink px-2.5 py-1.5 text-xs text-white"
                   style={{ bottom: `${(m.total / max) * 100}%` }}>

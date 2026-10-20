@@ -27,8 +27,17 @@
 }
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     @apply bg-page text-ink font-sans text-[14.5px] leading-[1.5];
+    overflow-x: hidden;
+  }
+  /* iOS Safari zooms into any field under 16px on focus; keep fields at 16px on touch screens. (.money is the 20px balance field.) */
+  @media (pointer: coarse) {
+    input:not([type="checkbox"], [type="radio"], .money), select, textarea { font-size: 16px !important; }
   }
   h1, h2, h3 { letter-spacing: -0.01em; }
   button { @apply cursor-pointer; }

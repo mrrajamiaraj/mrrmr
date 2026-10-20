@@ -104,7 +104,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
               </button>
             ))}
           </div>
-          <label className="mb-2 flex min-h-9 min-w-[200px] flex-[0_1_280px] items-center gap-2 rounded-md border border-[#D6D3CB] bg-white px-2.5 focus-within:border-brand-2">
+          <label className="mb-2 flex min-h-9 w-full items-center gap-2 sm:w-auto sm:min-w-[200px] sm:flex-[0_1_280px] rounded-md border border-[#D6D3CB] bg-white px-2.5 focus-within:border-brand-2">
             <SearchIcon size={15} className="text-slate-500" />
             <span className="sr-only">Search</span>
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, reason, notes" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />

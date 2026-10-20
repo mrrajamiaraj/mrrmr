@@ -50,7 +50,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         style={{ maxWidth }}
-        className="max-h-[calc(100dvh-16px)] w-full overflow-y-auto overscroll-contain rounded-t-xl bg-white pb-[env(safe-area-inset-bottom)] text-left shadow-[0_20px_50px_-12px_rgba(28,27,24,0.35)] sm:max-h-[calc(100dvh-32px)] sm:rounded-lg sm:pb-0"
+        className="max-h-[calc(100dvh-16px)] w-full overflow-y-auto overscroll-contain rounded-t-xl bg-white text-left shadow-[0_20px_50px_-12px_rgba(28,27,24,0.35)] sm:max-h-[calc(100dvh-32px)] sm:rounded-lg"
       >
         {header ? (
           header(titleId)
