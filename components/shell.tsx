@@ -30,6 +30,7 @@ const TABS = [
 ];
 
 const pad = "px-[clamp(16px,4vw,40px)]";
+const logoutBtn = "inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-2.5 text-[13.5px] text-slate-700 hover:bg-soft sm:px-3";
 
 /** Top bar with the section links, then the page title, its one-line description and the page's buttons. */
 export function Shell({
@@ -48,11 +49,12 @@ export function Shell({
   return (
     <div className="min-h-screen">
       <header className={`border-b border-line bg-white ${pad}`}>
-        <div className="mx-auto flex max-w-[1200px] items-center gap-6">
+        {/* Phones: logo and buttons on one row, the section tabs scroll sideways on a row below. */}
+        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-6 md:flex-nowrap">
           <Link href="/account" className="flex-none py-3 text-[15px] font-semibold text-ink">
             Ledger<span className="text-brand-2">.</span>
           </Link>
-          <nav aria-label="Sections" className="-mb-px flex min-w-0 flex-auto gap-5 overflow-x-auto">
+          <nav aria-label="Sections" className="order-last -mx-[clamp(16px,4vw,40px)] -mb-px flex w-[calc(100%_+_2*clamp(16px,4vw,40px))] gap-5 overflow-x-auto border-t border-soft px-[clamp(16px,4vw,40px)] [scrollbar-width:none] md:order-none md:mx-0 md:w-auto md:min-w-0 md:flex-auto md:border-t-0 md:px-0">
             {TABS.map((t) => {
               const on = path.startsWith(t.href);
               return (
@@ -69,14 +71,14 @@ export function Shell({
               );
             })}
           </nav>
-          <div className="flex flex-none items-center gap-3">
-            <a href="/export" download className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13.5px] text-slate-600 hover:text-ink">
+          <div className="ml-auto flex flex-none items-center gap-2 sm:gap-3">
+            <a href="/export" download aria-label="Export CSV" className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap px-1 text-[13.5px] text-slate-600 hover:text-ink">
               <DownloadIcon size={15} />
               <span className="hidden sm:inline">Export CSV</span>
             </a>
             {admin.viewer ? (
               <form action={exitViewMode}>
-                <button type="submit" className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 text-[13.5px] text-slate-700 hover:bg-soft">
+                <button type="submit" className={logoutBtn}>
                   <LogoutIcon size={15} />
                   Log out
                 </button>
@@ -85,9 +87,9 @@ export function Shell({
               <>
                 <AdminButton email={admin.email} lastChanged={admin.lastChanged} />
                 <form action={signOut}>
-                  <button type="submit" className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 text-[13.5px] text-slate-700 hover:bg-soft">
+                  <button type="submit" aria-label="Log out" className={logoutBtn}>
                     <LogoutIcon size={15} />
-                    Log out
+                    <span className="hidden sm:inline">Log out</span>
                   </button>
                 </form>
               </>
@@ -96,11 +98,11 @@ export function Shell({
         </div>
       </header>
 
-      <main className={`${pad} pb-20 pt-8`}>
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-6">
+      <main className={`${pad} pb-16 pt-6 sm:pb-20 sm:pt-8`}>
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-5 sm:gap-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="min-w-0 max-w-[720px]">
-              <h1 className="m-0 flex items-center gap-2.5 text-[26px] font-semibold leading-tight">
+              <h1 className="m-0 flex flex-wrap items-center gap-2.5 text-[22px] font-semibold leading-tight sm:text-[26px]">
                 {title}
                 {admin.viewer && (
                   <span className="inline-flex items-center gap-1 rounded border border-line bg-white px-1.5 py-0.5 text-[11.5px] font-medium text-slate-600">
@@ -111,7 +113,7 @@ export function Shell({
               </h1>
               <p className="m-0 mt-1 text-[14px] text-slate-500">{subtitle}</p>
             </div>
-            {!admin.viewer && actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+            {!admin.viewer && actions && <div className="flex w-full flex-wrap gap-2 sm:w-auto">{actions}</div>}
           </div>
           {children}
         </div>
@@ -134,7 +136,7 @@ export function HeaderButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex min-h-10 items-center gap-2 rounded-md px-3.5 text-[14px] font-medium ${
+      className={`inline-flex min-h-10 flex-auto items-center justify-center gap-2 rounded-md px-3.5 text-[14px] font-medium sm:flex-none ${
         variant === "green" ? "bg-brand text-white hover:bg-[#173D2E]" : "border border-[#D6D3CB] bg-white text-ink hover:bg-soft"
       }`}
     >

@@ -40,16 +40,17 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(28,27,24,0.4)] p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(28,27,24,0.4)] pt-4 sm:items-center sm:p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
+      {/* Phones: a sheet from the bottom edge; larger screens: centered. dvh keeps it clear of mobile browser bars. */}
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         style={{ maxWidth }}
-        className="max-h-[calc(100vh-32px)] w-full overflow-y-auto rounded-lg bg-white text-left shadow-[0_20px_50px_-12px_rgba(28,27,24,0.35)]"
+        className="max-h-[calc(100dvh-16px)] w-full overflow-y-auto overscroll-contain rounded-t-xl bg-white pb-[env(safe-area-inset-bottom)] text-left shadow-[0_20px_50px_-12px_rgba(28,27,24,0.35)] sm:max-h-[calc(100dvh-32px)] sm:rounded-lg sm:pb-0"
       >
         {header ? (
           header(titleId)

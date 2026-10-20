@@ -16,10 +16,11 @@ export function AdminButton({ email, lastChanged }: { email: string; lastChanged
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 text-[13.5px] text-slate-700 hover:bg-soft"
+        aria-label="Admin"
+        className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-2.5 text-[13.5px] text-slate-700 hover:bg-soft sm:px-3"
       >
         <LockIcon size={14} />
-        Admin
+        <span className="hidden sm:inline">Admin</span>
       </button>
       {open && <AdminDialog email={email} lastChanged={lastChanged} onClose={() => setOpen(false)} />}
     </>

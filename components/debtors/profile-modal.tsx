@@ -22,7 +22,7 @@ const AMOUNT_COLOR: Record<EventKind, string> = {
 
 function Stat({ label, value, sub, valueClass = "" }: { label: string; value: string; sub: string; valueClass?: string }) {
   return (
-    <div className="flex flex-col gap-0.5 px-4 py-3">
+    <div className="flex flex-col gap-0.5 bg-white px-4 py-3">
       <div className="caption">{label}</div>
       <div className={`money text-[19px] ${valueClass}`}>{value}</div>
       <div className="text-[12px] text-slate-500">{sub}</div>
@@ -98,15 +98,16 @@ export function ProfileModal({
       onClose={onClose}
       maxWidth={760}
       header={(id) => (
-        <div className="flex items-center gap-3 border-b border-line py-3 pl-5 pr-2">
+        <div className="flex items-center gap-3 border-b border-line py-3 pl-4 pr-2 sm:pl-5">
           <Avatar text={p.initials} size={40} />
           <div className="min-w-0 flex-auto">
             <h2 id={id} className="m-0 text-[18px] font-semibold leading-tight">{p.name}</h2>
             <div className="text-[13px] text-slate-500">
               {isCard ? cardTitle(card!) : isBank && account ? account.name : "All records"} · {p.dueText}
             </div>
+            <div className="mt-0.5 sm:hidden"><StatusPill status={p.status} /></div>
           </div>
-          <StatusPill status={p.status} />
+          <div className="hidden sm:block"><StatusPill status={p.status} /></div>
           <CloseButton onClick={onClose} label="Close profile" />
         </div>
       )}
@@ -121,8 +122,9 @@ export function ProfileModal({
         </>
       }
     >
-      <div className="flex flex-col gap-5 p-5">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] overflow-hidden rounded-lg border border-line [&>*+*]:border-l [&>*+*]:border-line">
+      <div className="flex flex-col gap-5 p-4 sm:p-5">
+        {/* Hairlines come from the 1px gap over a line-coloured background, so they stay right however the grid wraps. */}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(140px,100%),1fr))] gap-px overflow-hidden rounded-lg border border-line bg-line">
           {scoped ? (
             <>
               <Stat label={isCard ? "Used this card" : "Borrowed"} value={taka((p as CardProfile).used)} sub={`${(p as CardProfile).useCount} times`} />
