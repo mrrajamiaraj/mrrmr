@@ -55,7 +55,7 @@ export function ResearchView({ data }: { data: ResearchData }) {
   if (data.missingTables) {
     return (
       <Shell subtitle={subtitle}>
-        <section className="mx-auto w-full max-w-[720px] rounded-lg border border-[#E6D7B5] bg-[#FAF6EC] p-6">
+        <section className="mx-auto w-full max-w-[720px] rounded-lg border border-[#E6D7B5] bg-[#FAF6EC] p-4 sm:p-6">
           <h2 className="m-0 text-xl font-semibold text-[#85570F]">One-time setup needed</h2>
           <p className="mb-0 mt-2 text-[15px] text-slate-700">
             The research tables don&apos;t exist in Supabase yet. Open the Supabase dashboard → SQL Editor → New query, paste the

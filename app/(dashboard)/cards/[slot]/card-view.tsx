@@ -116,7 +116,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
         <SectionHead id="owe-h" title="Repayment outlook"
           sub={`What each person still owes, biggest first, and your available balance as each one pays. Tap a name to ${viewer ? "open their profile" : "record a repayment"}.`} />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-[14px]">
+          <table className="stack-table w-full min-w-[820px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Person</th>
@@ -130,31 +130,31 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
             <tbody>
               <tr className="border-b border-soft">
                 <th scope="row" className={`${td} text-left font-medium text-slate-500`}>Today</th>
-                <td className={`${td} text-right text-slate-400`}>—</td>
-                <td className={`${td} text-right text-slate-400`}>—</td>
-                <td className={`${td} text-right text-slate-400`}>—</td>
-                <td className={`${td} text-slate-400`}>—</td>
-                <td className={`${td} money text-right`}>{availNow != null ? taka(availNow) : "—"}</td>
+                <td className={`${td} stack-hide text-right text-slate-400`}>—</td>
+                <td className={`${td} stack-hide text-right text-slate-400`}>—</td>
+                <td className={`${td} stack-hide text-right text-slate-400`}>—</td>
+                <td className={`${td} stack-hide text-slate-400`}>—</td>
+                <td data-label="Available" className={`${td} money text-right`}>{availNow != null ? taka(availNow) : "—"}</td>
               </tr>
               {owingRows.map((p) => (
                 <tr key={p.id} className="border-b border-soft">
                   <th scope="row" className="px-4 py-1.5 text-left">
                     <PersonButton name={p.name} initials={p.initials} size={30} onClick={() => setOpenId(p.id)} />
                   </th>
-                  <td className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
-                  <td className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
-                  <td className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
-                  <td className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
-                  <td className={`${td} money text-right`}>{p.run != null ? taka(p.run) : "—"}</td>
+                  <td data-label="Used" className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
+                  <td data-label="Paid back" className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
+                  <td data-label="Still owes" className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
+                  <td data-label="Due" className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
+                  <td data-label="Available after" className={`${td} money text-right`}>{p.run != null ? taka(p.run) : "—"}</td>
                 </tr>
               ))}
               <tr className={totalRow}>
                 <th scope="row" className={`${td} text-left`}>Once everyone pays</th>
-                <td className={`${td} money text-right`}>{taka(usedTotal)}</td>
-                <td className={`${td} money text-right`}>{taka(paidTotal)}</td>
-                <td className={`${td} money text-right text-[#85570F]`}>{taka(owed)}</td>
+                <td data-label="Used" className={`${td} money text-right`}>{taka(usedTotal)}</td>
+                <td data-label="Paid back" className={`${td} money text-right`}>{taka(paidTotal)}</td>
+                <td data-label="Still owes" className={`${td} money text-right text-[#85570F]`}>{taka(owed)}</td>
                 <td className={td} />
-                <td className={`${td} money text-right text-brand-2`}>{availAfter != null ? taka(availAfter) : "Set limit"}</td>
+                <td data-label="Available after" className={`${td} money text-right text-brand-2`}>{availAfter != null ? taka(availAfter) : "Set limit"}</td>
               </tr>
             </tbody>
           </table>
@@ -164,7 +164,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       <SectionCard>
         <SectionHead id="log-h" title="Transactions" sub="Every use of this card. Tap a name to open their profile." />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse text-[14px]">
+          <table className="stack-table w-full min-w-[640px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Date</th>
@@ -181,7 +181,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                 const isNew = u.id === newestId;
                 return (
                   <tr key={u.id} className={`border-b border-soft ${isNew ? "bg-[#F2F6F3]" : ""}`}>
-                    <td className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(u.used_on)}</td>
+                    <td data-label="Date" className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(u.used_on)}</td>
                     <th scope="row" className="px-4 py-1.5 text-left">
                       {me ? (
                         <span className="inline-flex min-h-10 items-center text-slate-500">Me</span>
@@ -189,9 +189,9 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                         <PersonButton name={name} initials={initials(name)} onClick={() => setOpenId(u.person_id!)} />
                       )}
                     </th>
-                    <td className={td}>{u.reason_or_place}</td>
-                    <td className={`${td} money text-right ${me ? "text-slate-500" : ""}`}>{taka(u.amount)}</td>
-                    <td className="px-2 text-right">
+                    <td data-label="Why / where" className={td}>{u.reason_or_place}</td>
+                    <td data-label="Amount" className={`${td} money text-right ${me ? "text-slate-500" : ""}`}>{taka(u.amount)}</td>
+                    <td className="stack-corner px-2 text-right">
                       <DeleteButton label={`Delete ${name}'s card use, ${taka(u.amount)}`} onClick={() => setDeleting({
                         kind: "card_use", id: u.id, amount: u.amount, iso: u.used_on,
                         what: `${me ? "My spending" : `${name} used the card`} — ${u.reason_or_place}`,

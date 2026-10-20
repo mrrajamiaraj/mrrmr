@@ -99,7 +99,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
         <SectionHead id="deb-h" title="Loans from this account"
           sub="Tap a name to open their profile." />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-[14px]">
+          <table className="stack-table w-full min-w-[900px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Date taken</th>
@@ -117,16 +117,16 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                 const isNew = l.id === newestForFlash;
                 return (
                   <tr key={l.id} className={`border-b border-soft ${isNew ? "bg-[#F2F6F3]" : ""}`}>
-                    <td className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(l.taken_on)}</td>
+                    <td data-label="Date taken" className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(l.taken_on)}</td>
                     <th scope="row" className="px-4 py-1.5 text-left">
                       <PersonButton name={name} initials={initials(name)} onClick={() => open(l.person_id)} />
                       {isNew && <> <span className="text-xs font-medium text-brand-2">new</span></>}
                     </th>
-                    <td className={td}>{l.reason}</td>
-                    <td className={`${td} text-slate-600`}>{l.method}</td>
-                    <td className={`${td} money text-right`}>{taka(l.amount)}</td>
-                    <td className={`${td} whitespace-nowrap`}>{dateLong(l.due_on)}</td>
-                    <td className="px-2 text-right">
+                    <td data-label="Why" className={td}>{l.reason}</td>
+                    <td data-label="How" className={`${td} text-slate-600`}>{l.method}</td>
+                    <td data-label="Amount" className={`${td} money text-right`}>{taka(l.amount)}</td>
+                    <td data-label="Pay back by" className={`${td} whitespace-nowrap`}>{dateLong(l.due_on)}</td>
+                    <td className="stack-corner px-2 text-right">
                       <DeleteButton label={`Delete loan to ${name}, ${taka(l.amount)}`} onClick={() => setDeleting({
                         kind: "loan", id: l.id, amount: l.amount, iso: l.taken_on, what: `Loan to ${name} — ${l.reason}`,
                         undo: l.account_id ? undoText("loan", l.amount, account.name) : null,
@@ -147,7 +147,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
         <SectionHead id="owe-h" title="Repayment outlook"
           sub={`What each person still owes, biggest first, and your ${account.name} balance as each one pays.`} />
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-[14px]">
+          <table className="stack-table w-full min-w-[820px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <th scope="col" className={th}>Person</th>
@@ -161,31 +161,31 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
             <tbody>
               <tr className="border-b border-soft">
                 <th scope="row" className={`${td} text-left font-medium text-slate-500`}>Today</th>
-                <td className={`${td} text-right text-slate-400`}>—</td>
-                <td className={`${td} text-right text-slate-400`}>—</td>
-                <td className={`${td} text-right text-slate-400`}>—</td>
-                <td className={`${td} text-slate-400`}>—</td>
-                <td className={`${td} money text-right`}>{taka(now)}</td>
+                <td className={`${td} text-right text-slate-400 stack-hide`}>—</td>
+                <td className={`${td} text-right text-slate-400 stack-hide`}>—</td>
+                <td className={`${td} text-right text-slate-400 stack-hide`}>—</td>
+                <td className={`${td} text-slate-400 stack-hide`}>—</td>
+                <td data-label="Balance" className={`${td} money text-right`}>{taka(now)}</td>
               </tr>
               {owingRows.map((p) => (
                 <tr key={p.id} className="border-b border-soft">
                   <th scope="row" className="px-4 py-1.5 text-left">
                     <PersonButton name={p.name} initials={p.initials} size={30} onClick={() => open(p.id)} />
                   </th>
-                  <td className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
-                  <td className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
-                  <td className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
-                  <td className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
-                  <td className={`${td} money text-right`}>{taka(p.run)}</td>
+                  <td data-label="Took" className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
+                  <td data-label="Paid back" className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
+                  <td data-label="Still owes" className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
+                  <td data-label="Due" className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
+                  <td data-label="Balance after" className={`${td} money text-right`}>{taka(p.run)}</td>
                 </tr>
               ))}
               <tr className={totalRow}>
                 <th scope="row" className={`${td} text-left`}>Once everyone pays</th>
-                <td className={`${td} money text-right`}>{taka(lentTotal)}</td>
-                <td className={`${td} money text-right`}>{taka(paidTotal)}</td>
-                <td className={`${td} money text-right text-[#85570F]`}>{taka(owed)}</td>
+                <td data-label="Took" className={`${td} money text-right`}>{taka(lentTotal)}</td>
+                <td data-label="Paid back" className={`${td} money text-right`}>{taka(paidTotal)}</td>
+                <td data-label="Still owes" className={`${td} money text-right text-[#85570F]`}>{taka(owed)}</td>
                 <td className={td} />
-                <td className={`${td} money text-right text-brand-2`}>{taka(after)}</td>
+                <td data-label="Balance after" className={`${td} money text-right text-brand-2`}>{taka(after)}</td>
               </tr>
             </tbody>
           </table>

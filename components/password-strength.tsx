@@ -21,7 +21,7 @@ export function PasswordStrength({ value }: { value: string }) {
         ))}
       </div>
       <div className="text-[13.5px] font-semibold" style={{ color: lv[1] }}>Strength: {lv[0]}</div>
-      <ul className="m-0 grid list-none grid-cols-2 gap-x-3 gap-y-1 p-0 text-[13.5px]">
+      <ul className="m-0 grid list-none grid-cols-1 gap-x-3 min-[400px]:grid-cols-2 gap-y-1 p-0 text-[13.5px]">
         {rules.map((r) => (
           <li key={r.label} className="flex items-center gap-1.5" style={{ color: r.ok ? "#2E6B52" : "#7A766C" }}>
             <span aria-hidden="true" className="w-3.5 font-semibold">{r.ok ? "✓" : "○"}</span>

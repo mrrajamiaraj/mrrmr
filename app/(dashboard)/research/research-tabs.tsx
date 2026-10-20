@@ -117,7 +117,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] border-collapse text-[14px]">
+        <table className="stack-table w-full min-w-[820px] border-collapse text-[14px]">
           <thead>
             <tr className="border-b border-line bg-[#FAF9F6] text-left">
               <th scope="col" className={hth}>Date</th>
@@ -132,14 +132,16 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
             {rows.map((e) => (
               <tr key={e.id} className="border-b border-soft">
                 <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{dateLong(e.spent_on)}</td>
-                <td className="px-4 py-2.5"><FacilityChip name={e.facility} /></td>
-                <td className="px-4 py-2.5"><MemberChip name={e.member} /></td>
-                <td className="px-4 py-2.5">
-                  {e.description}
-                  {e.tag && <span className="ml-2 rounded border border-line bg-[#FAF9F6] px-1.5 py-0.5 text-[11.5px] text-slate-600">{e.tag}</span>}
+                <td data-label="Facility" className="px-4 py-2.5"><FacilityChip name={e.facility} /></td>
+                <td data-label="Paid by" className="px-4 py-2.5"><MemberChip name={e.member} /></td>
+                <td data-label="Description" className="px-4 py-2.5">
+                  <span>
+                    {e.description}
+                    {e.tag && <span className="ml-2 inline-block rounded border border-line bg-[#FAF9F6] px-1.5 py-0.5 text-[11.5px] text-slate-600">{e.tag}</span>}
+                  </span>
                 </td>
-                <td className="money px-4 py-2.5 text-right">{taka(e.amount)}</td>
-                {!viewer && <td className="px-4 py-1.5 text-right">
+                <td data-label="Amount" className="money px-4 py-2.5 text-right">{taka(e.amount)}</td>
+                {!viewer && <td className="stack-corner px-4 py-1.5 text-right">
                   <RowActions onEdit={() => setDialog({ kind: "expense", row: e })} onDelete={() => setDialog({ kind: "delete-expense", row: e })} />
                 </td>}
               </tr>
@@ -188,7 +190,7 @@ export function ContributionsTab({ contributions, members, setDialog }: {
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[680px] border-collapse text-[14px]">
+        <table className="stack-table w-full min-w-[680px] border-collapse text-[14px]">
           <thead>
             <tr className="border-b border-line bg-[#FAF9F6] text-left">
               <th scope="col" className={hth}>Date</th>
@@ -201,11 +203,11 @@ export function ContributionsTab({ contributions, members, setDialog }: {
           <tbody>
             {rows.map((c) => (
               <tr key={c.id} className="border-b border-soft">
-                <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{dateLong(c.paid_on)}</td>
+                <td data-label="Date" className="whitespace-nowrap px-4 py-2.5 text-slate-600">{dateLong(c.paid_on)}</td>
                 <td className="px-4 py-2.5"><MemberChip name={c.member} dot /></td>
-                <td className="px-4 py-2.5 text-slate-700">{c.note ?? "—"}</td>
-                <td className="money px-4 py-2.5 text-right text-[#355276]">{taka(c.amount)}</td>
-                {!viewer && <td className="px-4 py-1.5 text-right">
+                <td data-label="Notes" className="px-4 py-2.5 text-slate-700">{c.note ?? "—"}</td>
+                <td data-label="Amount" className="money px-4 py-2.5 text-right text-[#355276]">{taka(c.amount)}</td>
+                {!viewer && <td className="stack-corner px-4 py-1.5 text-right">
                   <RowActions onEdit={() => setDialog({ kind: "contribution", row: c })} onDelete={() => setDialog({ kind: "delete-contribution", row: c })} />
                 </td>}
               </tr>
@@ -249,7 +251,7 @@ export function SettlementTab({ expenses, contributions, members, totalExp, tota
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-[14px]">
+        <table className="stack-table w-full min-w-[640px] border-collapse text-[14px]">
           <thead>
             <tr className="border-y border-line bg-[#FAF9F6] text-left">
               <th scope="col" className={hth}>Member</th>
@@ -264,16 +266,16 @@ export function SettlementTab({ expenses, contributions, members, totalExp, tota
             {rows.map((r) => (
               <tr key={r.name} className="border-b border-soft">
                 <th scope="row" className="px-4 py-2.5 text-left font-medium"><MemberChip name={r.name} /></th>
-                <td className="money px-4 py-2.5 text-right">{taka(r.contributed)}</td>
-                <td className="money px-4 py-2.5 text-right">{taka(r.spent)}</td>
-                <td className={`money px-4 py-2.5 text-right ${r.net < 0 ? "text-[#9B3426]" : "text-brand-2"}`}>{sign(r.net)}{taka(r.net)}</td>
-                <td className="px-4 py-2.5">
+                <td data-label="Contributed" className="money px-4 py-2.5 text-right">{taka(r.contributed)}</td>
+                <td data-label="Paid for" className="money px-4 py-2.5 text-right">{taka(r.spent)}</td>
+                <td data-label="Net" className={`money px-4 py-2.5 text-right ${r.net < 0 ? "text-[#9B3426]" : "text-brand-2"}`}>{sign(r.net)}{taka(r.net)}</td>
+                <td data-label="Share" className="px-4 py-2.5">
                   <span className="flex items-center gap-2">
                     <span className="h-1 w-24 overflow-hidden rounded-full bg-[#E3E1DA]"><span className="block h-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
                     <span className="money text-[12.5px] text-slate-500">{r.share.toFixed(1)}%</span>
                   </span>
                 </td>
-                {!viewer && <td className="px-3 py-1.5 text-right">
+                {!viewer && <td data-label="" className="px-3 py-1.5 text-right">
                   <button type="button" onClick={() => setDialog({ kind: "contribution", row: null, member: r.name })}
                     className="min-h-8 rounded-md px-2 text-[13px] text-brand-2 hover:bg-soft">Add contribution</button>
                 </td>}
@@ -331,7 +333,7 @@ function BreakdownTable({ title, sub, label, rows, mark }: {
         <div className="mt-0.5 text-[13px] text-slate-500">{sub}</div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-[14px]">
+        <table className="stack-table w-full min-w-[640px] border-collapse text-[14px]">
           <thead>
             <tr className="border-y border-line bg-[#FAF9F6] text-left">
               <th scope="col" className={hth}>{label}</th>
@@ -345,10 +347,10 @@ function BreakdownTable({ title, sub, label, rows, mark }: {
             {rows.map((r) => (
               <tr key={r.name} className="border-b border-soft last:border-0">
                 <th scope="row" className="px-4 py-2.5 text-left font-medium">{mark(r.name)}</th>
-                <td className="money px-4 py-2.5 text-right text-slate-600">{r.count}</td>
-                <td className="money px-4 py-2.5 text-right text-slate-600">{takaDec(Math.round(r.avg * 100) / 100)}</td>
-                <td className="money px-4 py-2.5 text-right">{taka(r.total)}</td>
-                <td className="px-4 py-2.5">
+                <td data-label="Expenses" className="money px-4 py-2.5 text-right text-slate-600">{r.count}</td>
+                <td data-label="Average" className="money px-4 py-2.5 text-right text-slate-600">{takaDec(Math.round(r.avg * 100) / 100)}</td>
+                <td data-label="Total" className="money px-4 py-2.5 text-right">{taka(r.total)}</td>
+                <td data-label="Share" className="px-4 py-2.5">
                   <span className="flex items-center gap-2">
                     <span className="h-1 w-28 overflow-hidden rounded-full bg-[#E3E1DA]"><span className="block h-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
                     <span className="money text-[12.5px] text-slate-500">{r.share}%</span>
@@ -382,7 +384,7 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
   if (!months.length) return <EmptyNote>No expenses yet — monthly trends appear once you add some.</EmptyNote>;
 
   return (
-    <section className={`${card} flex flex-col gap-5 p-5`}>
+    <section className={`${card} flex flex-col gap-5 p-4 sm:p-5`}>
       <div>
         <h2 className="m-0 text-[16px] font-semibold">Spending by month, {years.join("–")}</h2>
         <div className="mt-0.5 text-[13px] text-slate-500">{monthLabel(months[0].key)} to {monthLabel(months[months.length - 1].key)}. Hover or tap a bar for details.</div>
@@ -390,7 +392,8 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
 
       {/* Single-series bar chart: one hue, no legend; hover a bar for its values. Cards below double as the table view. */}
       <div className="overflow-x-auto">
-        <div className="flex min-w-[560px] items-end gap-4 border-b border-[#D6D3CB] px-2 pt-8" style={{ height: 240 }} role="img"
+        {/* ~52px per month: fits a phone screen for half a year, scrolls sideways beyond that. */}
+        <div className="flex items-end gap-2 border-b border-[#D6D3CB] px-2 pt-8 sm:gap-4" style={{ height: 240, minWidth: months.length * 52 }} role="img"
           aria-label={`Monthly spending: ${months.map((m) => `${monthLabel(m.key)} ${taka(m.total)}`).join(", ")}`}>
           {months.map((m) => (
             <div key={m.key} className="relative flex h-full flex-1 flex-col items-center justify-end"
@@ -408,12 +411,12 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
             </div>
           ))}
         </div>
-        <div className="flex min-w-[560px] gap-4 px-2 pt-2">
-          {months.map((m) => <div key={m.key} className="flex-1 text-center text-[13px] font-medium text-slate-700">{monthLabel(m.key)}</div>)}
+        <div className="flex gap-2 px-2 pt-2 sm:gap-4" style={{ minWidth: months.length * 52 }}>
+          {months.map((m) => <div key={m.key} className="min-w-0 flex-1 text-center text-[11.5px] font-medium leading-tight text-slate-700 sm:text-[13px]">{monthLabel(m.key)}</div>)}
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(150px,100%),1fr))] gap-3">
         {months.map((m) => (
           <div key={m.key} className="border-l-2 border-line pl-3">
             <div className="text-[12.5px] text-slate-500">{monthLabel(m.key)}</div>

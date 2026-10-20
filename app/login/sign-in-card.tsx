@@ -16,8 +16,8 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
     }`;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[#F5F4F0] px-4 py-6">
-      <div className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border border-line bg-white px-6 py-7 shadow-[0_10px_30px_-20px_rgba(28,27,24,0.25)]">
+    <main className="grid min-h-dvh place-items-center bg-[#F5F4F0] px-4 py-6">
+      <div className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border border-line bg-white px-5 py-6 sm:px-6 sm:py-7 shadow-[0_10px_30px_-20px_rgba(28,27,24,0.25)]">
         <div className="text-[15px] font-semibold text-ink">Ledger<span className="text-brand-2">.</span></div>
         <div>
           <h1 className="m-0 text-xl font-semibold text-ink">Personal Finance</h1>

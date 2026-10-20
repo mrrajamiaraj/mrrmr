@@ -163,7 +163,7 @@ export function ProfileModal({
             )}
           </div>
           <div className="overflow-x-auto rounded-lg border border-line">
-            <table className="w-full min-w-[620px] border-collapse text-[13.5px]">
+            <table className="stack-table w-full min-w-[620px] border-collapse text-[13.5px]">
               <thead>
                 <tr className="border-b border-line bg-[#FAF9F6] text-left">
                   <th scope="col" className={hth}>Date</th>
@@ -178,12 +178,12 @@ export function ProfileModal({
                 {p.events.map((e) => {
                   return (
                     <tr key={e.id} className="border-b border-soft last:border-0">
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-600">{dateLong(e.iso)}</td>
+                      <td data-label="Date" className="whitespace-nowrap px-3 py-2 text-slate-600">{dateLong(e.iso)}</td>
                       <td className="whitespace-nowrap px-3 py-2">{e.kind}</td>
-                      <td className="px-3 py-2 text-slate-600">{e.detail}</td>
-                      <td className={`money whitespace-nowrap px-3 py-2 text-right ${AMOUNT_COLOR[e.kind]}`}>{amountSigned(e.sign, e.amount)}</td>
-                      <td className="money whitespace-nowrap px-3 py-2 text-right text-slate-600">{taka(e.owesAfter)}</td>
-                      <td className="px-1 text-right">
+                      <td data-label="Details" className="px-3 py-2 text-slate-600">{e.detail}</td>
+                      <td data-label="Amount" className={`money whitespace-nowrap px-3 py-2 text-right ${AMOUNT_COLOR[e.kind]}`}>{amountSigned(e.sign, e.amount)}</td>
+                      <td data-label="Owes after" className="money whitespace-nowrap px-3 py-2 text-right text-slate-600">{taka(e.owesAfter)}</td>
+                      <td className="stack-corner px-1 text-right">
                         <DeleteButton label={`Delete ${e.kind.toLowerCase()} of ${taka(e.amount)} on ${dateLong(e.iso)}`} onClick={() => askDelete(e)} />
                       </td>
                     </tr>

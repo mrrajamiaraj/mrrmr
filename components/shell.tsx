@@ -47,7 +47,7 @@ export function Shell({
   const title = TABS.find((t) => path.startsWith(t.href))?.label ?? "Finance";
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <header className={`border-b border-line bg-white ${pad}`}>
         {/* Phones: logo and buttons on one row, the section tabs scroll sideways on a row below. */}
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-6 md:flex-nowrap">

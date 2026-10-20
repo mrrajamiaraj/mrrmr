@@ -48,6 +48,56 @@
   }
 }
 
+/*
+ * Phones: a .stack-table drops its header and shows each row as a small card, one "label … value" line per cell.
+ * Labels come from each cell's data-label. A cell without one (the person or date) becomes the card's title;
+ * .stack-corner pins a cell (the delete button) to the card's top-right corner.
+ * Unlayered on purpose, so it beats the table's Tailwind utilities (min-w-*, px-*, text-right) without !important.
+ */
+@media (max-width: 639.98px) {
+  .stack-table { min-width: 0; }
+  .stack-table thead { display: none; }
+  .stack-table tbody { display: block; }
+  .stack-table tr {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 16px;
+  }
+  .stack-table :is(td, th) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 0;
+    max-width: none;
+    padding: 2px 0;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .stack-table :is(td, th)[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    max-width: 50%;
+    text-align: left;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--color-slate-500);
+  }
+  .stack-table :is(td, th):not([data-label]) {
+    order: -1;
+    justify-content: flex-start;
+    text-align: left;
+    font-weight: 500;
+  }
+  .stack-table :is(td, th):empty, .stack-table .stack-hide { display: none; }
+  .stack-table :is(td, th)[colspan]:not(:empty) { justify-content: center; text-align: center; font-weight: 400; padding: 16px 0; }
+  .stack-table tr:has(> .stack-corner) > :not([data-label], .stack-corner) { padding-right: 40px; }
+  .stack-table .stack-corner { position: absolute; top: 6px; right: 8px; padding: 0; }
+}
+
 @utility money {
   font-weight: 500;
   font-variant-numeric: tabular-nums;

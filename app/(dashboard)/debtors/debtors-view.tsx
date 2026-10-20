@@ -202,7 +202,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
       {tab === "table" && (
         <SectionCard>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] border-collapse text-[14px]">
+            <table className="stack-table w-full min-w-[1000px] border-collapse text-[14px]">
               <thead>
                 <tr className="border-b border-line bg-[#FAF9F6] text-left">
                   <th scope="col" className={th}>Person</th>
@@ -223,15 +223,15 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                     <th scope="row" className={`${td} text-left font-medium`}>
                       <button type="button" onClick={() => setOpenId(p.id)} className="text-left decoration-[#A8A49A] underline-offset-4 hover:underline">{p.name}</button>
                     </th>
-                    <td className={`${td} money text-right text-slate-600`}>{p.loanCount + p.cardCount}</td>
-                    <td className={`${td} money text-right`}>{taka(p.taken)}</td>
-                    <td className={`${td} money text-right`}>{taka(p.paid)}</td>
-                    <td className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
-                    <td className={td}><StatusPill status={p.status} /></td>
-                    <td className={`${td} max-w-[260px] truncate text-slate-600`} title={p.reasons.join(", ")}>{p.reasons.join(", ")}</td>
-                    <td className={`${td} whitespace-nowrap`}>{p.owes > 0 ? dateLong(p.due) : "—"}</td>
-                    <td className={`${td} money text-right text-slate-600`}>{pct(p.paid, p.taken, 1).toFixed(1)}%</td>
-                    {!viewer && <td className="whitespace-nowrap px-3 py-1.5 text-right text-[13px]">
+                    <td data-label="Records" className={`${td} money text-right text-slate-600`}>{p.loanCount + p.cardCount}</td>
+                    <td data-label="Borrowed" className={`${td} money text-right`}>{taka(p.taken)}</td>
+                    <td data-label="Repaid" className={`${td} money text-right`}>{taka(p.paid)}</td>
+                    <td data-label="Left" className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
+                    <td data-label="Status" className={td}><StatusPill status={p.status} /></td>
+                    <td data-label="Reasons" className={`${td} max-w-[260px] truncate text-slate-600`} title={p.reasons.join(", ")}>{p.reasons.join(", ")}</td>
+                    <td data-label="Next due" className={`${td} whitespace-nowrap`}>{p.owes > 0 ? dateLong(p.due) : "—"}</td>
+                    <td data-label="Repaid %" className={`${td} money text-right text-slate-600`}>{pct(p.paid, p.taken, 1).toFixed(1)}%</td>
+                    {!viewer && <td data-label="" className="whitespace-nowrap px-3 py-1.5 text-right text-[13px]">
                       <button type="button" onClick={() => setDialog({ kind: "loan", p })} className={textBtn}>Loan</button>
                       <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className={textBtn}>Repay</button>
                     </td>}
@@ -239,12 +239,12 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                 ))}
                 <tr className={totalRow}>
                   <th scope="row" className={`${td} text-left`}>Total</th>
-                  <td className={`${td} money text-right`}>{pTot.loans}</td>
-                  <td className={`${td} money text-right`}>{taka(pTot.lent)}</td>
-                  <td className={`${td} money text-right`}>{taka(pTot.rep)}</td>
-                  <td className={`${td} money text-right text-[#85570F]`}>{taka(pTot.left)}</td>
+                  <td data-label="Records" className={`${td} money text-right`}>{pTot.loans}</td>
+                  <td data-label="Borrowed" className={`${td} money text-right`}>{taka(pTot.lent)}</td>
+                  <td data-label="Repaid" className={`${td} money text-right`}>{taka(pTot.rep)}</td>
+                  <td data-label="Left" className={`${td} money text-right text-[#85570F]`}>{taka(pTot.left)}</td>
                   <td className={td} colSpan={3} />
-                  <td className={`${td} money text-right`}>{pct(pTot.rep, pTot.lent, 1).toFixed(1)}%</td>
+                  <td data-label="Repaid %" className={`${td} money text-right`}>{pct(pTot.rep, pTot.lent, 1).toFixed(1)}%</td>
                   {!viewer && <td className={td} />}
                 </tr>
               </tbody>
@@ -256,7 +256,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
       {tab === "ledger" && (
         <SectionCard>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] border-collapse text-[14px]">
+            <table className="stack-table w-full min-w-[820px] border-collapse text-[14px]">
               <thead>
                 <tr className="border-b border-line bg-[#FAF9F6] text-left">
                   <th scope="col" className={th}>Date</th>
@@ -272,14 +272,14 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                   const t = LEDGER_TYPE[e.kind];
                   return (
                     <tr key={e.id} className="border-b border-soft">
-                      <td className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(e.iso)}</td>
+                      <td data-label="Date" className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(e.iso)}</td>
                       <td className={`${td} font-medium`}>
                         <button type="button" onClick={() => setOpenId(e.personId)} className="text-left decoration-[#A8A49A] underline-offset-4 hover:underline">{e.person}</button>
                       </td>
-                      <td className={`${td} whitespace-nowrap text-slate-600`}>{t.label}</td>
-                      <td className={`${td} text-slate-600`}>{e.detail}</td>
-                      <td className={`${td} money text-right ${t.color}`}>{amountSigned(e.sign, e.amount)}</td>
-                      <td className={`${td} money text-right text-slate-600`}>{taka(e.owesAfter)}</td>
+                      <td data-label="Type" className={`${td} whitespace-nowrap text-slate-600`}>{t.label}</td>
+                      <td data-label="Reason / method" className={`${td} text-slate-600`}>{e.detail}</td>
+                      <td data-label="Amount" className={`${td} money text-right ${t.color}`}>{amountSigned(e.sign, e.amount)}</td>
+                      <td data-label="Owes after" className={`${td} money text-right text-slate-600`}>{taka(e.owesAfter)}</td>
                     </tr>
                   );
                 })}
