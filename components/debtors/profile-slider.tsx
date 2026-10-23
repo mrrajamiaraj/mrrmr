@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar, EmptyNote, StatusPill } from "@/components/debtors/bits";
 import { useViewer } from "@/components/shell";
+import { stagger } from "@/components/motion";
 import { ChevronLeft, ChevronRight, CloseIcon, SearchIcon } from "@/components/icons";
 import { dateShort, taka } from "@/lib/format";
 import type { Status } from "@/lib/types";
@@ -22,7 +23,7 @@ export type SlideItem = {
 };
 
 const STEP = 272; // card width 260 + gap 12
-const iconBtn = "flex size-9 items-center justify-center rounded-md border border-[#D6D3CB] bg-white text-slate-600 hover:bg-soft";
+const iconBtn = "flex size-9 items-center justify-center rounded-lg border border-[#D6D3CB] bg-white text-slate-600 hover:border-[#A8A49A] hover:bg-soft hover:text-ink disabled:opacity-40";
 
 export function ProfileSlider({
   title,
@@ -43,13 +44,29 @@ export function ProfileSlider({
   const track = useRef<HTMLDivElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [edges, setEdges] = useState({ start: true, end: true });
   const ql = q.trim().toLowerCase();
   const shown = !ql ? items : items.filter((p) => p.name.toLowerCase().includes(ql) || p.reasons.join(" ").toLowerCase().includes(ql));
+
+  // Which ends of the track are reached: greys out the arrows and drops the edge fade on that side.
+  const measure = () => {
+    const el = track.current;
+    if (el) setEdges({ start: el.scrollLeft <= 2, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2 });
+  };
+  useEffect(() => {
+    measure();
+    const el = track.current;
+    if (!el) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [shown.length]);
 
   const slide = (dir: 1 | -1) => {
     const el = track.current;
     if (el) el.scrollBy({ left: dir * STEP * Math.max(1, Math.floor(el.clientWidth / STEP)), behavior: "smooth" });
   };
+  const fade = `${edges.start ? "black" : "transparent"}, black 32px, black calc(100% - 32px), ${edges.end ? "black" : "transparent"}`;
 
   return (
     <section aria-labelledby="prof-h" className="flex flex-col gap-3">
@@ -76,14 +93,14 @@ export function ProfileSlider({
               </button>
             </label>
           )}
-          <button type="button" onClick={() => slide(-1)} aria-label="Previous debtors" className={iconBtn}>
+          <button type="button" onClick={() => slide(-1)} disabled={edges.start} aria-label="Previous debtors" className={iconBtn}>
             <ChevronLeft size={16} />
           </button>
-          <button type="button" onClick={() => slide(1)} aria-label="Next debtors" className={iconBtn}>
+          <button type="button" onClick={() => slide(1)} disabled={edges.end} aria-label="Next debtors" className={iconBtn}>
             <ChevronRight size={16} />
           </button>
           {!viewer && (
-            <button type="button" onClick={onAdd} className="ml-1 min-h-9 rounded-md border border-[#D6D3CB] bg-white px-3 text-[13.5px] hover:bg-soft">
+            <button type="button" onClick={onAdd} className="ml-1 min-h-9 rounded-lg border border-[#D6D3CB] bg-white px-3 text-[13.5px] hover:border-[#A8A49A] hover:bg-soft">
               Add debtor
             </button>
           )}
@@ -96,15 +113,16 @@ export function ProfileSlider({
         </div>
       )}
 
-      <div ref={track} role="region" aria-label="Debtor profiles, scroll sideways" tabIndex={0}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2">
-        {shown.map((p) => (
-          <button key={p.id} type="button" onClick={() => onOpen(p.id)} aria-label={`Open ${p.name}'s profile`}
-            className="flex flex-[0_0_260px] snap-start flex-col gap-3 rounded-lg border border-line bg-white p-4 text-left hover:border-[#D6D3CB] hover:shadow-[0_2px_8px_-4px_rgba(28,27,24,0.2)]">
+      <div ref={track} role="region" aria-label="Debtor profiles, scroll sideways" tabIndex={0} onScroll={measure}
+        style={{ maskImage: `linear-gradient(to right, ${fade})`, WebkitMaskImage: `linear-gradient(to right, ${fade})` }}
+        className="-my-2 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth py-2 pb-3">
+        {shown.map((p, i) => (
+          <button key={p.id} type="button" onClick={() => onOpen(p.id)} aria-label={`Open ${p.name}'s profile`} style={stagger(i, 45, 360)}
+            className="lift group flex flex-[0_0_260px] animate-fade-up snap-start flex-col gap-3 rounded-xl border border-line bg-white p-4 text-left shadow-[var(--shadow-card)]">
             <div className="flex w-full items-start gap-2.5">
-              <Avatar text={p.initials} size={34} />
+              <Avatar text={p.initials} size={36} />
               <div className="min-w-0 flex-auto">
-                <div className="truncate text-[14.5px] font-medium">{p.name}</div>
+                <div className="truncate text-[14.5px] font-medium group-hover:text-brand">{p.name}</div>
                 <div className="text-[12.5px] text-slate-500">{p.txCount} records · {dateShort(p.lastIso, "—")}</div>
               </div>
             </div>
@@ -114,7 +132,7 @@ export function ProfileSlider({
               <div><dt className="text-slate-500">Owes</dt><dd className="money m-0 text-[13.5px] text-[#85570F]">{taka(p.owes)}</dd></div>
             </dl>
             <div className="flex w-full items-center gap-2.5">
-              <div className="h-1 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]"><div className="h-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%` }} /></div>
+              <div className="h-1.5 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]"><div className="bar-fill h-full rounded-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%`, ...stagger(i, 45, 500) }} /></div>
               <StatusPill status={p.status} />
             </div>
           </button>

@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef } from "react";
 import { CloseIcon } from "@/components/icons";
 
+const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled):not([type=hidden]), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+
 /** Centered dialog: plain title row, content, and a footer for its buttons. */
 export function Modal({
   title,
@@ -27,7 +29,17 @@ export function Modal({
 
   // Runs once on open: parents pass inline onClose callbacks, which must not re-trigger focus.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
+    const opener = document.activeElement as HTMLElement | null;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return closeRef.current();
+      // Keep Tab inside the dialog.
+      if (e.key !== "Tab" || !ref.current) return;
+      const focusable = [...ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -35,12 +47,15 @@ export function Modal({
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      // Hand focus back to whatever opened the dialog, if it is still on the page.
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
     };
   }, []);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(28,27,24,0.4)] pt-4 sm:items-center sm:p-4"
+      data-float
+      className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-[rgba(28,27,24,0.42)] pt-4 backdrop-blur-[2px] sm:items-center sm:p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* Phones: a sheet from the bottom edge; larger screens: centered. dvh keeps it clear of mobile browser bars. */}
@@ -50,8 +65,10 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         style={{ maxWidth }}
-        className="max-h-[calc(100dvh-16px)] w-full overflow-y-auto overscroll-contain rounded-t-xl bg-white text-left shadow-[0_20px_50px_-12px_rgba(28,27,24,0.35)] sm:max-h-[calc(100dvh-32px)] sm:rounded-lg"
+        className="max-h-[calc(100dvh-16px)] w-full animate-sheet-up overflow-y-auto overscroll-contain rounded-t-2xl bg-white text-left shadow-[var(--shadow-pop)] sm:max-h-[calc(100dvh-32px)] sm:animate-pop-in sm:rounded-xl"
       >
+        {/* Grab handle so the phone sheet reads as a sheet. */}
+        <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-[#E3E1DA] sm:hidden" />
         {header ? (
           header(titleId)
         ) : (
@@ -62,7 +79,7 @@ export function Modal({
         )}
         {children}
         {footer && (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>
+          <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-white/95 px-5 py-3 backdrop-blur">{footer}</div>
         )}
       </div>
     </div>
@@ -79,11 +96,12 @@ export function CloseButton({ onClick, label = "Close" }: { onClick: () => void;
 
 export function ErrorBox({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div role="alert" className={`rounded-md bg-[#F5E4E0] px-3.5 py-2.5 text-sm font-medium text-[#7E2A1F] ${className}`}>
+    <div role="alert" className={`animate-pop-in rounded-md border border-[#EBCFC8] bg-[#F5E4E0] px-3.5 py-2.5 text-sm font-medium text-[#7E2A1F] ${className}`}>
       {children}
     </div>
   );
 }
 
-export const btnPrimary = "min-h-10 rounded-md bg-brand px-4 text-[14px] font-medium text-white hover:bg-[#173D2E]";
-export const btnGhost = "min-h-10 rounded-md px-3.5 text-[14px] text-slate-700 hover:bg-soft";
+export const btnPrimary = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#173D2E] hover:shadow-[0_6px_16px_-6px_rgba(31,77,58,0.55)]";
+export const btnDanger = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#9B3426] px-4 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2)] hover:bg-[#7E2A1F] hover:shadow-[0_6px_16px_-6px_rgba(155,52,38,0.55)]";
+export const btnGhost = "min-h-10 rounded-lg px-3.5 text-[14px] text-slate-700 hover:bg-soft";

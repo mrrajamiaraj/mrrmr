@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PencilIcon, SearchIcon, TrashIcon } from "@/components/icons";
+import { CloseIcon, PencilIcon, SearchIcon, TrashIcon } from "@/components/icons";
+import { CountUp } from "@/components/motion";
 import { EmptyNote } from "@/components/debtors/bits";
 import { useViewer } from "@/components/shell";
 import { facilityLook, memberLook, type ResearchContribution, type ResearchExpense } from "@/lib/research";
@@ -19,9 +20,9 @@ export const takaDec = (n: number) =>
   `${n < 0 ? "-" : ""}৳${Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 const pct1 = (part: number, whole: number) => (whole ? Math.round((part / whole) * 1000) / 10 : 0);
-const select = "min-h-9 min-w-0 flex-auto rounded-md border border-[#D6D3CB] bg-white px-2.5 text-[13.5px] sm:flex-none";
-const card = "overflow-hidden rounded-lg border border-line bg-white";
-const hth = "px-4 py-2 text-[12.5px] font-medium text-slate-500";
+const select = "min-h-9 min-w-0 flex-auto cursor-pointer rounded-lg border border-[#D6D3CB] bg-white px-2.5 text-[13.5px] hover:border-[#A8A49A] sm:flex-none";
+const card = "overflow-hidden rounded-xl border border-line bg-white shadow-[var(--shadow-card)]";
+const hth = "px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.04em] text-slate-500";
 
 // Facilities and members are told apart by a small colour mark next to the name, not by filled badges.
 function FacilityChip({ name }: { name: string }) {
@@ -43,17 +44,23 @@ function MemberChip({ name }: { name: string; dot?: boolean }) {
 function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   return (
     <span className="inline-flex gap-1">
-      <button type="button" aria-label="Edit" title="Edit" onClick={onEdit} className="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-soft"><PencilIcon size={16} /></button>
+      <button type="button" aria-label="Edit" title="Edit" onClick={onEdit} className="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-soft hover:text-ink"><PencilIcon size={16} /></button>
       <button type="button" aria-label="Delete" title="Delete" onClick={onDelete} className="flex size-9 items-center justify-center rounded-lg text-slate-400 hover:bg-[#F5E4E0] hover:text-[#9B3426]"><TrashIcon size={16} /></button>
     </span>
   );
 }
 function Search({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <label className="flex min-h-11 w-full items-center sm:w-auto sm:min-w-[220px] sm:flex-[1_1_320px] gap-2 rounded-md border border-[#D6D3CB] bg-white px-3.5 sm:max-w-[460px]">
+    <label className="flex min-h-11 w-full items-center sm:w-auto sm:min-w-[220px] sm:flex-[1_1_320px] gap-2 rounded-lg border border-[#D6D3CB] bg-white px-3.5 focus-within:border-brand-2 sm:max-w-[460px]">
       <SearchIcon size={16} className="text-slate-500" />
       <span className="sr-only">Search</span>
       <input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="min-w-0 flex-auto bg-transparent text-[15px] outline-none" />
+      {value && (
+        <button type="button" onClick={() => onChange("")} aria-label="Clear search"
+          className="-mr-1.5 grid size-7 flex-none animate-fade-in place-items-center rounded-md text-slate-400 hover:bg-soft hover:text-ink">
+          <CloseIcon size={14} />
+        </button>
+      )}
     </label>
   );
 }
@@ -84,8 +91,11 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
   const toggle = (key: "date" | "amount") => setSort((s) => (s.key === key ? { key, dir: (s.dir * -1) as 1 | -1 } : { key, dir: -1 }));
   const sortBtn = (key: "date" | "amount", label: string) => (
     <button type="button" onClick={() => toggle(key)} aria-pressed={sort.key === key}
-      className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2.5 text-[13.5px] ${sort.key === key ? "border-[#A8A49A] bg-soft text-ink" : "border-[#D6D3CB] bg-white text-slate-600"}`}>
-      {label} <span aria-hidden="true">{sort.key === key ? (sort.dir < 0 ? "↓" : "↑") : "⇅"}</span>
+      className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 text-[13.5px] ${sort.key === key ? "border-[#A8A49A] bg-soft text-ink" : "border-[#D6D3CB] bg-white text-slate-600 hover:border-[#A8A49A]"}`}>
+      {label}
+      <span aria-hidden="true" className={`inline-block transition-transform duration-300 ease-[var(--ease-spring)] ${sort.key === key && sort.dir > 0 ? "rotate-180" : ""} ${sort.key === key ? "" : "opacity-50"}`}>
+        {sort.key === key ? "↓" : "⇅"}
+      </span>
     </button>
   );
 
@@ -113,7 +123,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
         </div>
         <div className="flex flex-wrap justify-between gap-2 text-[13px] text-slate-600">
           <span>Showing <strong>{rows.length}</strong> of <strong>{expenses.length}</strong> expenses</span>
-          <span>Filtered Sum: <strong className="money text-ink">{taka(sum)}</strong></span>
+          <span>Filtered Sum: <strong className="money text-ink"><CountUp value={sum} format={taka} duration={500} /></strong></span>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -271,7 +281,7 @@ export function SettlementTab({ expenses, contributions, members, totalExp, tota
                 <td data-label="Net" className={`money px-4 py-2.5 text-right ${r.net < 0 ? "text-[#9B3426]" : "text-brand-2"}`}>{sign(r.net)}{taka(r.net)}</td>
                 <td data-label="Share" className="px-4 py-2.5">
                   <span className="flex items-center gap-2">
-                    <span className="h-1 w-24 overflow-hidden rounded-full bg-[#E3E1DA]"><span className="block h-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
+                    <span className="h-1.5 w-24 overflow-hidden rounded-full bg-[#E3E1DA]"><span className="bar-fill block h-full rounded-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
                     <span className="money text-[12.5px] text-slate-500">{r.share.toFixed(1)}%</span>
                   </span>
                 </td>
@@ -352,7 +362,7 @@ function BreakdownTable({ title, sub, label, rows, mark }: {
                 <td data-label="Total" className="money px-4 py-2.5 text-right">{taka(r.total)}</td>
                 <td data-label="Share" className="px-4 py-2.5">
                   <span className="flex items-center gap-2">
-                    <span className="h-1 w-28 overflow-hidden rounded-full bg-[#E3E1DA]"><span className="block h-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
+                    <span className="h-1.5 w-28 overflow-hidden rounded-full bg-[#E3E1DA]"><span className="bar-fill block h-full rounded-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
                     <span className="money text-[12.5px] text-slate-500">{r.share}%</span>
                   </span>
                 </td>
@@ -393,36 +403,55 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
       {/* Single-series bar chart: one hue, no legend; hover a bar for its values. Cards below double as the table view. */}
       <div className="overflow-x-auto">
         {/* ~52px per month: fits a phone screen for half a year, scrolls sideways beyond that. */}
-        <div className="flex items-end gap-2 border-b border-[#D6D3CB] px-2 pt-8 sm:gap-4" style={{ height: 240, minWidth: months.length * 52 }} role="img"
+        <div className="relative flex items-end gap-2 border-b border-[#D6D3CB] px-2 pt-8 sm:gap-4" style={{ height: 260, minWidth: months.length * 52 }} role="img"
           aria-label={`Monthly spending: ${months.map((m) => `${monthLabel(m.key)} ${taka(m.total)}`).join(", ")}`}>
-          {months.map((m) => (
-            <div key={m.key} className="relative flex h-full flex-1 flex-col items-center justify-end"
-              onMouseEnter={() => setHover(m.key)} onMouseLeave={() => setHover(null)}
-              onClick={() => setHover((h) => (h === m.key ? null : m.key))}>
-              {hover === m.key && (
-                <div className="pointer-events-none absolute z-10 -translate-y-2 whitespace-nowrap rounded-md bg-ink px-2.5 py-1.5 text-xs text-white"
-                  style={{ bottom: `${(m.total / max) * 100}%` }}>
-                  <div className="font-semibold">{monthLabel(m.key)}</div>
-                  <div className="money">{taka(m.total)} · {m.count} logs</div>
-                </div>
-              )}
-              <div className={`w-full max-w-[44px] rounded-t-sm ${hover && hover !== m.key ? "bg-brand-2/40" : "bg-brand-2"}`}
-                style={{ height: `${Math.max((m.total / max) * 100, 1.5)}%` }} />
+          {/* Quarter gridlines, labelled at the right edge. */}
+          {[0.25, 0.5, 0.75, 1].map((f) => (
+            <div key={f} aria-hidden="true" className="pointer-events-none absolute inset-x-0 border-t border-dashed border-[#EAE8E2]"
+              style={{ bottom: `calc(${f} * (100% - 32px))` }}>
+              <span className="absolute -top-2.5 right-0 bg-white pl-1.5 text-[10.5px] text-slate-400 tabular-nums">{taka(max * f)}</span>
             </div>
           ))}
+          {months.map((m, i) => {
+            const on = hover === m.key;
+            return (
+              <div key={m.key} className="relative flex h-full flex-1 cursor-pointer flex-col items-center justify-end"
+                onMouseEnter={() => setHover(m.key)} onMouseLeave={() => setHover(null)}
+                onClick={() => setHover((h) => (h === m.key ? null : m.key))}>
+                {on && (
+                  <div className="pointer-events-none absolute z-10 mb-2 animate-pop-in whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-xs text-white shadow-[var(--shadow-pop)]"
+                    style={{ bottom: `${(m.total / max) * 100}%` }}>
+                    <div className="font-semibold">{monthLabel(m.key)}</div>
+                    <div className="money text-[13px]">{taka(m.total)}</div>
+                    <div className="text-white/60">{m.count} logs · avg {takaDec(Math.round(m.avg))}</div>
+                    <span aria-hidden="true" className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-ink" />
+                  </div>
+                )}
+                <div className={`w-full max-w-[44px] origin-bottom animate-grow-y rounded-t-md bg-gradient-to-t from-brand to-brand-2 transition-[opacity,filter] duration-200 ${
+                  hover && !on ? "opacity-35" : "opacity-100"} ${on ? "brightness-110" : ""}`}
+                  style={{ height: `${Math.max((m.total / max) * 100, 1.5)}%`, animationDelay: `${Math.min(i * 50, 600)}ms` }} />
+              </div>
+            );
+          })}
         </div>
         <div className="flex gap-2 px-2 pt-2 sm:gap-4" style={{ minWidth: months.length * 52 }}>
-          {months.map((m) => <div key={m.key} className="min-w-0 flex-1 text-center text-[11.5px] font-medium leading-tight text-slate-700 sm:text-[13px]">{monthLabel(m.key)}</div>)}
+          {months.map((m) => (
+            <div key={m.key} className={`min-w-0 flex-1 text-center text-[11.5px] font-medium leading-tight transition-colors sm:text-[13px] ${hover === m.key ? "text-brand" : "text-slate-700"}`}>
+              {monthLabel(m.key)}
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(150px,100%),1fr))] gap-3">
         {months.map((m) => (
-          <div key={m.key} className="border-l-2 border-line pl-3">
+          <button key={m.key} type="button" onMouseEnter={() => setHover(m.key)} onMouseLeave={() => setHover(null)}
+            onFocus={() => setHover(m.key)} onBlur={() => setHover(null)}
+            className={`rounded-r-lg border-l-2 py-1.5 pl-3 text-left ${hover === m.key ? "border-brand-2 bg-[#F2F6F3]" : "border-line hover:bg-[#FAF9F6]"}`}>
             <div className="text-[12.5px] text-slate-500">{monthLabel(m.key)}</div>
             <div className="money text-[16px]">{taka(m.total)}</div>
             <div className="text-[12px] text-slate-500">{m.count} expenses · avg {takaDec(Math.round(m.avg * 100) / 100)}</div>
-          </div>
+          </button>
         ))}
       </div>
     </section>

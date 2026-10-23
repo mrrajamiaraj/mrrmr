@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { AdminProvider } from "@/components/shell";
+import { AdminProvider, TopBar } from "@/components/shell";
+import { Toaster } from "@/components/toast";
 import { timestampLong } from "@/lib/format";
 import { isViewerEmail } from "@/lib/viewer";
 
@@ -19,7 +20,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         viewer: isViewerEmail(user?.email),
       }}
     >
-      {children}
+      <div className="min-h-dvh">
+        <TopBar />
+        {children}
+      </div>
+      <Toaster />
     </AdminProvider>
   );
 }

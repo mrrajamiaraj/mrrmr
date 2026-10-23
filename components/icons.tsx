@@ -31,6 +31,9 @@ export const LockIcon = (p: P) => (
 export const EyeIcon = (p: P) => (
   <Svg strokeWidth={2} {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></Svg>
 );
+export const EyeOffIcon = (p: P) => (
+  <Svg strokeWidth={2} {...p}><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.7 3.6M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" /></Svg>
+);
 export const KeyIcon = (p: P) => (
   <Svg strokeWidth={2} {...p}><circle cx="7.5" cy="15.5" r="4.5" /><path d="M10.7 12.3L20 3M16 7l3 3M14 9l2 2" /></Svg>
 );
@@ -54,6 +57,15 @@ export const DownloadIcon = (p: P) => (
 );
 export const LogoutIcon = (p: P) => (
   <Svg strokeWidth={2} {...p}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 17l-5-5 5-5M5 12h11" /></Svg>
+);
+export const FlaskIcon = (p: P) => (
+  <Svg {...p}><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3" /><path d="M7 15h10" /></Svg>
+);
+export const CheckIcon = (p: P) => <Svg strokeWidth={2.2} {...p}><path d="M5 12.5l4.5 4.5L19 7.5" /></Svg>;
+export const ArrowRightIcon = (p: P) => <Svg strokeWidth={2} {...p}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>;
+export const ArrowUpIcon = (p: P) => <Svg strokeWidth={2} {...p}><path d="M12 19V5M6 11l6-6 6 6" /></Svg>;
+export const CommandIcon = (p: P) => (
+  <Svg {...p}><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" /></Svg>
 );
 export const ChipIcon = () => (
   <svg aria-hidden="true" width="40" height="30" viewBox="0 0 40 30" fill="none" stroke="#E3E1DA" strokeWidth="1.4">

@@ -89,14 +89,24 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
             <Figure label="Available now" value="—" tone="muted" note="Set the credit limit to see this"
               action={!viewer && <button type="button" onClick={() => setEditingCard(true)} className={linkBtn}>Set limit</button>} />
           )}
-          <Figure label="+ Owed to you" value={taka(owed)} tone="owed" note={`${owing.length} ${owing.length === 1 ? "person" : "people"} on this card`} />
-          <Figure label="= Once everyone pays" value={availAfter != null ? taka(availAfter) : "—"} tone="good" note="Available balance after repayment" />
+          <Figure label="+ Owed to you" value={owed} tone="owed" note={`${owing.length} ${owing.length === 1 ? "person" : "people"} on this card`} />
+          <Figure label="= Once everyone pays" value={availAfter ?? "—"} tone="good" note="Available balance after repayment" />
         </Statement>
         {limit != null && (
-          <div className="flex flex-wrap items-center gap-1.5 px-0.5 text-[12.5px] text-slate-500">
-            Credit limit <span className="money text-slate-700">{taka(limit)}</span>
-            {card.pay_by && <> · pay by {dateLong(card.pay_by)}</>}
-            {!viewer && <button type="button" onClick={() => setEditingCard(true)} className={linkBtn}>Edit</button>}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-0.5 text-[12.5px] text-slate-500">
+            {/* Limit used: what's spent now, plus the slice that frees up once people pay. */}
+            <div className="h-2 min-w-[160px] flex-auto overflow-hidden rounded-full bg-[#E3E1DA]" aria-hidden="true">
+              <div className="bar-fill flex h-full">
+                <div className="bg-[#B9852F] transition-[width] duration-700" style={{ width: `${limit ? Math.min((owed / limit) * 100, 100) : 0}%` }} />
+                <div className="bg-[#A8A49A] transition-[width] duration-700" style={{ width: `${limit ? Math.max(Math.min(((limit - availNow! - owed) / limit) * 100, 100), 0) : 0}%` }} />
+              </div>
+            </div>
+            <span className="flex flex-wrap items-center gap-1.5">
+              Credit limit <span className="money text-slate-700">{taka(limit)}</span>
+              <span className="text-slate-400">·</span> {limit ? Math.round(((limit - availNow!) / limit) * 100) : 0}% used
+              {card.pay_by && <><span className="text-slate-400">·</span> pay by {dateLong(card.pay_by)}</>}
+              {!viewer && <button type="button" onClick={() => setEditingCard(true)} className={linkBtn}>Edit</button>}
+            </span>
           </div>
         )}
       </div>
@@ -180,7 +190,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                 const name = me ? "Me" : peopleById.get(u.person_id!)?.name ?? "Unknown";
                 const isNew = u.id === newestId;
                 return (
-                  <tr key={u.id} className={`border-b border-soft ${isNew ? "bg-[#F2F6F3]" : ""}`}>
+                  <tr key={u.id} className={`border-b border-soft ${isNew ? "animate-highlight bg-[#F2F6F3]" : ""}`}>
                     <td data-label="Date" className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(u.used_on)}</td>
                     <th scope="row" className="px-4 py-1.5 text-left">
                       {me ? (

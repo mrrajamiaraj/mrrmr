@@ -11,7 +11,24 @@ import { dateLong, taka } from "@/lib/format";
 import { amountSigned, CARD_NAMES, cardTitle, type CardProfile, type EventKind, type HistoryEvent, type Profile } from "@/lib/ledger";
 import type { Card } from "@/lib/types";
 
-const hth = "whitespace-nowrap px-3 py-2 text-[12px] font-medium text-slate-500";
+const hth = "whitespace-nowrap px-3 py-2 text-[11.5px] font-medium uppercase tracking-[0.04em] text-slate-500";
+
+/** Avatar inside a ring that fills with how much has been paid back. */
+function ProgressAvatar({ initials, pct }: { initials: string; pct: number }) {
+  const r = 23, c = 2 * Math.PI * r;
+  return (
+    <span className="relative grid size-[52px] flex-none place-items-center" title={`${pct}% paid back`}>
+      <svg aria-hidden="true" width="52" height="52" viewBox="0 0 52 52" className="absolute inset-0 -rotate-90">
+        <circle cx="26" cy="26" r={r} fill="none" stroke="#E3E1DA" strokeWidth="3" />
+        <circle cx="26" cy="26" r={r} fill="none" stroke="#2E6B52" strokeWidth="3" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(pct, 100) / 100)}
+          className="transition-[stroke-dashoffset] duration-1000 ease-[var(--ease-out-expo)] [animation:ring_1.1s_var(--ease-out-expo)_backwards]"
+          style={{ ["--ring-from" as string]: c }} />
+      </svg>
+      <Avatar text={initials} size={40} />
+    </span>
+  );
+}
 
 /** Amount colour per kind of record: money out is neutral, money back is green. */
 const AMOUNT_COLOR: Record<EventKind, string> = {
@@ -99,7 +116,7 @@ export function ProfileModal({
       maxWidth={760}
       header={(id) => (
         <div className="flex items-center gap-3 border-b border-line py-3 pl-4 pr-2 sm:pl-5">
-          <Avatar text={p.initials} size={40} />
+          <ProgressAvatar initials={p.initials} pct={p.pct} />
           <div className="min-w-0 flex-auto">
             <h2 id={id} className="m-0 text-[18px] font-semibold leading-tight">{p.name}</h2>
             <div className="text-[13px] text-slate-500">
@@ -124,7 +141,7 @@ export function ProfileModal({
     >
       <div className="flex flex-col gap-5 p-4 sm:p-5">
         {/* Hairlines come from the 1px gap over a line-coloured background, so they stay right however the grid wraps. */}
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(140px,100%),1fr))] gap-px overflow-hidden rounded-lg border border-line bg-line">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(140px,100%),1fr))] gap-px overflow-hidden rounded-xl border border-line bg-line">
           {scoped ? (
             <>
               <Stat label={isCard ? "Used this card" : "Borrowed"} value={taka((p as CardProfile).used)} sub={`${(p as CardProfile).useCount} times`} />
@@ -162,7 +179,7 @@ export function ProfileModal({
               </button>
             )}
           </div>
-          <div className="overflow-x-auto rounded-lg border border-line">
+          <div className="overflow-x-auto rounded-xl border border-line">
             <table className="stack-table w-full min-w-[620px] border-collapse text-[13.5px]">
               <thead>
                 <tr className="border-b border-line bg-[#FAF9F6] text-left">

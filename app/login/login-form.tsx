@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import { signIn, forgotPassword, type AuthState } from "./actions";
+import { ArrowRightIcon } from "@/components/icons";
+import { Spinner } from "@/components/motion";
+import { PasswordInput } from "@/components/password-input";
 
 export function LoginForm({ next }: { next: string }) {
   const [signInState, signInAction, signingIn] = useActionState<AuthState, FormData>(signIn, {});
@@ -9,31 +12,34 @@ export function LoginForm({ next }: { next: string }) {
   const state = resetState.error || resetState.message ? resetState : signInState;
 
   return (
-    <form className="flex flex-col gap-3.5" action={signInAction}>
+    <form className="flex flex-col gap-4" action={signInAction}>
       <input type="hidden" name="next" value={next} />
       <label className="field-label">
         Email
-        <input className="field-input focus:border-[#2E6B52]" name="email" type="email" autoComplete="email" required />
+        <input className="field-input" name="email" type="email" autoComplete="email" placeholder="you@example.com" required />
       </label>
       <label className="field-label">
         Password
-        <input className="field-input focus:border-[#2E6B52]" name="password" type="password" autoComplete="current-password" required />
+        <PasswordInput name="password" autoComplete="current-password" required />
       </label>
 
-      {state.error && <div className="rounded-md bg-[#F5E4E0] px-3 py-2.5 text-sm text-[#9B3426]" role="alert">{state.error}</div>}
-      {state.message && <div className="rounded-md bg-[#E3ECE6] px-3 py-2.5 text-sm text-[#1F4D3A]" role="status">{state.message}</div>}
+      {state.error && <div className="animate-pop-in rounded-lg border border-[#EBCFC8] bg-[#F5E4E0] px-3 py-2.5 text-sm text-[#9B3426]" role="alert">{state.error}</div>}
+      {state.message && <div className="animate-pop-in rounded-lg border border-[#CADBD0] bg-[#E3ECE6] px-3 py-2.5 text-sm text-[#1F4D3A]" role="status">{state.message}</div>}
 
-      <button type="submit" className="min-h-11 rounded-md bg-brand text-[14px] font-medium text-white hover:bg-[#173D2E]" disabled={signingIn}>
-        {signingIn ? "Signing in…" : "Sign in"}
+      <button type="submit" disabled={signingIn}
+        className="group mt-1 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand text-[14.5px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#173D2E] hover:shadow-[0_8px_20px_-8px_rgba(31,77,58,0.6)]">
+        {signingIn ? <><Spinner />Signing in…</> : <>Sign in<ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-0.5" /></>}
       </button>
+      {/* Stays after "Sign in": pressing Enter submits with the first submit button in the form. */}
       <button
         type="submit"
         formAction={resetAction}
         formNoValidate
         disabled={resetting}
-        className="min-h-10 self-start px-1 text-[14.5px] font-semibold text-brand-2"
+        className="inline-flex min-h-9 items-center gap-2 self-center rounded-md px-2 text-[13.5px] font-medium text-brand-2 hover:bg-[#F2F6F3] hover:text-brand"
       >
-        {resetting ? "Sending…" : "Forgot password?"}
+        {resetting && <Spinner size={12} />}
+        {resetting ? "Sending reset link…" : "Forgot password?"}
       </button>
     </form>
   );

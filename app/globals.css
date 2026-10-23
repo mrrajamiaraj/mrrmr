@@ -24,6 +24,65 @@
   --color-slate-700: #46433D;
   --color-slate-800: #2E2C28;
   --color-slate-900: #1C1B18;
+
+  --shadow-card: 0 1px 2px rgba(28, 27, 24, 0.04), 0 1px 0 rgba(28, 27, 24, 0.02);
+  --shadow-lift: 0 1px 2px rgba(28, 27, 24, 0.05), 0 8px 24px -8px rgba(28, 27, 24, 0.16);
+  --shadow-pop: 0 24px 60px -16px rgba(28, 27, 24, 0.35), 0 0 0 1px rgba(28, 27, 24, 0.06);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  --animate-fade-up: fade-up 480ms var(--ease-out-expo) both;
+  --animate-fade-in: fade-in 240ms ease-out both;
+  --animate-pop-in: pop-in 320ms var(--ease-out-expo) both;
+  --animate-sheet-up: sheet-up 380ms var(--ease-out-expo) both;
+  --animate-grow-x: grow-x 900ms var(--ease-out-expo) both;
+  --animate-grow-y: grow-y 800ms var(--ease-out-expo) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-spin: spin 0.7s linear infinite;
+  --animate-highlight: highlight 2.4s ease-out both;
+}
+
+/* Top level rather than inside @theme so they are always emitted: some are referenced from inline styles. */
+/* Entrances animate `translate`/`scale`, not `transform`, so a finished entrance never pins `transform` and blocks hover lifts. */
+@keyframes fade-up {
+  from { opacity: 0; translate: 0 10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop-in {
+  from { opacity: 0; translate: 0 8px; scale: 0.97; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes sheet-up {
+  from { translate: 0 100%; }
+  to { translate: 0 0; }
+}
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes grow-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes highlight {
+  0%, 30% { background-color: #E6EFE9; }
+  100% { background-color: #F2F6F3; }
+}
+/* Progress ring: draws from empty to its current offset. Set --ring-from to the circumference. */
+@keyframes ring {
+  from { stroke-dashoffset: var(--ring-from); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @layer base {
@@ -45,6 +104,50 @@
   :where(button, a, input, select, [tabindex]):focus-visible {
     outline: 2px solid #2E6B52;
     outline-offset: 2px;
+  }
+  ::selection { background: #C9D9CF; color: var(--color-ink); }
+
+  /* Every interactive surface eases its colours instead of snapping; a pressed button dips slightly. */
+  :where(button, a, input, select, textarea, [role="tab"]) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform, translate, scale;
+    transition-duration: 160ms;
+    transition-timing-function: ease-out;
+  }
+  :where(button:not(:disabled), a[class*="rounded"]):active { transform: scale(0.97); }
+
+  :where(.field-input, select):focus { border-color: var(--color-brand-2); box-shadow: 0 0 0 3px rgba(46, 107, 82, 0.12); outline: none; }
+  :where(label):has(> input[type="search"]):focus-within { box-shadow: 0 0 0 3px rgba(46, 107, 82, 0.12); }
+
+  /* Thin, warm scrollbars for the sideways sliders and tables. */
+  * { scrollbar-width: thin; scrollbar-color: #D6D3CB transparent; }
+
+  /* Tables: rows warm up under the pointer. */
+  @media (hover: hover) {
+    .stack-table tbody tr { transition: background-color 120ms ease-out; }
+    .stack-table tbody tr:hover { background-color: #FAF9F6; }
+  }
+}
+
+/* Each page's sections rise in one after another. Floating layers (dialogs, toasts) are skipped: they have their own entrances. */
+.page-enter > :not([data-float]) { animation: var(--animate-fade-up); }
+.page-enter > :nth-child(2):not([data-float]) { animation-delay: 60ms; }
+.page-enter > :nth-child(3):not([data-float]) { animation-delay: 120ms; }
+.page-enter > :nth-child(4):not([data-float]) { animation-delay: 170ms; }
+.page-enter > :nth-child(n + 5):not([data-float]) { animation-delay: 210ms; }
+
+/* Route-level page transitions use the View Transitions API where available; the header stays put. */
+::view-transition { pointer-events: none; }
+::view-transition-group(site-header) { animation: none; z-index: 100; }
+::view-transition-old(site-header) { display: none; }
+::view-transition-new(site-header) { animation: none; }
+
+/* Motion is decoration here: people who ask for less get none of it. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -123,6 +226,28 @@
   font-weight: 500;
   font-size: 13.5px;
   color: #46433D;
+}
+
+/* Placeholder block for loading skeletons. */
+@utility skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, #EFEDE7 25%, #F7F6F2 37%, #EFEDE7 63%);
+  background-size: 400% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* A card that rises a little under the pointer. */
+@utility lift {
+  transition: transform 220ms var(--ease-out-expo), box-shadow 220ms var(--ease-out-expo), border-color 160ms ease-out;
+  @media (hover: hover) {
+    &:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: #D6D3CB; }
+  }
+}
+
+/* Progress fill that sweeps in from the left on first paint. */
+@utility bar-fill {
+  transform-origin: left center;
+  animation: var(--animate-grow-x);
 }
 
 /* Small grey caption above a figure. */

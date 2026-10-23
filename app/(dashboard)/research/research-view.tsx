@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { HeaderButton, Shell } from "@/components/shell";
 import { Figure, Statement } from "@/components/balance-editor";
 import { PlusIcon } from "@/components/icons";
-import { ErrorBox, Modal, btnGhost, btnPrimary } from "@/components/modal";
+import { ErrorBox, Modal, btnDanger, btnGhost, btnPrimary } from "@/components/modal";
+import { Spinner, UnderlineTabs } from "@/components/motion";
 import { Flash } from "@/components/debtors/bits";
 import { deleteContribution, deleteExpense, saveContribution, saveExpense } from "@/lib/research-actions";
 import {
@@ -70,31 +71,28 @@ export function ResearchView({ data }: { data: ResearchData }) {
   return (
     <Shell subtitle={subtitle} actions={actions}>
       <Statement label="Key figures" cols={4}>
-        <Figure label="Spent" value={taka(totalExp)} note={`${expenses.length} expenses`} />
-        <Figure label="Contributed" value={taka(totalCon)} note={`${contributions.length} member payments`} />
-        <Figure label={net < 0 ? "Short by" : "Left over"} value={taka(net)} tone={net < 0 ? "owed" : "good"}
+        <Figure label="Spent" value={totalExp} note={`${expenses.length} expenses`} />
+        <Figure label="Contributed" value={totalCon} note={`${contributions.length} member payments`} />
+        <Figure label={net < 0 ? "Short by" : "Left over"} value={net} tone={net < 0 ? "owed" : "good"}
           note={net < 0 ? "Contributions don't cover spending yet" : "Contributions cover all spending"} />
         <Figure label="Average expense" value={takaDec(Math.round(avg * 100) / 100)} note={`Largest ${taka(peak)}`} />
       </Statement>
 
-      <div role="tablist" aria-label="Research views" className="flex gap-5 overflow-x-auto shadow-[inset_0_-1px_0_#E3E1DA]">
-        {tabs.map(([key, label, count]) => (
-          <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-            className={`whitespace-nowrap border-b-2 pb-2.5 pt-1 text-[14px] ${tab === key ? "border-ink font-medium text-ink" : "border-transparent text-slate-500 hover:text-ink"}`}>
-            {label}{count != null && <span className="ml-1.5 text-slate-400">{count}</span>}
-          </button>
-        ))}
+      <div className="border-b border-line">
+        <UnderlineTabs label="Research views" tabs={tabs} value={tab} onChange={setTab} />
       </div>
 
       <Flash text={flash} />
 
-      {tab === "ledger" && <LedgerTab expenses={expenses} facilities={facilities} members={members} setDialog={setDialog} />}
-      {tab === "contributions" && <ContributionsTab contributions={contributions} members={members} setDialog={setDialog} />}
-      {tab === "settlement" && (
-        <SettlementTab expenses={expenses} contributions={contributions} members={members} totalExp={totalExp} totalCon={totalCon} setDialog={setDialog} />
-      )}
-      {tab === "analytics" && <AnalyticsTab expenses={expenses} facilities={facilities} members={members} totalExp={totalExp} onSettlement={() => setTab("settlement")} />}
-      {tab === "monthly" && <MonthlyTab expenses={expenses} />}
+      <div key={tab} className="flex animate-fade-in flex-col gap-5 sm:gap-6">
+        {tab === "ledger" && <LedgerTab expenses={expenses} facilities={facilities} members={members} setDialog={setDialog} />}
+        {tab === "contributions" && <ContributionsTab contributions={contributions} members={members} setDialog={setDialog} />}
+        {tab === "settlement" && (
+          <SettlementTab expenses={expenses} contributions={contributions} members={members} totalExp={totalExp} totalCon={totalCon} setDialog={setDialog} />
+        )}
+        {tab === "analytics" && <AnalyticsTab expenses={expenses} facilities={facilities} members={members} totalExp={totalExp} onSettlement={() => setTab("settlement")} />}
+        {tab === "monthly" && <MonthlyTab expenses={expenses} />}
+      </div>
 
       {dialog?.kind === "expense" && (
         <ExpenseDialog row={dialog.row} facilities={facilities} members={members} onClose={() => setDialog(null)}
@@ -145,7 +143,7 @@ function ExpenseDialog({ row, facilities, members, onClose, onSaved }: {
             if (r.error) setError(r.error);
             else onSaved(`${row ? "Updated" : "Added"} ${taka(Number(f.amount))} expense at ${f.facility.trim()} paid by ${f.member.trim()}.`);
           })}>
-          {pending ? "Saving…" : row ? "Save changes" : "Add expense"}
+          {pending && <Spinner />}{pending ? "Saving…" : row ? "Save changes" : "Add expense"}
         </button>
       </>}>
       <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
@@ -194,7 +192,7 @@ function ContributionDialog({ row, member, members, onClose, onSaved }: {
             if (r.error) setError(r.error);
             else onSaved(`${row ? "Updated" : "Recorded"} ${taka(Number(f.amount))} contribution from ${f.member.trim()}.`);
           })}>
-          {pending ? "Saving…" : row ? "Save changes" : "Record contribution"}
+          {pending && <Spinner />}{pending ? "Saving…" : row ? "Save changes" : "Record contribution"}
         </button>
       </>}>
       <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
@@ -223,9 +221,9 @@ function ConfirmDelete({ what, run, onClose, onDone }: {
     <Modal title="Delete this entry?" onClose={onClose} maxWidth={480}
       footer={<>
         <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
-        <button type="button" disabled={pending} className="min-h-10 rounded-md bg-[#9B3426] px-4 text-[14px] font-medium text-white hover:bg-[#7E2A1F]"
+        <button type="button" disabled={pending} className={btnDanger}
           onClick={() => start(async () => { const r = await run(); if (r.error) setError(r.error); else onDone("Entry deleted."); })}>
-          {pending ? "Deleting…" : "Delete"}
+          {pending && <Spinner />}{pending ? "Deleting…" : "Delete"}
         </button>
       </>}>
       <div className="flex flex-col gap-3 p-5 text-[15px]">

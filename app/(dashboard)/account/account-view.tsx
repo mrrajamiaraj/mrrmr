@@ -73,15 +73,20 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
             footnote={`Updated ${timestampLong(account.updated_at)}`}
             onSave={(n) => setAccountBalance(account.id, n)}
           />
-          <Figure label="+ Owed to you" value={taka(owed)} tone="owed" note={`${owing.length} ${owing.length === 1 ? "person" : "people"} on loans from this account`} />
-          <Figure label="= Once everyone pays" value={taka(after)} tone="good" note={`Your ${account.name} balance after repayment`} />
+          <Figure label="+ Owed to you" value={owed} tone="owed" note={`${owing.length} ${owing.length === 1 ? "person" : "people"} on loans from this account`} />
+          <Figure label="= Once everyone pays" value={after} tone="good" note={`Your ${account.name} balance after repayment`} />
         </Statement>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-0.5 text-[12.5px] text-slate-500">
-          <div className="flex h-1.5 min-w-[160px] flex-auto overflow-hidden rounded-full bg-[#E3E1DA]" aria-hidden="true">
-            <div className="bg-brand-2" style={{ width: `${inHand}%` }} />
-            <div className="bg-[#B9852F]" style={{ width: `${outPct}%` }} />
+          <div className="h-2 min-w-[160px] flex-auto overflow-hidden rounded-full bg-[#E3E1DA]" aria-hidden="true">
+            <div className="bar-fill flex h-full gap-[2px]">
+              <div className="rounded-full bg-brand-2 transition-[width] duration-700" style={{ width: `${inHand}%` }} title={`${inHand}% in the bank`} />
+              <div className="rounded-full bg-[#B9852F] transition-[width] duration-700" style={{ width: `${outPct}%` }} title={`${outPct}% lent out`} />
+            </div>
           </div>
-          <span className="whitespace-nowrap">{inHand}% in the bank · {outPct}% lent out</span>
+          <span className="flex items-center gap-3 whitespace-nowrap">
+            <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-full bg-brand-2" />{inHand}% in the bank</span>
+            <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-full bg-[#B9852F]" />{outPct}% lent out</span>
+          </span>
         </div>
       </div>
 
@@ -116,11 +121,11 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                 const name = peopleById.get(l.person_id)?.name ?? "Unknown";
                 const isNew = l.id === newestForFlash;
                 return (
-                  <tr key={l.id} className={`border-b border-soft ${isNew ? "bg-[#F2F6F3]" : ""}`}>
+                  <tr key={l.id} className={`border-b border-soft ${isNew ? "animate-highlight bg-[#F2F6F3]" : ""}`}>
                     <td data-label="Date taken" className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(l.taken_on)}</td>
                     <th scope="row" className="px-4 py-1.5 text-left">
                       <PersonButton name={name} initials={initials(name)} onClick={() => open(l.person_id)} />
-                      {isNew && <> <span className="text-xs font-medium text-brand-2">new</span></>}
+                      {isNew && <> <span className="ml-1 rounded-full bg-brand-2 px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-white">new</span></>}
                     </th>
                     <td data-label="Why" className={td}>{l.reason}</td>
                     <td data-label="How" className={`${td} text-slate-600`}>{l.method}</td>

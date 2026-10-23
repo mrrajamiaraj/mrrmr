@@ -8,7 +8,8 @@ import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { ProfileModal } from "@/components/debtors/profile-modal";
 import { RepayForm, repayTargets } from "@/components/debtors/repay-form";
 import { Avatar, EmptyNote, Flash, SectionCard, StatusPill, td, th, totalRow } from "@/components/debtors/bits";
-import { ErrorBox, Modal, btnGhost, btnPrimary } from "@/components/modal";
+import { ErrorBox, Modal, btnDanger, btnGhost, btnPrimary } from "@/components/modal";
+import { Spinner, UnderlineTabs, stagger } from "@/components/motion";
 import { deletePerson, updatePerson } from "@/lib/actions";
 import { amountSigned, buildProfiles, byOwesThenName, type EventKind, type Profile } from "@/lib/ledger";
 import { dateLong, pct, taka } from "@/lib/format";
@@ -89,22 +90,15 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
       }
     >
       <Statement label="Loan figures">
-        <Figure label="Lent out" value={taka(totLent)} note="Loans and card use by others" />
-        <Figure label="Paid back" value={taka(totRepaid)} tone="good" note={`${pct(totRepaid, totLent, 1)}% recovered`} />
-        <Figure label="Still owed" value={taka(totOwes)} tone="owed" note={`${owingCount} ${owingCount === 1 ? "person" : "people"} still owe`} />
+        <Figure label="Lent out" value={totLent} note="Loans and card use by others" />
+        <Figure label="Paid back" value={totRepaid} tone="good" note={`${pct(totRepaid, totLent, 1)}% recovered`} />
+        <Figure label="Still owed" value={totOwes} tone="owed" note={`${owingCount} ${owingCount === 1 ? "person" : "people"} still owe`} />
       </Statement>
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line">
-          <div role="tablist" aria-label="Views" className="-mb-px flex gap-5">
-            {tabs.map(([key, label, count]) => (
-              <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-                className={`border-b-2 pb-2.5 pt-1 text-[14px] ${tab === key ? "border-ink font-medium text-ink" : "border-transparent text-slate-500 hover:text-ink"}`}>
-                {label}{count != null && <span className="ml-1.5 text-slate-400">{count}</span>}
-              </button>
-            ))}
-          </div>
-          <label className="mb-2 flex min-h-9 w-full items-center gap-2 sm:w-auto sm:min-w-[200px] sm:flex-[0_1_280px] rounded-md border border-[#D6D3CB] bg-white px-2.5 focus-within:border-brand-2">
+          <UnderlineTabs label="Views" tabs={tabs} value={tab} onChange={setTab} />
+          <label className="mb-2 flex min-h-9 w-full items-center gap-2 sm:w-auto sm:min-w-[200px] sm:flex-[0_1_280px] rounded-lg border border-[#D6D3CB] bg-white px-2.5 focus-within:border-brand-2">
             <SearchIcon size={15} className="text-slate-500" />
             <span className="sr-only">Search</span>
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, reason, notes" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
@@ -114,19 +108,22 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
           {tab !== "ledger" ? (
             <div role="group" aria-label="Filter by status" className="flex flex-wrap items-center gap-1">
               <span className="mr-1.5 text-slate-500">Status</span>
-              {STATUSES.map((s) => (
-                <button key={s} type="button" aria-pressed={statusF === s} onClick={() => setStatusF(s)}
-                  className={`min-h-8 rounded-md px-2.5 ${statusF === s ? "bg-ink text-white" : "text-slate-600 hover:bg-soft"}`}>
-                  {s}
-                </button>
-              ))}
+              {STATUSES.map((s) => {
+                const n = s === "All" ? all.length : all.filter((p) => p.status === s).length;
+                return (
+                  <button key={s} type="button" aria-pressed={statusF === s} onClick={() => setStatusF(s)}
+                    className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 ${statusF === s ? "border-ink bg-ink text-white shadow-[0_2px_6px_-2px_rgba(28,27,24,0.4)]" : "border-line bg-white text-slate-600 hover:border-[#D6D3CB] hover:text-ink"}`}>
+                    {s}<span className={`text-[11.5px] tabular-nums ${statusF === s ? "text-white/70" : "text-slate-400"}`}>{n}</span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div role="group" aria-label="Filter ledger by type" className="flex flex-wrap items-center gap-1">
               <span className="mr-1.5 text-slate-500">Show</span>
               {([["ALL", "Everything"], ["LENT", "Money out"], ["REPAID", "Repayments"]] as [TypeF, string][]).map(([key, label]) => (
                 <button key={key} type="button" aria-pressed={typeF === key} onClick={() => setTypeF(key)}
-                  className={`min-h-8 rounded-md px-2.5 ${typeF === key ? "bg-ink text-white" : "text-slate-600 hover:bg-soft"}`}>
+                  className={`min-h-8 rounded-full border px-3 ${typeF === key ? "border-ink bg-ink text-white shadow-[0_2px_6px_-2px_rgba(28,27,24,0.4)]" : "border-line bg-white text-slate-600 hover:border-[#D6D3CB] hover:text-ink"}`}>
                   {label}
                 </button>
               ))}
@@ -138,17 +135,17 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
       <Flash text={flash} />
 
       {tab === "portfolio" && (
-        <section aria-label="People" className="flex flex-col gap-3">
+        <section key={statusF} aria-label="People" className="flex animate-fade-in flex-col gap-3">
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(320px,100%),1fr))] items-start gap-3">
-            {people.map((p) => {
+            {people.map((p, i) => {
               const isOpen = expanded === p.id;
               const records = [p.loanCount && `${p.loanCount} ${p.loanCount === 1 ? "loan" : "loans"}`, p.cardCount && `${p.cardCount} card ${p.cardCount === 1 ? "use" : "uses"}`].filter(Boolean).join(", ") || "No records";
               return (
-                <article key={p.id} className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4">
+                <article key={p.id} style={stagger(i)} className="lift flex animate-fade-up flex-col gap-3 rounded-xl border border-line bg-white p-4 shadow-[var(--shadow-card)]">
                   <div className="flex items-start gap-3">
-                    <Avatar text={p.initials} size={36} />
+                    <Avatar text={p.initials} size={38} />
                     <div className="min-w-0 flex-auto">
-                      <button type="button" onClick={() => setOpenId(p.id)} className="text-left text-[15px] font-medium decoration-[#A8A49A] underline-offset-4 hover:underline">{p.name}</button>
+                      <button type="button" onClick={() => setOpenId(p.id)} className="text-left text-[15px] font-medium decoration-[#A8A49A] underline-offset-4 hover:text-brand hover:underline">{p.name}</button>
                       <div className="text-[12.5px] text-slate-500">{records}{p.owes > 0 && <> · due {dateLong(p.due)}</>}</div>
                     </div>
                     <StatusPill status={p.status} />
@@ -160,11 +157,11 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                     <div><dt className="text-slate-500">Left</dt><dd className="money m-0 text-[14px] text-[#85570F]">{taka(p.owes)}</dd></div>
                   </dl>
                   <div className="flex items-center gap-2.5 text-[12px] text-slate-500">
-                    <div className="h-1 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]"><div className="h-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%` }} /></div>
-                    {pct(p.paid, p.taken, 1).toFixed(0)}%
+                    <div className="h-1.5 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]"><div className="bar-fill h-full rounded-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%`, ...stagger(i, 40, 600) }} /></div>
+                    <span className="money w-9 text-right">{pct(p.paid, p.taken, 1).toFixed(0)}%</span>
                   </div>
                   {isOpen && (
-                    <ol className="m-0 flex list-none flex-col divide-y divide-soft rounded-md border border-soft p-0">
+                    <ol className="m-0 flex max-h-[320px] animate-fade-up list-none flex-col divide-y divide-soft overflow-y-auto rounded-lg border border-soft bg-[#FCFBF9] p-0">
                       {p.events.map((e) => (
                         <li key={e.id} className="flex items-baseline gap-3 px-3 py-2 text-[13px]">
                           <div className="min-w-0 flex-auto">
@@ -352,7 +349,7 @@ function EditPersonDialog({ p, onClose }: { p: Profile; onClose: () => void }) {
         <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
         <button type="button" disabled={pending} className={btnPrimary}
           onClick={() => start(async () => { const r = await updatePerson(p.id, f); if (r.error) setError(r.error); else onClose(); })}>
-          {pending ? "Saving…" : "Save"}
+          {pending && <Spinner />}{pending ? "Saving…" : "Save"}
         </button>
       </>}>
       <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
@@ -376,9 +373,9 @@ function DeletePersonDialog({ p, onClose, onDone }: { p: Profile; onClose: () =>
       footer={<>
         <button type="button" onClick={onClose} className={btnGhost}>{hasRecords ? "Close" : "Cancel"}</button>
         {!hasRecords && (
-          <button type="button" disabled={pending} className="min-h-10 rounded-md bg-[#9B3426] px-4 text-[14px] font-medium text-white hover:bg-[#7E2A1F]"
+          <button type="button" disabled={pending} className={btnDanger}
             onClick={() => start(async () => { const r = await deletePerson(p.id); if (r.error) setError(r.error); else onDone(`${p.name} was deleted.`); })}>
-            {pending ? "Deleting…" : "Delete"}
+            {pending && <Spinner />}{pending ? "Deleting…" : "Delete"}
           </button>
         )}
       </>}>
