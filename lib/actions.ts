@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { writer } from "@/lib/viewer";
 import { passwordProblems } from "@/lib/password";
+import { cleanText, siteOrigin } from "@/lib/security";
 
 export type ActionResult = { error?: string; personId?: string | null };
 
@@ -32,7 +33,10 @@ function money(n: unknown) {
   return Number.isFinite(v) ? v : NaN;
 }
 
-const orNull = (s: string | null | undefined) => (s && s.trim() ? s.trim() : null);
+// Free text is trimmed and capped server-side; the forms are not the only way to call these actions.
+const NAME = 120, TEXT = 500;
+const orNull = (s: string | null | undefined, max = TEXT) => cleanText(s, max) || null;
+const req = (s: string | null | undefined, max = TEXT) => cleanText(s, max);
 
 // ---- balances ---------------------------------------------------------------
 
@@ -55,13 +59,13 @@ export async function setCardBalance(cardId: string, balance: number): Promise<A
 // ---- first-run setup --------------------------------------------------------
 
 export async function createAccount(input: { name: string; holder_name: string; balance: number }): Promise<ActionResult> {
-  if (!input.name.trim()) return { error: "Enter the account name." };
+  if (!req(input.name, NAME)) return { error: "Enter the account name." };
   const b = money(input.balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
   const supabase = await writer();
   const { error } = await supabase
     .from("accounts")
-    .insert({ name: input.name.trim(), holder_name: orNull(input.holder_name), balance: b });
+    .insert({ name: req(input.name, NAME), holder_name: orNull(input.holder_name, NAME), balance: b });
   return done(error);
 }
 
@@ -75,16 +79,17 @@ export async function createCard(input: {
   balance: number;
   pay_by: string;
 }): Promise<ActionResult> {
-  if (!input.bank.trim() || !input.name.trim()) return { error: "Enter the bank and card name." };
+  if (input.slot !== 1 && input.slot !== 2) return { error: "Unknown card slot." };
+  if (!req(input.bank, NAME) || !req(input.name, NAME)) return { error: "Enter the bank and card name." };
   if (input.last4 && !/^\d{4}$/.test(input.last4)) return { error: "Last 4 digits must be 4 numbers." };
   const b = money(input.balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
   const supabase = await writer();
   const { error } = await supabase.from("cards").insert({
     slot: input.slot,
-    bank: input.bank.trim(),
-    name: input.name.trim(),
-    network: orNull(input.network),
+    bank: req(input.bank, NAME),
+    name: req(input.name, NAME),
+    network: orNull(input.network, 40),
     last4: orNull(input.last4),
     credit_limit: input.credit_limit == null || Number.isNaN(input.credit_limit) ? null : money(input.credit_limit),
     balance: b,
@@ -120,14 +125,14 @@ export async function addLoan(input: {
   notes?: string;
 }): Promise<ActionResult> {
   const amount = money(input.amount);
-  if (!input.name.trim()) return { error: "Enter who took the money." };
+  if (!req(input.name, NAME)) return { error: "Enter who took the money." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
-  if (!input.reason.trim()) return { error: "Enter why they took it." };
+  if (!req(input.reason)) return { error: "Enter why they took it." };
   const supabase = await writer();
   const { data, error } = await supabase.rpc("add_loan", {
-    p_person_name: input.name.trim(),
+    p_person_name: req(input.name, NAME),
     p_amount: amount,
-    p_reason: input.reason.trim(),
+    p_reason: req(input.reason),
     p_taken_on: orNull(input.takenOn),
     p_method: input.method,
     p_due_on: orNull(input.dueOn),
@@ -150,17 +155,17 @@ export async function addCardUse(input: {
   addToBalance: boolean;
 }): Promise<ActionResult> {
   const amount = money(input.amount);
-  if (!input.name.trim()) return { error: "Enter who used the card (or “Me” for your own spending)." };
+  if (!req(input.name, NAME)) return { error: "Enter who used the card (or “Me” for your own spending)." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
-  if (!input.reason.trim()) return { error: "Enter why or where it was used." };
+  if (!req(input.reason)) return { error: "Enter why or where it was used." };
   const supabase = await writer();
   const { data, error } = await supabase.rpc("add_card_use", {
     p_card_id: input.cardId,
-    p_person_name: input.name.trim(),
+    p_person_name: req(input.name, NAME),
     p_amount: amount,
-    p_reason_or_place: input.reason.trim(),
+    p_reason_or_place: req(input.reason),
     p_used_on: orNull(input.usedOn),
-    p_category: input.category,
+    p_category: req(input.category, 40),
     p_due_on: orNull(input.dueOn),
     p_add_to_balance: input.addToBalance,
   });
@@ -204,11 +209,11 @@ export async function updatePerson(
   personId: string,
   input: { name: string; relation: string; phone: string; notes: string }
 ): Promise<ActionResult> {
-  if (!input.name.trim()) return { error: "Enter a name." };
+  if (!req(input.name, NAME)) return { error: "Enter a name." };
   const supabase = await writer();
   const { error } = await supabase
     .from("people")
-    .update({ name: input.name.trim(), relation: orNull(input.relation), phone: orNull(input.phone), notes: orNull(input.notes) })
+    .update({ name: req(input.name, NAME), relation: orNull(input.relation, NAME), phone: orNull(input.phone, 40), notes: orNull(input.notes) })
     .eq("id", personId);
   return done(error, { personId });
 }
@@ -238,6 +243,7 @@ export async function deleteRecords(
   records: { kind: RecordKind; id: string }[],
   undoBalance: boolean
 ): Promise<ActionResult> {
+  if (!Array.isArray(records) || records.length > 500) return { error: "Too many records at once." };
   if (records.some((r) => !["loan", "card_use", "repayment"].includes(r.kind))) return { error: "Unknown record type." };
   const supabase = await writer();
   let deleted = 0;
@@ -256,6 +262,7 @@ export async function deleteRecords(
 
 export async function changePassword(current: string, next: string, confirm: string): Promise<ActionResult> {
   if (!current) return { error: "Enter your current password." };
+  if (current.length > 256 || next.length > 256) return { error: "Passwords can be at most 256 characters." };
   if (passwordProblems(next).length) return { error: "The new password does not meet all four requirements." };
   if (next === current) return { error: "The new password must be different from the current one." };
   if (next !== confirm) return { error: "The two new passwords do not match." };
@@ -281,7 +288,9 @@ export async function sendPasswordReset(): Promise<ActionResult> {
   const { data: claims } = await supabase.auth.getClaims();
   const email = claims?.claims?.email as string | undefined;
   if (!email) return { error: "Your session has expired. Sign in again." };
-  const origin = (await headers()).get("origin") ?? "http://localhost:3000";
+  const h = await headers();
+  const origin = siteOrigin((n) => h.get(n));
+  if (!origin) return { error: "Could not work out this site's address. Set SITE_URL and try again." };
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?next=/auth/reset`,
   });

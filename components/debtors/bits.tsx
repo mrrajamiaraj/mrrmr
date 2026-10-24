@@ -7,12 +7,12 @@ import type { Status } from "@/lib/types";
 
 // Muted tints so people are easy to tell apart at a glance; picked from the initials, so a person keeps their colour.
 const AVATAR_TINTS = [
-  "bg-[#E9EEEA] text-[#1F4D3A]",
-  "bg-[#E8EDF4] text-[#2F4A6E]",
-  "bg-[#F3ECE1] text-[#7A5418]",
-  "bg-[#F1E7E9] text-[#7C3445]",
-  "bg-[#ECE9F3] text-[#4A3F78]",
-  "bg-[#E4EFEF] text-[#285E5E]",
+  "bg-[#E9EEEA] text-brand-ink dark:bg-[#1C2E25]",
+  "bg-[#E8EDF4] text-[#2F4A6E] dark:bg-[#1C2534] dark:text-[#9DB8DE]",
+  "bg-owed-tint text-[#7A5418] dark:text-[#E3B873]",
+  "bg-[#F1E7E9] text-[#7C3445] dark:bg-[#2E1C21] dark:text-[#E59CAE]",
+  "bg-[#ECE9F3] text-[#4A3F78] dark:bg-[#232036] dark:text-[#B8AEE8]",
+  "bg-[#E4EFEF] text-[#285E5E] dark:bg-[#172A2A] dark:text-[#86CACA]",
 ];
 const tint = (s: string) => AVATAR_TINTS[[...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AVATAR_TINTS.length];
 
@@ -20,8 +20,8 @@ export function Avatar({ text, size = 42, me = false }: { text: string; size?: n
   return (
     <span
       style={{ width: size, height: size, fontSize: size <= 30 ? 11 : size >= 50 ? 17 : 13.5 }}
-      className={`inline-flex flex-none select-none items-center justify-center rounded-full font-semibold ring-2 ring-white ${
-        me ? "bg-[#E3E1DA] text-slate-700" : tint(text)
+      className={`inline-flex flex-none select-none items-center justify-center rounded-full font-semibold ring-2 ring-surface ${
+        me ? "bg-line text-slate-700" : tint(text)
       }`}
     >
       {text}
@@ -30,9 +30,9 @@ export function Avatar({ text, size = 42, me = false }: { text: string; size?: n
 }
 
 const STATUS_BG: Record<Status, string> = {
-  Pending: "bg-[#F8ECE9]",
-  "Partially Paid": "bg-[#F7F0E3]",
-  Repaid: "bg-[#EAF2ED]",
+  Pending: "bg-bad-tint",
+  "Partially Paid": "bg-owed-tint",
+  Repaid: "bg-good-tint",
 };
 
 /** Status as a soft pill with a coloured dot. */
@@ -51,7 +51,7 @@ export function DuePill({ kind, children }: { kind: DueKind; children: React.Rea
 
 export function Tag({ children, white = false }: { children: React.ReactNode; white?: boolean }) {
   return (
-    <span className={`rounded px-1.5 py-px text-[12.5px] text-slate-600 ${white ? "border border-line bg-white" : "bg-soft"}`}>{children}</span>
+    <span className={`rounded px-1.5 py-px text-[12.5px] text-slate-600 ${white ? "border border-line bg-surface" : "bg-soft"}`}>{children}</span>
   );
 }
 
@@ -64,13 +64,13 @@ export function PersonButton({ name, initials, onClick, size = 28 }: { name: str
       className="group inline-flex min-h-10 items-center gap-2.5 p-0 text-left text-[14px] font-medium text-ink"
     >
       <span className="transition-transform duration-200 ease-[var(--ease-spring)] group-hover:scale-110"><Avatar text={initials} size={size} /></span>
-      <span className="decoration-[#A8A49A] underline-offset-4 group-hover:text-brand group-hover:underline">{name}</span>
+      <span className="decoration-slate-400 underline-offset-4 group-hover:text-brand-ink group-hover:underline">{name}</span>
     </button>
   );
 }
 
 export function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`overflow-hidden rounded-xl border border-line bg-white shadow-[var(--shadow-card)] ${className}`}>{children}</section>;
+  return <section className={`spot overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-card)] ${className}`}>{children}</section>;
 }
 
 export function SectionHead({ id, title, sub, action }: { id: string; title: string; sub?: string; action?: React.ReactNode }) {
@@ -87,8 +87,8 @@ export function SectionHead({ id, title, sub, action }: { id: string; title: str
 
 export const th = "px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.04em] text-slate-500";
 export const td = "px-4 py-2.5";
-export const theadRow = "border-y border-line bg-[#FAF9F6] text-left";
-export const totalRow = "border-t border-[#D6D3CB] bg-[#FAF9F6] font-medium";
+export const theadRow = "border-y border-line bg-subtle text-left";
+export const totalRow = "border-t border-line-strong bg-subtle font-medium";
 
 /** Confirms a save. Shows as a toast; renders nothing in place, so pages can keep it wherever they like. */
 export function Flash({ text }: { text: string }) {
@@ -98,8 +98,8 @@ export function Flash({ text }: { text: string }) {
 
 export function EmptyNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-[#D6D3CB] bg-white/50 px-6 py-10 text-center text-[14px] text-slate-500">
-      <svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40" fill="none" className="text-[#C9C5BB]">
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface/50 px-6 py-10 text-center text-[14px] text-slate-500">
+      <svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40" fill="none" className="text-slate-300">
         <rect x="6" y="9" width="28" height="22" rx="4" stroke="currentColor" strokeWidth="1.6" />
         <path d="M6 16h28M12 23h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       </svg>

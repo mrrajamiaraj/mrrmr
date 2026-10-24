@@ -80,14 +80,14 @@ function AdminDialog({ email, lastChanged, onClose }: { email: string; lastChang
       }
     >
       <div className="flex flex-col gap-4 p-5">
-        <div className="flex items-center gap-3 rounded-lg border border-[#CADBD0] bg-[#F2F6F3] px-3.5 py-3">
+        <div className="flex items-center gap-3 rounded-lg border border-good-line bg-good-tint px-3.5 py-3">
           <span className="inline-flex size-[38px] flex-none items-center justify-center rounded-full bg-brand font-semibold text-white">A</span>
           <div className="min-w-0 flex-auto">
             <div className="font-semibold">Signed in as Admin</div>
             <div className="truncate text-[13.5px] text-slate-600">{email} · Password last changed {lastChanged}</div>
           </div>
           <form action={signOut}>
-            <button type="submit" aria-label="Sign out" title="Sign out" className="flex size-11 items-center justify-center rounded-md text-slate-600 hover:bg-white">
+            <button type="submit" aria-label="Sign out" title="Sign out" className="flex size-11 items-center justify-center rounded-md text-slate-600 hover:bg-surface">
               <LogoutIcon size={18} />
             </button>
           </form>
@@ -99,7 +99,7 @@ function AdminDialog({ email, lastChanged, onClose }: { email: string; lastChang
         </label>
         <label className="field-label">
           New password *
-          <input type={type} value={nw} onChange={(e) => { setNw(e.target.value); reset(); }} autoComplete="new-password" placeholder="At least 8 characters" className="field-input border-2 border-[#3D7D61]" />
+          <input type={type} value={nw} onChange={(e) => { setNw(e.target.value); reset(); }} autoComplete="new-password" placeholder="At least 8 characters" className="field-input border-2 border-brand-2" />
         </label>
         <PasswordStrength value={nw} />
         <label className="field-label">
@@ -107,7 +107,7 @@ function AdminDialog({ email, lastChanged, onClose }: { email: string; lastChang
           <input type={type} value={conf} onChange={(e) => { setConf(e.target.value); reset(); }} autoComplete="new-password" placeholder="Type the new password again" className="field-input" />
         </label>
         {conf.length > 0 && (
-          <div className="-mt-2 text-[13.5px] font-semibold" style={{ color: conf === nw ? "#2E6B52" : "#9B3426" }}>
+          <div className="-mt-2 text-[13.5px] font-semibold" style={{ color: conf === nw ? "var(--color-brand-2)" : "var(--color-bad)" }}>
             {conf === nw ? "✓ Passwords match" : "Passwords do not match yet"}
           </div>
         )}
@@ -116,7 +116,7 @@ function AdminDialog({ email, lastChanged, onClose }: { email: string; lastChang
           Show passwords
         </label>
         {error && <ErrorBox>{error}</ErrorBox>}
-        {done && <div role="status" className="rounded-md bg-[#E3ECE6] px-3.5 py-2.5 text-sm font-medium text-[#1F4D3A]">{done}</div>}
+        {done && <div role="status" className="rounded-md bg-good-tint-2 px-3.5 py-2.5 text-sm font-medium text-brand-ink">{done}</div>}
       </div>
     </Modal>
   );

@@ -10,6 +10,10 @@ import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow, totalRow } from "@/components/debtors/bits";
 import { EditCardDialog, SetupCard } from "@/components/setup-forms";
 import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
+import { CardVisual } from "@/components/card-visual";
+import { FlowChart, OUT_COLOR, Ring, type Flow } from "@/components/charts";
+import { SortTh, useSort } from "@/components/sortable";
+import { usePalettePeople } from "@/components/command-palette";
 import { setCardBalance } from "@/lib/actions";
 import { buildCardProfiles, byOwesThenName, CARD_NAMES, cardTitle } from "@/lib/ledger";
 import { dateLong, initials, taka, timestampLong } from "@/lib/format";
@@ -32,6 +36,17 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
     () => (card ? buildCardProfiles(data, card.id, today).sort(byOwesThenName) : []),
     [data, card, today]
   );
+  const uses = useMemo(() => (card ? data.cardUses.filter((u) => u.card_id === card.id) : []), [data.cardUses, card]);
+  const peopleById = useMemo(() => new Map(data.people.map((p) => [p.id, p])), [data.people]);
+  const nameOf = (id: string | null) => (!id ? "Me" : peopleById.get(id)?.name ?? "Unknown");
+  const { sorted: useRows, sort, toggle } = useSort(uses, {
+    date: (u) => u.used_on, person: (u) => nameOf(u.person_id), amount: (u) => u.amount,
+  });
+  const flows = useMemo<Flow[]>(() => card ? [
+    ...uses.map((u) => ({ iso: u.used_on, amount: u.amount, dir: "out" as const })),
+    ...data.repayments.filter((r) => r.applies_to === "card" && r.card_id === card.id).map((r) => ({ iso: r.paid_on, amount: r.amount, dir: "in" as const })),
+  ] : [], [uses, data.repayments, card]);
+  usePalettePeople(profiles, setOpenId);
 
   if (!card) {
     return (
@@ -52,15 +67,14 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const usedTotal = owing.reduce((s, p) => s + p.used, 0);
   const paidTotal = owing.reduce((s, p) => s + p.paid, 0);
 
-  const peopleById = new Map(data.people.map((p) => [p.id, p]));
-  const uses = data.cardUses.filter((u) => u.card_id === card.id);
+  const usedPct = limit ? Math.round(((limit - availNow!) / limit) * 100) : 0;
   // After "Add", highlight the newest row on this card.
   const newestId = flash.at ? [...uses].sort((a, b) => b.created_at.localeCompare(a.created_at))[0]?.id : undefined;
   const pv = openId ? profiles.find((p) => p.id === openId) : undefined;
   const account = data.accounts[0] ? { id: data.accounts[0].id, name: data.accounts[0].name } : null;
 
   const openAdd = (prefill = "") => setAdding({ prefill });
-  const linkBtn = "rounded px-1.5 py-0.5 text-[12.5px] font-medium text-brand-2 underline decoration-[#CADBD0] underline-offset-2 hover:bg-soft";
+  const linkBtn = "rounded px-1.5 py-0.5 text-[12.5px] font-medium text-brand-2 underline decoration-good-line underline-offset-2 hover:bg-soft";
 
   return (
     <Shell
@@ -95,20 +109,44 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
         {limit != null && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-0.5 text-[12.5px] text-slate-500">
             {/* Limit used: what's spent now, plus the slice that frees up once people pay. */}
-            <div className="h-2 min-w-[160px] flex-auto overflow-hidden rounded-full bg-[#E3E1DA]" aria-hidden="true">
+            <div className="h-2 min-w-[160px] flex-auto overflow-hidden rounded-full bg-line" aria-hidden="true">
               <div className="bar-fill flex h-full">
-                <div className="bg-[#B9852F] transition-[width] duration-700" style={{ width: `${limit ? Math.min((owed / limit) * 100, 100) : 0}%` }} />
-                <div className="bg-[#A8A49A] transition-[width] duration-700" style={{ width: `${limit ? Math.max(Math.min(((limit - availNow! - owed) / limit) * 100, 100), 0) : 0}%` }} />
+                <div className="bg-owed-bar transition-[width] duration-700" style={{ width: `${limit ? Math.min((owed / limit) * 100, 100) : 0}%` }} />
+                <div className="bg-slate-400 transition-[width] duration-700" style={{ width: `${limit ? Math.max(Math.min(((limit - availNow! - owed) / limit) * 100, 100), 0) : 0}%` }} />
               </div>
             </div>
             <span className="flex flex-wrap items-center gap-1.5">
               Credit limit <span className="money text-slate-700">{taka(limit)}</span>
-              <span className="text-slate-400">·</span> {limit ? Math.round(((limit - availNow!) / limit) * 100) : 0}% used
+              <span className="text-slate-400">·</span> {usedPct}% used
               {card.pay_by && <><span className="text-slate-400">·</span> pay by {dateLong(card.pay_by)}</>}
               {!viewer && <button type="button" onClick={() => setEditingCard(true)} className={linkBtn}>Edit</button>}
             </span>
           </div>
         )}
+      </div>
+
+      <div className="grid items-start gap-5 sm:gap-6 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-4">
+          <CardVisual card={card} available={availNow} />
+          {limit != null && (
+            <div className="spot flex items-center gap-4 rounded-xl border border-line bg-surface p-4 shadow-[var(--shadow-card)]">
+              <Ring value={usedPct} color={usedPct > 80 ? "var(--color-bad)" : OUT_COLOR}>
+                <span>
+                  <span className="money block text-[18px] leading-none">{usedPct}%</span>
+                  <span className="text-[10.5px] text-slate-500">used</span>
+                </span>
+              </Ring>
+              <dl className="m-0 grid flex-auto grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
+                <div><dt className="text-slate-500">Limit</dt><dd className="money m-0 text-[14px]">{taka(limit)}</dd></div>
+                <div><dt className="text-slate-500">Spent</dt><dd className="money m-0 text-[14px]">{taka(limit - availNow!)}</dd></div>
+                <div><dt className="text-slate-500">Others owe</dt><dd className="money m-0 text-[14px] text-owed">{taka(owed)}</dd></div>
+                <div><dt className="text-slate-500">Pay by</dt><dd className="m-0 text-[14px] font-medium">{card.pay_by ? dateLong(card.pay_by) : "—"}</dd></div>
+              </dl>
+            </div>
+          )}
+        </div>
+        <FlowChart title="Card activity" sub="Spent on this card and paid back by people, per month."
+          flows={flows} today={today} outLabel="Spent" inLabel="Paid back" />
       </div>
 
       <Flash text={flash.text} />
@@ -153,7 +191,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                   </th>
                   <td data-label="Used" className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
                   <td data-label="Paid back" className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
-                  <td data-label="Still owes" className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
+                  <td data-label="Still owes" className={`${td} money text-right text-owed`}>{taka(p.owes)}</td>
                   <td data-label="Due" className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
                   <td data-label="Available after" className={`${td} money text-right`}>{p.run != null ? taka(p.run) : "—"}</td>
                 </tr>
@@ -162,7 +200,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                 <th scope="row" className={`${td} text-left`}>Once everyone pays</th>
                 <td data-label="Used" className={`${td} money text-right`}>{taka(usedTotal)}</td>
                 <td data-label="Paid back" className={`${td} money text-right`}>{taka(paidTotal)}</td>
-                <td data-label="Still owes" className={`${td} money text-right text-[#85570F]`}>{taka(owed)}</td>
+                <td data-label="Still owes" className={`${td} money text-right text-owed`}>{taka(owed)}</td>
                 <td className={td} />
                 <td data-label="Available after" className={`${td} money text-right text-brand-2`}>{availAfter != null ? taka(availAfter) : "Set limit"}</td>
               </tr>
@@ -172,25 +210,25 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       </SectionCard>
 
       <SectionCard>
-        <SectionHead id="log-h" title="Transactions" sub="Every use of this card. Tap a name to open their profile." />
+        <SectionHead id="log-h" title="Transactions" sub="Every use of this card. Tap a name to open their profile, or a heading to sort." />
         <div className="overflow-x-auto">
           <table className="stack-table w-full min-w-[640px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
-                <th scope="col" className={th}>Date</th>
-                <th scope="col" className={th}>Person</th>
+                <SortTh k="date" label="Date" sort={sort} onSort={toggle} />
+                <SortTh k="person" label="Person" sort={sort} onSort={toggle} text />
                 <th scope="col" className={th}>Why / where</th>
-                <th scope="col" className={`${th} text-right`}>Amount</th>
+                <SortTh k="amount" label="Amount" sort={sort} onSort={toggle} right />
                 <th scope="col" className={th}><span className="sr-only">Delete</span></th>
               </tr>
             </thead>
             <tbody>
-              {uses.map((u) => {
+              {useRows.map((u) => {
                 const me = !u.person_id;
-                const name = me ? "Me" : peopleById.get(u.person_id!)?.name ?? "Unknown";
+                const name = nameOf(u.person_id);
                 const isNew = u.id === newestId;
                 return (
-                  <tr key={u.id} className={`border-b border-soft ${isNew ? "animate-highlight bg-[#F2F6F3]" : ""}`}>
+                  <tr key={u.id} className={`border-b border-soft ${isNew ? "animate-highlight bg-good-tint" : ""}`}>
                     <td data-label="Date" className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(u.used_on)}</td>
                     <th scope="row" className="px-4 py-1.5 text-left">
                       {me ? (

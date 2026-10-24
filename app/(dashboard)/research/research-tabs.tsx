@@ -20,8 +20,8 @@ export const takaDec = (n: number) =>
   `${n < 0 ? "-" : ""}৳${Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 const pct1 = (part: number, whole: number) => (whole ? Math.round((part / whole) * 1000) / 10 : 0);
-const select = "min-h-9 min-w-0 flex-auto cursor-pointer rounded-lg border border-[#D6D3CB] bg-white px-2.5 text-[13.5px] hover:border-[#A8A49A] sm:flex-none";
-const card = "overflow-hidden rounded-xl border border-line bg-white shadow-[var(--shadow-card)]";
+const select = "min-h-9 min-w-0 flex-auto cursor-pointer rounded-lg border border-line-strong bg-surface px-2.5 text-[13.5px] hover:border-slate-400 sm:flex-none";
+const card = "overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-card)]";
 const hth = "px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.04em] text-slate-500";
 
 // Facilities and members are told apart by a small colour mark next to the name, not by filled badges.
@@ -45,13 +45,13 @@ function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => 
   return (
     <span className="inline-flex gap-1">
       <button type="button" aria-label="Edit" title="Edit" onClick={onEdit} className="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-soft hover:text-ink"><PencilIcon size={16} /></button>
-      <button type="button" aria-label="Delete" title="Delete" onClick={onDelete} className="flex size-9 items-center justify-center rounded-lg text-slate-400 hover:bg-[#F5E4E0] hover:text-[#9B3426]"><TrashIcon size={16} /></button>
+      <button type="button" aria-label="Delete" title="Delete" onClick={onDelete} className="flex size-9 items-center justify-center rounded-lg text-slate-400 hover:bg-bad-tint hover:text-bad"><TrashIcon size={16} /></button>
     </span>
   );
 }
 function Search({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <label className="flex min-h-11 w-full items-center sm:w-auto sm:min-w-[220px] sm:flex-[1_1_320px] gap-2 rounded-lg border border-[#D6D3CB] bg-white px-3.5 focus-within:border-brand-2 sm:max-w-[460px]">
+    <label className="flex min-h-11 w-full items-center sm:w-auto sm:min-w-[220px] sm:flex-[1_1_320px] gap-2 rounded-lg border border-line-strong bg-surface px-3.5 focus-within:border-brand-2 sm:max-w-[460px]">
       <SearchIcon size={16} className="text-slate-500" />
       <span className="sr-only">Search</span>
       <input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="min-w-0 flex-auto bg-transparent text-[15px] outline-none" />
@@ -91,7 +91,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
   const toggle = (key: "date" | "amount") => setSort((s) => (s.key === key ? { key, dir: (s.dir * -1) as 1 | -1 } : { key, dir: -1 }));
   const sortBtn = (key: "date" | "amount", label: string) => (
     <button type="button" onClick={() => toggle(key)} aria-pressed={sort.key === key}
-      className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 text-[13.5px] ${sort.key === key ? "border-[#A8A49A] bg-soft text-ink" : "border-[#D6D3CB] bg-white text-slate-600 hover:border-[#A8A49A]"}`}>
+      className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 text-[13.5px] ${sort.key === key ? "border-slate-400 bg-soft text-ink" : "border-line-strong bg-surface text-slate-600 hover:border-slate-400"}`}>
       {label}
       <span aria-hidden="true" className={`inline-block transition-transform duration-300 ease-[var(--ease-spring)] ${sort.key === key && sort.dir > 0 ? "rotate-180" : ""} ${sort.key === key ? "" : "opacity-50"}`}>
         {sort.key === key ? "↓" : "⇅"}
@@ -129,7 +129,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
       <div className="overflow-x-auto">
         <table className="stack-table w-full min-w-[820px] border-collapse text-[14px]">
           <thead>
-            <tr className="border-b border-line bg-[#FAF9F6] text-left">
+            <tr className="border-b border-line bg-subtle text-left">
               <th scope="col" className={hth}>Date</th>
               <th scope="col" className={hth}>Facility / Center</th>
               <th scope="col" className={hth}>Personnel</th>
@@ -147,7 +147,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
                 <td data-label="Description" className="px-4 py-2.5">
                   <span>
                     {e.description}
-                    {e.tag && <span className="ml-2 inline-block rounded border border-line bg-[#FAF9F6] px-1.5 py-0.5 text-[11.5px] text-slate-600">{e.tag}</span>}
+                    {e.tag && <span className="ml-2 inline-block rounded border border-line bg-subtle px-1.5 py-0.5 text-[11.5px] text-slate-600">{e.tag}</span>}
                   </span>
                 </td>
                 <td data-label="Amount" className="money px-4 py-2.5 text-right">{taka(e.amount)}</td>
@@ -191,18 +191,18 @@ export function ContributionsTab({ contributions, members, setDialog }: {
               {members.map((m) => <option key={m}>{m}</option>)}
             </select>
             {!viewer && <button type="button" onClick={() => setDialog({ kind: "contribution", row: null })}
-              className="min-h-9 rounded-md border border-[#D6D3CB] bg-white px-3 text-[13.5px] hover:bg-soft">Add contribution</button>}
+              className="min-h-9 rounded-md border border-line-strong bg-surface px-3 text-[13.5px] hover:bg-soft">Add contribution</button>}
           </div>
         </div>
         <div className="flex flex-wrap justify-between gap-2 text-[13px] text-slate-600">
           <span>Showing <strong>{rows.length}</strong> of <strong>{contributions.length}</strong> contributions logged</span>
-          <span className="text-[#355276]">Total Contributed: <strong className="money text-ink">{taka(total)}</strong></span>
+          <span className="text-info">Total Contributed: <strong className="money text-ink">{taka(total)}</strong></span>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="stack-table w-full min-w-[680px] border-collapse text-[14px]">
           <thead>
-            <tr className="border-b border-line bg-[#FAF9F6] text-left">
+            <tr className="border-b border-line bg-subtle text-left">
               <th scope="col" className={hth}>Date</th>
               <th scope="col" className={hth}>Member Contributor</th>
               <th scope="col" className={hth}>Notes &amp; Reference</th>
@@ -216,7 +216,7 @@ export function ContributionsTab({ contributions, members, setDialog }: {
                 <td data-label="Date" className="whitespace-nowrap px-4 py-2.5 text-slate-600">{dateLong(c.paid_on)}</td>
                 <td className="px-4 py-2.5"><MemberChip name={c.member} dot /></td>
                 <td data-label="Notes" className="px-4 py-2.5 text-slate-700">{c.note ?? "—"}</td>
-                <td data-label="Amount" className="money px-4 py-2.5 text-right text-[#355276]">{taka(c.amount)}</td>
+                <td data-label="Amount" className="money px-4 py-2.5 text-right text-info">{taka(c.amount)}</td>
                 {!viewer && <td className="stack-corner px-4 py-1.5 text-right">
                   <RowActions onEdit={() => setDialog({ kind: "contribution", row: c })} onDelete={() => setDialog({ kind: "delete-contribution", row: c })} />
                 </td>}
@@ -263,7 +263,7 @@ export function SettlementTab({ expenses, contributions, members, totalExp, tota
       <div className="overflow-x-auto">
         <table className="stack-table w-full min-w-[640px] border-collapse text-[14px]">
           <thead>
-            <tr className="border-y border-line bg-[#FAF9F6] text-left">
+            <tr className="border-y border-line bg-subtle text-left">
               <th scope="col" className={hth}>Member</th>
               <th scope="col" className={`${hth} text-right`}>Contributed</th>
               <th scope="col" className={`${hth} text-right`}>Paid for</th>
@@ -278,10 +278,10 @@ export function SettlementTab({ expenses, contributions, members, totalExp, tota
                 <th scope="row" className="px-4 py-2.5 text-left font-medium"><MemberChip name={r.name} /></th>
                 <td data-label="Contributed" className="money px-4 py-2.5 text-right">{taka(r.contributed)}</td>
                 <td data-label="Paid for" className="money px-4 py-2.5 text-right">{taka(r.spent)}</td>
-                <td data-label="Net" className={`money px-4 py-2.5 text-right ${r.net < 0 ? "text-[#9B3426]" : "text-brand-2"}`}>{sign(r.net)}{taka(r.net)}</td>
+                <td data-label="Net" className={`money px-4 py-2.5 text-right ${r.net < 0 ? "text-bad" : "text-brand-2"}`}>{sign(r.net)}{taka(r.net)}</td>
                 <td data-label="Share" className="px-4 py-2.5">
                   <span className="flex items-center gap-2">
-                    <span className="h-1.5 w-24 overflow-hidden rounded-full bg-[#E3E1DA]"><span className="bar-fill block h-full rounded-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
+                    <span className="h-1.5 w-24 overflow-hidden rounded-full bg-line"><span className="bar-fill block h-full rounded-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
                     <span className="money text-[12.5px] text-slate-500">{r.share.toFixed(1)}%</span>
                   </span>
                 </td>
@@ -325,7 +325,7 @@ export function AnalyticsTab({ expenses, facilities, members, totalExp, onSettle
         mark={(name) => <MemberChip name={name} />} />
       <p className="m-0 text-[13px] text-slate-500">
         To compare what each member paid against what they contributed, see{" "}
-        <button type="button" onClick={onSettlement} className="text-brand-2 underline decoration-[#CADBD0] underline-offset-2">Settlement</button>.
+        <button type="button" onClick={onSettlement} className="text-brand-2 underline decoration-good-line underline-offset-2">Settlement</button>.
       </p>
     </>
   );
@@ -345,7 +345,7 @@ function BreakdownTable({ title, sub, label, rows, mark }: {
       <div className="overflow-x-auto">
         <table className="stack-table w-full min-w-[640px] border-collapse text-[14px]">
           <thead>
-            <tr className="border-y border-line bg-[#FAF9F6] text-left">
+            <tr className="border-y border-line bg-subtle text-left">
               <th scope="col" className={hth}>{label}</th>
               <th scope="col" className={`${hth} text-right`}>Expenses</th>
               <th scope="col" className={`${hth} text-right`}>Average</th>
@@ -362,7 +362,7 @@ function BreakdownTable({ title, sub, label, rows, mark }: {
                 <td data-label="Total" className="money px-4 py-2.5 text-right">{taka(r.total)}</td>
                 <td data-label="Share" className="px-4 py-2.5">
                   <span className="flex items-center gap-2">
-                    <span className="h-1.5 w-28 overflow-hidden rounded-full bg-[#E3E1DA]"><span className="bar-fill block h-full rounded-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
+                    <span className="h-1.5 w-28 overflow-hidden rounded-full bg-line"><span className="bar-fill block h-full rounded-full bg-brand-2" style={{ width: `${r.share}%` }} /></span>
                     <span className="money text-[12.5px] text-slate-500">{r.share}%</span>
                   </span>
                 </td>
@@ -403,13 +403,13 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
       {/* Single-series bar chart: one hue, no legend; hover a bar for its values. Cards below double as the table view. */}
       <div className="overflow-x-auto">
         {/* ~52px per month: fits a phone screen for half a year, scrolls sideways beyond that. */}
-        <div className="relative flex items-end gap-2 border-b border-[#D6D3CB] px-2 pt-8 sm:gap-4" style={{ height: 260, minWidth: months.length * 52 }} role="img"
+        <div className="relative flex items-end gap-2 border-b border-line-strong px-2 pt-8 sm:gap-4" style={{ height: 260, minWidth: months.length * 52 }} role="img"
           aria-label={`Monthly spending: ${months.map((m) => `${monthLabel(m.key)} ${taka(m.total)}`).join(", ")}`}>
           {/* Quarter gridlines, labelled at the right edge. */}
           {[0.25, 0.5, 0.75, 1].map((f) => (
-            <div key={f} aria-hidden="true" className="pointer-events-none absolute inset-x-0 border-t border-dashed border-[#EAE8E2]"
+            <div key={f} aria-hidden="true" className="pointer-events-none absolute inset-x-0 border-t border-dashed border-soft"
               style={{ bottom: `calc(${f} * (100% - 32px))` }}>
-              <span className="absolute -top-2.5 right-0 bg-white pl-1.5 text-[10.5px] text-slate-400 tabular-nums">{taka(max * f)}</span>
+              <span className="absolute -top-2.5 right-0 bg-surface pl-1.5 text-[10.5px] text-slate-400 tabular-nums">{taka(max * f)}</span>
             </div>
           ))}
           {months.map((m, i) => {
@@ -419,11 +419,11 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
                 onMouseEnter={() => setHover(m.key)} onMouseLeave={() => setHover(null)}
                 onClick={() => setHover((h) => (h === m.key ? null : m.key))}>
                 {on && (
-                  <div className="pointer-events-none absolute z-10 mb-2 animate-pop-in whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-xs text-white shadow-[var(--shadow-pop)]"
+                  <div className="pointer-events-none absolute z-10 mb-2 animate-pop-in whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-xs text-on-ink shadow-[var(--shadow-pop)]"
                     style={{ bottom: `${(m.total / max) * 100}%` }}>
                     <div className="font-semibold">{monthLabel(m.key)}</div>
                     <div className="money text-[13px]">{taka(m.total)}</div>
-                    <div className="text-white/60">{m.count} logs · avg {takaDec(Math.round(m.avg))}</div>
+                    <div className="text-on-ink/60">{m.count} logs · avg {takaDec(Math.round(m.avg))}</div>
                     <span aria-hidden="true" className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-ink" />
                   </div>
                 )}
@@ -436,7 +436,7 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
         </div>
         <div className="flex gap-2 px-2 pt-2 sm:gap-4" style={{ minWidth: months.length * 52 }}>
           {months.map((m) => (
-            <div key={m.key} className={`min-w-0 flex-1 text-center text-[11.5px] font-medium leading-tight transition-colors sm:text-[13px] ${hover === m.key ? "text-brand" : "text-slate-700"}`}>
+            <div key={m.key} className={`min-w-0 flex-1 text-center text-[11.5px] font-medium leading-tight transition-colors sm:text-[13px] ${hover === m.key ? "text-brand-ink" : "text-slate-700"}`}>
               {monthLabel(m.key)}
             </div>
           ))}
@@ -447,7 +447,7 @@ export function MonthlyTab({ expenses }: { expenses: ResearchExpense[] }) {
         {months.map((m) => (
           <button key={m.key} type="button" onMouseEnter={() => setHover(m.key)} onMouseLeave={() => setHover(null)}
             onFocus={() => setHover(m.key)} onBlur={() => setHover(null)}
-            className={`rounded-r-lg border-l-2 py-1.5 pl-3 text-left ${hover === m.key ? "border-brand-2 bg-[#F2F6F3]" : "border-line hover:bg-[#FAF9F6]"}`}>
+            className={`rounded-r-lg border-l-2 py-1.5 pl-3 text-left ${hover === m.key ? "border-brand-2 bg-good-tint" : "border-line hover:bg-subtle"}`}>
             <div className="text-[12.5px] text-slate-500">{monthLabel(m.key)}</div>
             <div className="money text-[16px]">{taka(m.total)}</div>
             <div className="text-[12px] text-slate-500">{m.count} expenses · avg {takaDec(Math.round(m.avg * 100) / 100)}</div>

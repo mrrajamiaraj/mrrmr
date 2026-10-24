@@ -10,6 +10,9 @@ import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow, totalRow } from "@/components/debtors/bits";
 import { SetupAccount } from "@/components/setup-forms";
 import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
+import { FlowChart, OwedRanking, type Flow } from "@/components/charts";
+import { SortTh, useSort } from "@/components/sortable";
+import { usePalettePeople } from "@/components/command-palette";
 import { setAccountBalance } from "@/lib/actions";
 import { buildLoanProfiles, byOwesThenName } from "@/lib/ledger";
 import { dateLong, initials, pct, taka, timestampLong } from "@/lib/format";
@@ -24,6 +27,20 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
 
   // Loans only: credit-card use and its repayments live on the card pages, not in the bank balance.
   const profiles = useMemo(() => buildLoanProfiles(data, today).sort(byOwesThenName), [data, today]);
+  const loans = useMemo(
+    () => (account ? data.loans.filter((l) => l.account_id === account.id || l.account_id === null) : []),
+    [data.loans, account]
+  );
+  const peopleById = useMemo(() => new Map(data.people.map((p) => [p.id, p])), [data.people]);
+  const nameOf = (id: string) => peopleById.get(id)?.name ?? "Unknown";
+  const { sorted: loanRows, sort, toggle } = useSort(loans, {
+    date: (l) => l.taken_on, person: (l) => nameOf(l.person_id), amount: (l) => l.amount, due: (l) => l.due_on,
+  });
+  const flows = useMemo<Flow[]>(() => [
+    ...loans.map((l) => ({ iso: l.taken_on, amount: l.amount, dir: "out" as const })),
+    ...data.repayments.filter((r) => r.applies_to === "loan").map((r) => ({ iso: r.paid_on, amount: r.amount, dir: "in" as const })),
+  ], [loans, data.repayments]);
+  usePalettePeople(profiles, setOpenId);
 
   if (!account) {
     return (
@@ -45,8 +62,6 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
   const inHand = after ? pct(now, after, 1) : 100;
   const outPct = Math.round((100 - inHand) * 10) / 10;
 
-  const peopleById = new Map(data.people.map((p) => [p.id, p]));
-  const loans = data.loans.filter((l) => l.account_id === account.id || l.account_id === null);
   const newestForFlash = flash.personId
     ? loans.filter((l) => l.person_id === flash.personId).sort((a, b) => b.created_at.localeCompare(a.created_at))[0]?.id
     : undefined;
@@ -77,17 +92,23 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
           <Figure label="= Once everyone pays" value={after} tone="good" note={`Your ${account.name} balance after repayment`} />
         </Statement>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-0.5 text-[12.5px] text-slate-500">
-          <div className="h-2 min-w-[160px] flex-auto overflow-hidden rounded-full bg-[#E3E1DA]" aria-hidden="true">
+          <div className="h-2 min-w-[160px] flex-auto overflow-hidden rounded-full bg-line" aria-hidden="true">
             <div className="bar-fill flex h-full gap-[2px]">
               <div className="rounded-full bg-brand-2 transition-[width] duration-700" style={{ width: `${inHand}%` }} title={`${inHand}% in the bank`} />
-              <div className="rounded-full bg-[#B9852F] transition-[width] duration-700" style={{ width: `${outPct}%` }} title={`${outPct}% lent out`} />
+              <div className="rounded-full bg-owed-bar transition-[width] duration-700" style={{ width: `${outPct}%` }} title={`${outPct}% lent out`} />
             </div>
           </div>
           <span className="flex items-center gap-3 whitespace-nowrap">
             <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-full bg-brand-2" />{inHand}% in the bank</span>
-            <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-full bg-[#B9852F]" />{outPct}% lent out</span>
+            <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-full bg-owed-bar" />{outPct}% lent out</span>
           </span>
         </div>
+      </div>
+
+      <div className="grid items-stretch gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <FlowChart title="Lending activity" sub={`Lent from ${account.name} and paid back, per month. Hover or use ← → for details.`}
+          flows={flows} today={today} outLabel="Lent" inLabel="Paid back" />
+        <OwedRanking items={profiles} onOpen={open} />
       </div>
 
       <Flash text={flash.text} />
@@ -102,30 +123,30 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
 
       <SectionCard>
         <SectionHead id="deb-h" title="Loans from this account"
-          sub="Tap a name to open their profile." />
+          sub="Tap a name to open their profile. Tap a column heading to sort." />
         <div className="overflow-x-auto">
           <table className="stack-table w-full min-w-[900px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
-                <th scope="col" className={th}>Date taken</th>
-                <th scope="col" className={th}>Person</th>
+                <SortTh k="date" label="Date taken" sort={sort} onSort={toggle} />
+                <SortTh k="person" label="Person" sort={sort} onSort={toggle} text />
                 <th scope="col" className={th}>Why</th>
                 <th scope="col" className={th}>How</th>
-                <th scope="col" className={`${th} text-right`}>Amount</th>
-                <th scope="col" className={th}>Pay back by</th>
+                <SortTh k="amount" label="Amount" sort={sort} onSort={toggle} right />
+                <SortTh k="due" label="Pay back by" sort={sort} onSort={toggle} />
                 <th scope="col" className={th}><span className="sr-only">Delete</span></th>
               </tr>
             </thead>
             <tbody>
-              {loans.map((l) => {
-                const name = peopleById.get(l.person_id)?.name ?? "Unknown";
+              {loanRows.map((l) => {
+                const name = nameOf(l.person_id);
                 const isNew = l.id === newestForFlash;
                 return (
-                  <tr key={l.id} className={`border-b border-soft ${isNew ? "animate-highlight bg-[#F2F6F3]" : ""}`}>
+                  <tr key={l.id} className={`border-b border-soft ${isNew ? "animate-highlight bg-good-tint" : ""}`}>
                     <td data-label="Date taken" className={`${td} whitespace-nowrap text-slate-600`}>{dateLong(l.taken_on)}</td>
                     <th scope="row" className="px-4 py-1.5 text-left">
                       <PersonButton name={name} initials={initials(name)} onClick={() => open(l.person_id)} />
-                      {isNew && <> <span className="ml-1 rounded-full bg-brand-2 px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-white">new</span></>}
+                      {isNew && <> <span className="ml-1 rounded-full bg-brand px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-white">new</span></>}
                     </th>
                     <td data-label="Why" className={td}>{l.reason}</td>
                     <td data-label="How" className={`${td} text-slate-600`}>{l.method}</td>
@@ -179,7 +200,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                   </th>
                   <td data-label="Took" className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
                   <td data-label="Paid back" className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
-                  <td data-label="Still owes" className={`${td} money text-right text-[#85570F]`}>{taka(p.owes)}</td>
+                  <td data-label="Still owes" className={`${td} money text-right text-owed`}>{taka(p.owes)}</td>
                   <td data-label="Due" className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
                   <td data-label="Balance after" className={`${td} money text-right`}>{taka(p.run)}</td>
                 </tr>
@@ -188,7 +209,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                 <th scope="row" className={`${td} text-left`}>Once everyone pays</th>
                 <td data-label="Took" className={`${td} money text-right`}>{taka(lentTotal)}</td>
                 <td data-label="Paid back" className={`${td} money text-right`}>{taka(paidTotal)}</td>
-                <td data-label="Still owes" className={`${td} money text-right text-[#85570F]`}>{taka(owed)}</td>
+                <td data-label="Still owes" className={`${td} money text-right text-owed`}>{taka(owed)}</td>
                 <td className={td} />
                 <td data-label="Balance after" className={`${td} money text-right text-brand-2`}>{taka(after)}</td>
               </tr>

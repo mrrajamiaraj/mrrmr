@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { writer } from "@/lib/viewer";
+import { cleanText } from "@/lib/security";
 
 export type Result = { error?: string };
 
@@ -17,8 +18,9 @@ function done(error: { code?: string; message: string } | null): Result {
   return {};
 }
 
-const amountOk = (n: number) => Number.isFinite(n) && n > 0;
-const clean = (s: string) => s.trim();
+const amountOk = (n: number) => typeof n === "number" && Number.isFinite(n) && n > 0 && n < 1e12;
+// Trimmed and capped server-side: these actions can be called without the form.
+const clean = (s: string) => cleanText(s, 300);
 
 export async function saveExpense(
   id: string | null,

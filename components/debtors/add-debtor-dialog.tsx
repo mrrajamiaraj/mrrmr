@@ -103,8 +103,8 @@ export function AddDebtorDialog(props: Props) {
     >
       <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
         {props.lockedPerson ? (
-          <div className="col-span-full flex items-center gap-2.5 rounded-md border border-[#CADBD0] bg-[#F2F6F3] px-3.5 py-2.5">
-            <span className="inline-flex size-8 items-center justify-center rounded-full bg-[#E3ECE6] text-[13px] font-semibold text-[#1F4D3A]">{props.lockedPerson.initials}</span>
+          <div className="col-span-full flex items-center gap-2.5 rounded-md border border-good-line bg-good-tint px-3.5 py-2.5">
+            <span className="inline-flex size-8 items-center justify-center rounded-full bg-good-tint-2 text-[13px] font-semibold text-brand-ink">{props.lockedPerson.initials}</span>
             <div>
               <div className="font-semibold">{props.lockedPerson.name}</div>
               <div className="text-[13px] text-slate-600">Currently owes {taka(props.lockedPerson.owes)}</div>
@@ -115,7 +115,7 @@ export function AddDebtorDialog(props: Props) {
             {isLoan ? "Who took the money? *" : "Who used the card? *"}
             <input type="text" list={listId} value={f.name} onChange={set("name")} autoComplete="off"
               placeholder={isLoan ? "e.g. Mamun Vai, Rafi Ahmed…" : "e.g. Rafi Ahmed, Nusrat… or “Me”"}
-              className={`${input} border-2 border-[#3D7D61]`} />
+              className={`${input} border-2 border-brand-2`} />
             <datalist id={listId}>
               {!isLoan && <option value="Me" />}
               {props.knownNames.map((n) => <option key={n} value={n} />)}
@@ -184,7 +184,7 @@ export function AddDebtorDialog(props: Props) {
         )}
 
         {(props.mode === "card" || props.account) && (
-          <label className="col-span-full flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md bg-[#FAF9F6] px-3 py-2 text-[14.5px]">
+          <label className="col-span-full flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md bg-subtle px-3 py-2 text-[14.5px]">
             <input type="checkbox" checked={flag} onChange={() => setFlag(!flag)} className="size-[18px] accent-brand-2" />
             {props.mode === "loan" ? `Take this amount out of my ${props.account!.name} balance` : "Add this amount to the card balance"}
           </label>

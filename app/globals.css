@@ -1,17 +1,53 @@
 @import "tailwindcss";
 
-@theme {
+/* `dark:` follows the app's own theme switch (data-theme on <html>), not only the system setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Every colour in the app is one of these tokens, so night mode is a single override block (below the keyframes).
+ * `static` keeps each variable in the output even if no utility uses it: components also read them via var().
+ */
+@theme static {
   --font-sans: var(--font-plex-sans), var(--font-bangla), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), var(--font-bangla), ui-monospace, monospace;
 
+  /* Paper, surfaces and hairlines. */
+  --color-page: #F5F4F0;
+  --color-surface: #FFFFFF;
+  --color-subtle: #FAF9F6;
+  --color-soft: #F0EEE9;
+  --color-line: #E3E1DA;
+  --color-line-strong: #D6D3CB;
   --color-ink: #1C1B18;
+  /* Text on an ink fill (selected chips, toasts). */
+  --color-on-ink: #FFFFFF;
+
+  /* Brand green: `brand` is the solid fill under white text, `brand-ink` is brand as text, `brand-2` the lighter accent. */
   --color-brand: #1F4D3A;
+  --color-brand-hover: #173D2E;
+  --color-brand-ink: #1F4D3A;
   --color-brand-2: #2E6B52;
   --color-brand-3: #2E6B52;
   --color-mint: #C9D9CF;
-  --color-page: #F5F4F0;
-  --color-line: #E3E1DA;
-  --color-soft: #F0EEE9;
+  --color-good-tint: #F2F6F3;
+  --color-good-tint-2: #E6EFE9;
+  --color-good-line: #CADBD0;
+
+  /* Money owed (amber), problems (red), neutral info (blue). */
+  --color-owed: #85570F;
+  --color-owed-bar: #B9852F;
+  --color-owed-tint: #FAF6EC;
+  --color-owed-line: #E6D7B5;
+  --color-bad: #9B3426;
+  --color-bad-deep: #7E2A1F;
+  --color-bad-tint: #F5E4E0;
+  --color-bad-line: #EBCFC8;
+  --color-bad-solid: #9B3426;
+  --color-bad-solid-hover: #7E2A1F;
+  --color-info: #355276;
+
+  /* Chart series (validated pair with --color-owed-bar). */
+  --color-chart-in: #25875E;
 
   /* Warm greys instead of Tailwind's blue-tinted slate, so every text-slate-* reads as paper and ink. */
   --color-slate-50: #FAF9F6;
@@ -74,8 +110,8 @@
   to { background-position: -200% 0; }
 }
 @keyframes highlight {
-  0%, 30% { background-color: #E6EFE9; }
-  100% { background-color: #F2F6F3; }
+  0%, 30% { background-color: var(--color-good-tint-2); }
+  100% { background-color: var(--color-good-tint); }
 }
 /* Progress ring: draws from empty to its current offset. Set --ring-from to the circumference. */
 @keyframes ring {
@@ -84,6 +120,69 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+@keyframes theme-icon {
+  from { opacity: 0; rotate: -90deg; scale: 0.4; }
+  to { opacity: 1; rotate: 0deg; scale: 1; }
+}
+
+/*
+ * Night mode. The theme script in the root layout sets data-theme before first paint (from the saved choice, or the
+ * system setting), so there is no flash. Each step is chosen for the dark surface, not flipped: text keeps ≥ 4.5:1,
+ * solid fills keep white text readable, and the chart pair is re-validated against #1A1A18.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-page: #111110;
+  --color-surface: #1A1A18;
+  --color-subtle: #1F1F1D;
+  --color-soft: #262623;
+  --color-line: #2D2C29;
+  --color-line-strong: #3B3A36;
+  --color-ink: #EDEBE5;
+  --color-on-ink: #151513;
+
+  --color-brand: #2F7A59;
+  --color-brand-hover: #398A67;
+  --color-brand-ink: #7FCBA5;
+  --color-brand-2: #67BE95;
+  --color-brand-3: #67BE95;
+  --color-good-tint: #16231C;
+  --color-good-tint-2: #1C2E25;
+  --color-good-line: #2B4A3A;
+
+  --color-owed: #E3AE5C;
+  --color-owed-bar: #BD8A3A;
+  --color-owed-tint: #251F12;
+  --color-owed-line: #4A3C1F;
+  --color-bad: #EE8472;
+  --color-bad-deep: #F5A193;
+  --color-bad-tint: #2C1815;
+  --color-bad-line: #5A2C24;
+  --color-bad-solid: #B4432F;
+  --color-bad-solid-hover: #C4513C;
+  --color-info: #93B2DB;
+  --color-chart-in: #3FA57A;
+
+  --color-slate-50: #1F1F1D;
+  --color-slate-100: #262623;
+  --color-slate-200: #2D2C29;
+  --color-slate-300: #3B3A36;
+  --color-slate-400: #7C786F;
+  --color-slate-500: #9D998F;
+  --color-slate-600: #B5B1A7;
+  --color-slate-700: #CCC8BE;
+  --color-slate-800: #DFDCD4;
+  --color-slate-900: #EDEBE5;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.015);
+  --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -8px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 24px 60px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Theme switch: the new theme grows out of the toggle as a circle (View Transitions), the header included. */
+html.theme-vt header { view-transition-name: none !important; }
+html.theme-vt::view-transition-old(root),
+html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 
 @layer base {
   html {
@@ -93,7 +192,10 @@
   body {
     @apply bg-page text-ink font-sans text-[14.5px] leading-[1.5];
     overflow-x: hidden;
+    /* Phones: no grey flash on tap (every control has its own pressed state), and no double-tap zoom delay. */
+    -webkit-tap-highlight-color: transparent;
   }
+  :where(button, a, [role="tab"], [role="option"], label) { touch-action: manipulation; }
   /* iOS Safari zooms into any field under 16px on focus; keep fields at 16px on touch screens. (.money is the 20px balance field.) */
   @media (pointer: coarse) {
     input:not([type="checkbox"], [type="radio"], .money), select, textarea { font-size: 16px !important; }
@@ -102,10 +204,10 @@
   button { @apply cursor-pointer; }
   button:disabled { @apply cursor-not-allowed opacity-60; }
   :where(button, a, input, select, [tabindex]):focus-visible {
-    outline: 2px solid #2E6B52;
+    outline: 2px solid var(--color-brand-2);
     outline-offset: 2px;
   }
-  ::selection { background: #C9D9CF; color: var(--color-ink); }
+  ::selection { background: var(--color-good-line); color: var(--color-ink); }
 
   /* Every interactive surface eases its colours instead of snapping; a pressed button dips slightly. */
   :where(button, a, input, select, textarea, [role="tab"]) {
@@ -119,12 +221,12 @@
   :where(label):has(> input[type="search"]):focus-within { box-shadow: 0 0 0 3px rgba(46, 107, 82, 0.12); }
 
   /* Thin, warm scrollbars for the sideways sliders and tables. */
-  * { scrollbar-width: thin; scrollbar-color: #D6D3CB transparent; }
+  * { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
 
   /* Tables: rows warm up under the pointer. */
   @media (hover: hover) {
     .stack-table tbody tr { transition: background-color 120ms ease-out; }
-    .stack-table tbody tr:hover { background-color: #FAF9F6; }
+    .stack-table tbody tr:hover { background-color: var(--color-subtle); }
   }
 }
 
@@ -210,11 +312,11 @@
 @utility field-input {
   min-height: 42px;
   padding: 0 12px;
-  border: 1px solid #D6D3CB;
+  border: 1px solid var(--color-line-strong);
   border-radius: 6px;
   font-size: 14.5px;
   font-weight: 400;
-  background: #FFFFFF;
+  background: var(--color-surface);
   color: var(--color-ink);
   width: 100%;
 }
@@ -225,13 +327,13 @@
   gap: 6px;
   font-weight: 500;
   font-size: 13.5px;
-  color: #46433D;
+  color: var(--color-slate-700);
 }
 
 /* Placeholder block for loading skeletons. */
 @utility skeleton {
   border-radius: 6px;
-  background: linear-gradient(90deg, #EFEDE7 25%, #F7F6F2 37%, #EFEDE7 63%);
+  background: linear-gradient(90deg, var(--color-soft) 25%, var(--color-subtle) 37%, var(--color-soft) 63%);
   background-size: 400% 100%;
   animation: var(--animate-shimmer);
 }
@@ -240,7 +342,25 @@
 @utility lift {
   transition: transform 220ms var(--ease-out-expo), box-shadow 220ms var(--ease-out-expo), border-color 160ms ease-out;
   @media (hover: hover) {
-    &:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: #D6D3CB; }
+    &:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--color-line-strong); }
+  }
+}
+
+/* A surface with a soft green glow under the pointer. The header's pointer tracker sets --mx / --my. */
+@utility spot {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--color-brand-2) 9%, transparent), transparent 65%);
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+  }
+  @media (hover: hover) {
+    &:hover::after { opacity: 1; }
   }
 }
 
@@ -254,5 +374,5 @@
 @utility caption {
   font-size: 12.5px;
   font-weight: 500;
-  color: #7A766C;
+  color: var(--color-slate-500);
 }

@@ -2,13 +2,9 @@ import { loadFinance } from "@/lib/data";
 import { loadResearch } from "@/lib/research-data";
 import { todayIso } from "@/lib/format";
 import { cardLabel } from "@/lib/ledger";
+import { csvCell as cell } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
-
-function cell(v: unknown) {
-  const s = v == null ? "" : String(v);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 
 /** One CSV with every record, for personal backups. The proxy already requires a signed-in user. */
 export async function GET() {
@@ -36,6 +32,7 @@ export async function GET() {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="finance-backup-${todayIso()}.csv"`,
       "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

@@ -65,10 +65,10 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         style={{ maxWidth }}
-        className="max-h-[calc(100dvh-16px)] w-full animate-sheet-up overflow-y-auto overscroll-contain rounded-t-2xl bg-white text-left shadow-[var(--shadow-pop)] sm:max-h-[calc(100dvh-32px)] sm:animate-pop-in sm:rounded-xl"
+        className="max-h-[calc(100dvh-16px)] w-full animate-sheet-up overflow-y-auto overscroll-contain rounded-t-2xl bg-surface text-left shadow-[var(--shadow-pop)] sm:max-h-[calc(100dvh-32px)] sm:animate-pop-in sm:rounded-xl"
       >
         {/* Grab handle so the phone sheet reads as a sheet. */}
-        <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-[#E3E1DA] sm:hidden" />
+        <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-line sm:hidden" />
         {header ? (
           header(titleId)
         ) : (
@@ -79,7 +79,7 @@ export function Modal({
         )}
         {children}
         {footer && (
-          <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-white/95 px-5 py-3 backdrop-blur">{footer}</div>
+          <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-surface/95 px-5 py-3 backdrop-blur">{footer}</div>
         )}
       </div>
     </div>
@@ -96,12 +96,12 @@ export function CloseButton({ onClick, label = "Close" }: { onClick: () => void;
 
 export function ErrorBox({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div role="alert" className={`animate-pop-in rounded-md border border-[#EBCFC8] bg-[#F5E4E0] px-3.5 py-2.5 text-sm font-medium text-[#7E2A1F] ${className}`}>
+    <div role="alert" className={`animate-pop-in rounded-md border border-bad-line bg-bad-tint px-3.5 py-2.5 text-sm font-medium text-bad-deep ${className}`}>
       {children}
     </div>
   );
 }
 
-export const btnPrimary = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#173D2E] hover:shadow-[0_6px_16px_-6px_rgba(31,77,58,0.55)]";
-export const btnDanger = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#9B3426] px-4 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2)] hover:bg-[#7E2A1F] hover:shadow-[0_6px_16px_-6px_rgba(155,52,38,0.55)]";
+export const btnPrimary = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-brand-hover hover:shadow-[0_6px_16px_-6px_rgba(31,77,58,0.55)]";
+export const btnDanger = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-bad-solid px-4 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2)] hover:bg-bad-solid-hover hover:shadow-[0_6px_16px_-6px_rgba(155,52,38,0.55)]";
 export const btnGhost = "min-h-10 rounded-lg px-3.5 text-[14px] text-slate-700 hover:bg-soft";

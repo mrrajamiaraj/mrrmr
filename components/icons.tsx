@@ -67,8 +67,15 @@ export const ArrowUpIcon = (p: P) => <Svg strokeWidth={2} {...p}><path d="M12 19
 export const CommandIcon = (p: P) => (
   <Svg {...p}><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" /></Svg>
 );
+export const SunIcon = (p: P) => (
+  <Svg strokeWidth={2} {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4" /></Svg>
+);
+export const MoonIcon = (p: P) => <Svg strokeWidth={2} {...p}><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z" /></Svg>;
+export const MonitorIcon = (p: P) => (
+  <Svg strokeWidth={2} {...p}><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></Svg>
+);
 export const ChipIcon = () => (
-  <svg aria-hidden="true" width="40" height="30" viewBox="0 0 40 30" fill="none" stroke="#E3E1DA" strokeWidth="1.4">
+  <svg aria-hidden="true" width="40" height="30" viewBox="0 0 40 30" fill="none" stroke="var(--color-line)" strokeWidth="1.4">
     <rect x="1" y="1" width="38" height="28" rx="5" /><path d="M1 11h12M1 19h12M27 11h12M27 19h12M13 1v28M27 1v28" />
   </svg>
 );

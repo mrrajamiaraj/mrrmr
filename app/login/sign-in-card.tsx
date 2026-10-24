@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { BankIcon, CardIcon, KeyIcon, PeopleIcon, PersonIcon, ShieldIcon } from "@/components/icons";
 import { ViewForm } from "@/app/view/view-form";
+import { Wordmark } from "@/components/brand";
+import { ThemeToggle } from "@/components/theme";
 import { LoginForm } from "./login-form";
 
 type Mode = "viewer" | "admin";
@@ -12,6 +14,14 @@ const FEATURES = [
   { icon: PeopleIcon, title: "Every debtor in one place", text: "Loans, card use and repayments, with a full history per person." },
   { icon: CardIcon, title: "Credit cards, tracked", text: "Available limit today and what frees up as people repay." },
 ];
+
+/** Brand panel depth: layers drift against the pointer, read from --px / --py (−1…1). */
+function parallax(e: React.PointerEvent<HTMLElement>) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--px", String(((e.clientX - r.left) / r.width) * 2 - 1));
+  e.currentTarget.style.setProperty("--py", String(((e.clientY - r.top) / r.height) * 2 - 1));
+}
 
 /** Shared by /login and /view: one card, Viewer (read-only key) or Admin (email + password). */
 export function SignInCard({ next, error, initialMode }: { next: string; error?: string; initialMode: Mode }) {
@@ -24,14 +34,39 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
   return (
     <main className="grid min-h-dvh bg-page lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       {/* Brand panel: large screens only. */}
-      <section aria-hidden="true" className="relative hidden overflow-hidden bg-brand text-white lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:44px_44px]" />
-        <div className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-[radial-gradient(circle,rgba(201,217,207,0.35),transparent_65%)]" />
-        <div className="pointer-events-none absolute -bottom-48 -left-24 size-[460px] rounded-full bg-[radial-gradient(circle,rgba(46,107,82,0.9),transparent_70%)]" />
+      <section aria-hidden="true" onPointerMove={parallax} onPointerLeave={(e) => { e.currentTarget.style.setProperty("--px", "0"); e.currentTarget.style.setProperty("--py", "0"); }}
+        className="relative hidden overflow-hidden bg-brand text-white dark:bg-[#10271D] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:44px_44px] [translate:calc(var(--px,0)*-8px)_calc(var(--py,0)*-8px)] transition-[translate] duration-700 ease-out" />
+        <div className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-[radial-gradient(circle,rgba(201,217,207,0.35),transparent_65%)] [translate:calc(var(--px,0)*24px)_calc(var(--py,0)*24px)] transition-[translate] duration-700 ease-out" />
+        <div className="pointer-events-none absolute -bottom-48 -left-24 size-[460px] rounded-full bg-[radial-gradient(circle,rgba(46,107,82,0.9),transparent_70%)] [translate:calc(var(--px,0)*-18px)_calc(var(--py,0)*-18px)] transition-[translate] duration-700 ease-out" />
 
-        <div className="relative flex animate-fade-up items-center gap-2.5 text-[17px] font-semibold">
-          <span className="grid size-9 place-items-center rounded-lg bg-white text-[15px] text-brand">L</span>
-          <span>Ledger<span className="text-mint">.</span></span>
+        {/* A floating glimpse of the workspace: decorative shapes only, no figures. */}
+        <div className="pointer-events-none absolute right-[-64px] top-[calc(50%-110px)] hidden w-[300px] [translate:calc(var(--px,0)*-14px)_calc(var(--py,0)*-14px)] transition-[translate] duration-500 ease-out 2xl:block">
+        <div className="animate-pop-in rounded-2xl border border-white/15 bg-white/[0.07] p-5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.45)] backdrop-blur-md [animation-delay:350ms]">
+          <div className="mb-4 flex items-center gap-2">
+            <span className="size-2 rounded-full bg-mint" />
+            <span className="h-2 w-24 rounded-full bg-white/25" />
+          </div>
+          <div className="flex h-24 items-end gap-2">
+            {[38, 62, 45, 80, 56, 92, 70].map((h, i) => (
+              <span key={i} className="flex flex-1 items-end gap-[2px]">
+                <span className="flex-1 origin-bottom animate-grow-y rounded-t-[3px] bg-[#D9B46A]/80" style={{ height: `${h}%`, animationDelay: `${450 + i * 60}ms` }} />
+                <span className="flex-1 origin-bottom animate-grow-y rounded-t-[3px] bg-mint/80" style={{ height: `${h * 0.7}%`, animationDelay: `${480 + i * 60}ms` }} />
+              </span>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center gap-3 border-t border-white/10 pt-4">
+            <span className="size-8 rounded-full bg-white/15" />
+            <span className="flex flex-auto flex-col gap-1.5">
+              <span className="h-2 w-3/4 rounded-full bg-white/25" />
+              <span className="h-1.5 overflow-hidden rounded-full bg-white/10"><span className="bar-fill block h-full w-2/3 rounded-full bg-mint [animation-delay:700ms]" /></span>
+            </span>
+          </div>
+        </div>
+        </div>
+
+        <div className="relative animate-fade-up text-[18px]">
+          <Wordmark size={36} light />
         </div>
 
         <div className="relative flex max-w-[480px] flex-col gap-8">
@@ -56,11 +91,11 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
         </div>
       </section>
 
-      <div className="grid place-items-center px-4 py-8">
-        <div className="flex w-full max-w-[420px] animate-pop-in flex-col gap-5 rounded-2xl border border-line bg-white px-5 py-7 shadow-[0_24px_60px_-30px_rgba(28,27,24,0.35)] sm:px-8 sm:py-9">
-          <div className="flex items-center gap-2 text-[15px] font-semibold text-ink lg:hidden">
-            <span aria-hidden="true" className="grid size-7 place-items-center rounded-md bg-brand text-[13px] text-white">L</span>
-            <span>Ledger<span className="text-brand-2">.</span></span>
+      <div className="relative grid place-items-center px-4 pb-[max(32px,env(safe-area-inset-bottom))] pt-16 lg:py-8">
+        <div className="absolute right-4 top-[max(16px,env(safe-area-inset-top))]"><ThemeToggle /></div>
+        <div className="flex w-full max-w-[420px] animate-pop-in flex-col gap-5 rounded-2xl border border-line bg-surface px-5 py-7 shadow-[0_24px_60px_-30px_rgba(28,27,24,0.35)] sm:px-8 sm:py-9">
+          <div className="text-[16px] lg:hidden">
+            <Wordmark size={32} />
           </div>
           <div>
             <h1 className="m-0 text-[24px] font-semibold tracking-[-0.02em] text-ink">Welcome back</h1>
@@ -72,7 +107,7 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
           <div role="tablist" aria-label="Sign-in type" className="relative flex gap-1 rounded-lg border border-line bg-soft p-1">
             {/* Sliding thumb under the selected option. */}
             <span aria-hidden="true"
-              className={`absolute inset-y-1 left-1 w-[calc(50%-6px)] rounded-md bg-white shadow-[0_1px_3px_rgba(28,27,24,0.14)] transition-transform duration-300 ease-[var(--ease-out-expo)] ${mode === "admin" ? "translate-x-[calc(100%+4px)]" : ""}`} />
+              className={`absolute inset-y-1 left-1 w-[calc(50%-6px)] rounded-md bg-surface shadow-[0_1px_3px_rgba(28,27,24,0.14)] transition-transform duration-300 ease-[var(--ease-out-expo)] ${mode === "admin" ? "translate-x-[calc(100%+4px)]" : ""}`} />
             <button type="button" role="tab" aria-selected={mode === "viewer"} onClick={() => setMode("viewer")} className={tab("viewer")}>
               <PersonIcon size={16} />
               Viewer
@@ -84,7 +119,7 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
           </div>
 
           {error && (
-            <div className="animate-pop-in rounded-lg border border-[#EBCFC8] bg-[#F5E4E0] px-3 py-2.5 text-sm text-[#9B3426]" role="alert">
+            <div className="animate-pop-in rounded-lg border border-bad-line bg-bad-tint px-3 py-2.5 text-sm text-bad" role="alert">
               {error}
             </div>
           )}

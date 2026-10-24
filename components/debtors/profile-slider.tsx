@@ -23,7 +23,7 @@ export type SlideItem = {
 };
 
 const STEP = 272; // card width 260 + gap 12
-const iconBtn = "flex size-9 items-center justify-center rounded-lg border border-[#D6D3CB] bg-white text-slate-600 hover:border-[#A8A49A] hover:bg-soft hover:text-ink disabled:opacity-40";
+const iconBtn = "flex size-9 items-center justify-center rounded-lg border border-line-strong bg-surface text-slate-600 hover:border-slate-400 hover:bg-soft hover:text-ink disabled:opacity-40";
 
 export function ProfileSlider({
   title,
@@ -81,7 +81,7 @@ export function ProfileSlider({
               <SearchIcon size={16} />
             </button>
           ) : (
-            <label className="flex min-h-9 w-[min(280px,100%)] items-center gap-2 rounded-md border border-[#D6D3CB] bg-white pl-2.5 pr-1 focus-within:border-brand-2">
+            <label className="flex min-h-9 w-[min(280px,100%)] items-center gap-2 rounded-md border border-line-strong bg-surface pl-2.5 pr-1 focus-within:border-brand-2">
               <SearchIcon size={15} className="text-slate-500" />
               <span className="sr-only">Search debtors</span>
               <input type="search" autoFocus value={q}
@@ -100,7 +100,7 @@ export function ProfileSlider({
             <ChevronRight size={16} />
           </button>
           {!viewer && (
-            <button type="button" onClick={onAdd} className="ml-1 min-h-9 rounded-lg border border-[#D6D3CB] bg-white px-3 text-[13.5px] hover:border-[#A8A49A] hover:bg-soft">
+            <button type="button" onClick={onAdd} className="ml-1 min-h-9 rounded-lg border border-line-strong bg-surface px-3 text-[13.5px] hover:border-slate-400 hover:bg-soft">
               Add debtor
             </button>
           )}
@@ -118,21 +118,21 @@ export function ProfileSlider({
         className="-my-2 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth py-2 pb-3">
         {shown.map((p, i) => (
           <button key={p.id} type="button" onClick={() => onOpen(p.id)} aria-label={`Open ${p.name}'s profile`} style={stagger(i, 45, 360)}
-            className="lift group flex flex-[0_0_260px] animate-fade-up snap-start flex-col gap-3 rounded-xl border border-line bg-white p-4 text-left shadow-[var(--shadow-card)]">
+            className="lift spot group flex flex-[0_0_260px] animate-fade-up snap-start flex-col gap-3 rounded-xl border border-line bg-surface p-4 text-left shadow-[var(--shadow-card)]">
             <div className="flex w-full items-start gap-2.5">
               <Avatar text={p.initials} size={36} />
               <div className="min-w-0 flex-auto">
-                <div className="truncate text-[14.5px] font-medium group-hover:text-brand">{p.name}</div>
+                <div className="truncate text-[14.5px] font-medium group-hover:text-brand-ink">{p.name}</div>
                 <div className="text-[12.5px] text-slate-500">{p.txCount} records · {dateShort(p.lastIso, "—")}</div>
               </div>
             </div>
             <dl className="m-0 grid w-full grid-cols-3 gap-2 text-[12px]">
               <div><dt className="text-slate-500">{tookLabel}</dt><dd className="money m-0 text-[13.5px]">{taka(p.took)}</dd></div>
               <div><dt className="text-slate-500">Paid</dt><dd className="money m-0 text-[13.5px]">{taka(p.paid)}</dd></div>
-              <div><dt className="text-slate-500">Owes</dt><dd className="money m-0 text-[13.5px] text-[#85570F]">{taka(p.owes)}</dd></div>
+              <div><dt className="text-slate-500">Owes</dt><dd className="money m-0 text-[13.5px] text-owed">{taka(p.owes)}</dd></div>
             </dl>
             <div className="flex w-full items-center gap-2.5">
-              <div className="h-1.5 flex-auto overflow-hidden rounded-full bg-[#E3E1DA]"><div className="bar-fill h-full rounded-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%`, ...stagger(i, 45, 500) }} /></div>
+              <div className="h-1.5 flex-auto overflow-hidden rounded-full bg-line"><div className="bar-fill h-full rounded-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%`, ...stagger(i, 45, 500) }} /></div>
               <StatusPill status={p.status} />
             </div>
           </button>

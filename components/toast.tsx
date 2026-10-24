@@ -30,7 +30,7 @@ const LIFETIME = 5000;
 export function Toaster() {
   const list = useSyncExternalStore(subscribe, () => toasts, () => EMPTY);
   return (
-    <div data-float aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex flex-col items-center gap-2 p-4 sm:items-end sm:p-6">
+    <div data-float aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex flex-col items-center gap-2 px-4 pb-[calc(76px+env(safe-area-inset-bottom))] pt-4 sm:items-end sm:px-6 sm:pt-6 md:pb-6">
       {list.map((t) => <ToastItem key={t.id} t={t} />)}
     </div>
   );
@@ -47,15 +47,15 @@ function ToastItem({ t }: { t: Toast }) {
 
   return (
     <div role="status" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
-      className={`pointer-events-auto relative flex w-full max-w-[420px] items-start gap-3 overflow-hidden rounded-xl bg-ink py-3 pl-3.5 pr-2 text-[14px] text-white shadow-[var(--shadow-pop)] ${
+      className={`pointer-events-auto relative flex w-full max-w-[420px] items-start gap-3 overflow-hidden rounded-xl bg-ink py-3 pl-3.5 pr-2 text-[14px] text-on-ink shadow-[var(--shadow-pop)] ${
         t.leaving ? "translate-y-2 opacity-0 transition-[translate,opacity] duration-200" : "animate-pop-in"
       }`}>
-      <span aria-hidden="true" className="mt-px grid size-5 flex-none place-items-center rounded-full bg-[#2E6B52] text-white">
+      <span aria-hidden="true" className="mt-px grid size-5 flex-none place-items-center rounded-full bg-brand text-white">
         <CheckIcon size={12} />
       </span>
       <span className="min-w-0 flex-auto leading-snug">{t.text}</span>
       <button type="button" aria-label="Dismiss" onClick={() => dismiss(t.id)}
-        className="-my-1 grid size-7 flex-none place-items-center rounded-md text-white/60 hover:bg-white/10 hover:text-white">
+        className="-my-1 grid size-7 flex-none place-items-center rounded-md text-on-ink/60 hover:bg-on-ink/10 hover:text-on-ink">
         <CloseIcon size={14} />
       </button>
       {/* Time left before it goes away; stops while the pointer is on it. */}

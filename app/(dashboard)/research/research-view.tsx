@@ -56,11 +56,11 @@ export function ResearchView({ data }: { data: ResearchData }) {
   if (data.missingTables) {
     return (
       <Shell subtitle={subtitle}>
-        <section className="mx-auto w-full max-w-[720px] rounded-lg border border-[#E6D7B5] bg-[#FAF6EC] p-4 sm:p-6">
-          <h2 className="m-0 text-xl font-semibold text-[#85570F]">One-time setup needed</h2>
+        <section className="mx-auto w-full max-w-[720px] rounded-lg border border-owed-line bg-owed-tint p-4 sm:p-6">
+          <h2 className="m-0 text-xl font-semibold text-owed">One-time setup needed</h2>
           <p className="mb-0 mt-2 text-[15px] text-slate-700">
             The research tables don&apos;t exist in Supabase yet. Open the Supabase dashboard → SQL Editor → New query, paste the
-            contents of <code className="rounded bg-white px-1.5 py-0.5 font-mono text-sm">supabase/migrations/0003_research_ledger.sql</code>,
+            contents of <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-sm">supabase/migrations/0003_research_ledger.sql</code>,
             click <strong>Run</strong>, then refresh this page.
           </p>
         </section>
@@ -150,7 +150,7 @@ function ExpenseDialog({ row, facilities, members, onClose, onSaved }: {
         <label className="field-label">Date<input type="date" className="field-input" value={f.spent_on} onChange={set("spent_on")} /></label>
         <label className="field-label">Amount (৳) *<input type="number" min="1" inputMode="decimal" className="field-input font-mono" value={f.amount} onChange={set("amount")} placeholder="0" /></label>
         <label className="field-label">Facility / center *
-          <input list="research-facilities" className="field-input border-2 border-[#3D7D61]" value={f.facility} onChange={set("facility")} autoComplete="off" />
+          <input list="research-facilities" className="field-input border-2 border-brand-2" value={f.facility} onChange={set("facility")} autoComplete="off" />
           <datalist id="research-facilities">{facilities.map((x) => <option key={x} value={x} />)}</datalist>
         </label>
         <label className="field-label">Paid by *
@@ -197,7 +197,7 @@ function ContributionDialog({ row, member, members, onClose, onSaved }: {
       </>}>
       <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
         <label className="field-label sm:col-span-2">Member *
-          <input list="research-members-c" className="field-input border-2 border-[#5A7397]" value={f.member} onChange={set("member")} autoComplete="off" placeholder="e.g. Adnan, Somik" />
+          <input list="research-members-c" className="field-input border-2 border-info" value={f.member} onChange={set("member")} autoComplete="off" placeholder="e.g. Adnan, Somik" />
           <datalist id="research-members-c">{members.map((x) => <option key={x} value={x} />)}</datalist>
         </label>
         <label className="field-label">Amount (৳) *<input type="number" min="1" inputMode="decimal" className="field-input font-mono" value={f.amount} onChange={set("amount")} placeholder="0" /></label>

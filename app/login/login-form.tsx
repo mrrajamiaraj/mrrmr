@@ -23,11 +23,11 @@ export function LoginForm({ next }: { next: string }) {
         <PasswordInput name="password" autoComplete="current-password" required />
       </label>
 
-      {state.error && <div className="animate-pop-in rounded-lg border border-[#EBCFC8] bg-[#F5E4E0] px-3 py-2.5 text-sm text-[#9B3426]" role="alert">{state.error}</div>}
-      {state.message && <div className="animate-pop-in rounded-lg border border-[#CADBD0] bg-[#E3ECE6] px-3 py-2.5 text-sm text-[#1F4D3A]" role="status">{state.message}</div>}
+      {state.error && <div className="animate-pop-in rounded-lg border border-bad-line bg-bad-tint px-3 py-2.5 text-sm text-bad" role="alert">{state.error}</div>}
+      {state.message && <div className="animate-pop-in rounded-lg border border-good-line bg-good-tint-2 px-3 py-2.5 text-sm text-brand-ink" role="status">{state.message}</div>}
 
       <button type="submit" disabled={signingIn}
-        className="group mt-1 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand text-[14.5px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#173D2E] hover:shadow-[0_8px_20px_-8px_rgba(31,77,58,0.6)]">
+        className="group mt-1 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand text-[14.5px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-brand-hover hover:shadow-[0_8px_20px_-8px_rgba(31,77,58,0.6)]">
         {signingIn ? <><Spinner />Signing in…</> : <>Sign in<ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-0.5" /></>}
       </button>
       {/* Stays after "Sign in": pressing Enter submits with the first submit button in the form. */}
@@ -36,7 +36,7 @@ export function LoginForm({ next }: { next: string }) {
         formAction={resetAction}
         formNoValidate
         disabled={resetting}
-        className="inline-flex min-h-9 items-center gap-2 self-center rounded-md px-2 text-[13.5px] font-medium text-brand-2 hover:bg-[#F2F6F3] hover:text-brand"
+        className="inline-flex min-h-9 items-center gap-2 self-center rounded-md px-2 text-[13.5px] font-medium text-brand-2 hover:bg-good-tint hover:text-brand-ink"
       >
         {resetting && <Spinner size={12} />}
         {resetting ? "Sending reset link…" : "Forgot password?"}

@@ -94,7 +94,7 @@ export function UnderlineTabs<K extends string>({
           className={`whitespace-nowrap pb-3 pt-1 text-[14px] ${value === key ? "font-medium text-ink" : "text-slate-500 hover:text-ink"}`}>
           {text}
           {count != null && (
-            <span className={`ml-1.5 inline-flex min-w-5 justify-center rounded-full px-1.5 text-[11.5px] font-medium tabular-nums ${value === key ? "bg-ink text-white" : "bg-soft text-slate-500"}`}>
+            <span className={`ml-1.5 inline-flex min-w-5 justify-center rounded-full px-1.5 text-[11.5px] font-medium tabular-nums ${value === key ? "bg-ink text-on-ink" : "bg-soft text-slate-500"}`}>
               {count}
             </span>
           )}

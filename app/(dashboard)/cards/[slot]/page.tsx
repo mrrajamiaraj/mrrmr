@@ -6,7 +6,7 @@ import { CardView } from "./card-view";
 
 export async function generateMetadata({ params }: { params: Promise<{ slot: string }> }) {
   const { slot } = await params;
-  return { title: `${slot === "2" ? CARD_NAMES[2] : CARD_NAMES[1]} · Finance Workspace` };
+  return { title: `${slot === "2" ? CARD_NAMES[2] : CARD_NAMES[1]}` };
 }
 
 export default async function CardPage({ params }: { params: Promise<{ slot: string }> }) {

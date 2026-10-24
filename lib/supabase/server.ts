@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { hardenCookie } from "@/lib/supabase/cookies";
 
 // One client per request. Server Components can't write cookies, so setAll
 // may throw there; proxy.ts refreshes the session cookie instead.
@@ -16,7 +17,7 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, hardenCookie(options))
             );
           } catch {}
         },

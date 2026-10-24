@@ -81,10 +81,10 @@ export function RepayForm({
     });
   }
 
-  const input = "min-h-10 rounded-md border border-[#D6D3CB] bg-white px-3 text-[14px] font-normal";
+  const input = "min-h-10 rounded-md border border-line-strong bg-surface px-3 text-[14px] font-normal";
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-lg border border-line bg-[#FAF9F6] p-4">
+    <div className="flex flex-col gap-2.5 rounded-lg border border-line bg-subtle p-4">
       <div className="text-[14.5px] font-semibold">Record a repayment from {first}</div>
       <div className="flex flex-wrap items-end gap-2.5">
         <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-[13px] font-medium text-slate-700">
@@ -111,7 +111,7 @@ export function RepayForm({
             </select>
           </label>
         )}
-        <button type="button" onClick={save} disabled={pending} className="min-h-10 rounded-md bg-brand px-4 text-[14px] font-medium text-white hover:bg-[#173D2E]">
+        <button type="button" onClick={save} disabled={pending} className="min-h-10 rounded-md bg-brand px-4 text-[14px] font-medium text-white hover:bg-brand-hover">
           {pending ? "Saving…" : "Save repayment"}
         </button>
       </div>

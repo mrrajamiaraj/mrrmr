@@ -19,8 +19,8 @@ function ProgressAvatar({ initials, pct }: { initials: string; pct: number }) {
   return (
     <span className="relative grid size-[52px] flex-none place-items-center" title={`${pct}% paid back`}>
       <svg aria-hidden="true" width="52" height="52" viewBox="0 0 52 52" className="absolute inset-0 -rotate-90">
-        <circle cx="26" cy="26" r={r} fill="none" stroke="#E3E1DA" strokeWidth="3" />
-        <circle cx="26" cy="26" r={r} fill="none" stroke="#2E6B52" strokeWidth="3" strokeLinecap="round"
+        <circle cx="26" cy="26" r={r} fill="none" stroke="var(--color-line)" strokeWidth="3" />
+        <circle cx="26" cy="26" r={r} fill="none" stroke="var(--color-brand-2)" strokeWidth="3" strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(pct, 100) / 100)}
           className="transition-[stroke-dashoffset] duration-1000 ease-[var(--ease-out-expo)] [animation:ring_1.1s_var(--ease-out-expo)_backwards]"
           style={{ ["--ring-from" as string]: c }} />
@@ -39,7 +39,7 @@ const AMOUNT_COLOR: Record<EventKind, string> = {
 
 function Stat({ label, value, sub, valueClass = "" }: { label: string; value: string; sub: string; valueClass?: string }) {
   return (
-    <div className="flex flex-col gap-0.5 bg-white px-4 py-3">
+    <div className="flex flex-col gap-0.5 bg-surface px-4 py-3">
       <div className="caption">{label}</div>
       <div className={`money text-[19px] ${valueClass}`}>{value}</div>
       <div className="text-[12px] text-slate-500">{sub}</div>
@@ -146,14 +146,14 @@ export function ProfileModal({
             <>
               <Stat label={isCard ? "Used this card" : "Borrowed"} value={taka((p as CardProfile).used)} sub={`${(p as CardProfile).useCount} times`} />
               <Stat label="Paid back" value={taka(p.paid)} sub={`${p.payCount} payments · ${p.pct}%`} valueClass="text-brand-2" />
-              <Stat label="Still owes" value={taka(p.owes)} sub={`of ${taka((p as CardProfile).used)}`} valueClass="text-[#85570F]" />
+              <Stat label="Still owes" value={taka(p.owes)} sub={`of ${taka((p as CardProfile).used)}`} valueClass="text-owed" />
             </>
           ) : (
             <>
               <Stat label="Loans" value={taka(p.loanTotal)} sub={`${p.loanCount} times`} />
               <Stat label="Card use" value={taka(p.cardTotal)} sub={`${p.cardCount} times`} />
               <Stat label="Paid back" value={taka(p.paid)} sub={`${p.payCount} payments · ${p.pct}%`} valueClass="text-brand-2" />
-              <Stat label="Still owes" value={taka(p.owes)} sub={`of ${taka(p.taken)}`} valueClass="text-[#85570F]" />
+              <Stat label="Still owes" value={taka(p.owes)} sub={`of ${taka(p.taken)}`} valueClass="text-owed" />
             </>
           )}
         </div>
@@ -174,7 +174,7 @@ export function ProfileModal({
             <h3 className="m-0 text-[14.5px] font-semibold">History</h3>
             {p.events.length > 0 && !viewer && (
               <button type="button" onClick={() => setClearing(true)}
-                className="min-h-8 rounded-md px-2 text-[13px] text-[#9B3426] hover:bg-[#F8ECE9]">
+                className="min-h-8 rounded-md px-2 text-[13px] text-bad hover:bg-bad-tint">
                 Clear history
               </button>
             )}
@@ -182,7 +182,7 @@ export function ProfileModal({
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="stack-table w-full min-w-[620px] border-collapse text-[13.5px]">
               <thead>
-                <tr className="border-b border-line bg-[#FAF9F6] text-left">
+                <tr className="border-b border-line bg-subtle text-left">
                   <th scope="col" className={hth}>Date</th>
                   <th scope="col" className={hth}>Type</th>
                   <th scope="col" className={hth}>Details</th>

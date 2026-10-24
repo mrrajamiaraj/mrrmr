@@ -1,4 +1,6 @@
-# Personal Finance & Loan Recovery Workspace
+# RMR Finance
+
+Personal finance and loan-recovery workspace, with day and night themes (header toggle, `T`, or follows the device).
 
 A private dashboard for one person: City Bank balance, two credit cards, who owes you money (loans and card
 use), repayments, and a monthly recovery summary. Built with Next.js (App Router), TypeScript, Tailwind CSS and
@@ -83,6 +85,31 @@ Open http://localhost:3000 and sign in.
 
 Only server code (`proxy.ts`, `lib/supabase/server.ts`) reads them, so they have no `NEXT_PUBLIC_` prefix and
 never reach the browser. **Never** put the `service_role` / secret key in this app.
+
+## Security
+
+What the app enforces (tests: `npm test`; dependency check: `npm run audit`):
+
+- **Database is the real boundary.** Every table has owner-only RLS; view mode is blocked from writing by restrictive
+  policies. Server actions also refuse signed-out and view-mode callers before any query runs.
+- **Sign-in:** per-IP limits (view key 8 tries / 15 min, admin 10 / 15 min, reset emails 5 / hour), one generic error
+  message, constant-time view-key check, safe `next` redirects (no `//` or `/\` tricks).
+- **Password reset** without the old password only works from a fresh reset-email session, never for the viewer.
+- **Session cookies** are `httpOnly`, `SameSite=Lax`, and `Secure` in production.
+- **Headers:** CSP (`connect-src 'self'`, `frame-ancestors 'none'`), HSTS, `nosniff`, Referrer- and Permissions-Policy;
+  private pages and the CSV are `no-store`. CSV cells that start with `= + - @` are defused for Excel.
+
+The in-memory rate limits are per server instance, so on Vercel they slow guessing rather than cap it globally.
+
+**Do these yourself (the app can't):**
+
+1. **Rotate the viewer password.** Its old value is in the source (`lib/viewer.ts`). Supabase → Authentication → Users →
+   the viewer → set a new long random password; put it in Vercel as `VIEWER_PASSWORD` with `VIEWER_EMAIL`.
+2. **Use a stronger view key.** Set `VIEW_PASSCODE` in Vercel to a passphrase (e.g. four random words), not `mrrmr`.
+3. **Set `SITE_URL`** in Vercel to your https address (reset emails use it).
+4. Supabase → Authentication → Providers → Email: turn on **Secure password change**; keep sign-ups **off**;
+   check that **Redirect URLs** only lists your own domains.
+5. If this repository is public on GitHub, make it private (it contains the old viewer login and project ref).
 
 ## Deploy to Vercel
 

@@ -1,14 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/security";
 
 // Landing point for email links (password reset). Handles both link styles:
 //  - ?token_hash=…&type=recovery  (works in any browser — needs the email template from the README)
 //  - ?code=…                      (PKCE: only works in the same browser that asked for the email)
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
-  const nextParam = searchParams.get("next") ?? "/";
-  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+  const next = safeNextPath(searchParams.get("next"));
   const fail = (text: string) => NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(text)}`);
 
   const tokenHash = searchParams.get("token_hash");
