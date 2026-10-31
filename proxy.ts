@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hardenCookie } from "@/lib/supabase/cookies";
+import { isViewerEmail } from "@/lib/viewer";
 
 const PUBLIC_PATHS = ["/login", "/auth", "/view"];
+const VIEWER_PATHS = ["/research"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -42,6 +44,13 @@ export async function proxy(request: NextRequest) {
   if (signedIn && (path === "/login" || path === "/view")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+  // View mode sees Research Finance only: every other page (and the CSV export) sends the viewer there.
+  if (signedIn && isViewerEmail(data?.claims?.email as string | undefined) && !isPublic && !VIEWER_PATHS.some((p) => path === p || path.startsWith(p + "/"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/research";
     url.search = "";
     return NextResponse.redirect(url);
   }

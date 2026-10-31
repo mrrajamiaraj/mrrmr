@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { TABS } from "@/components/shell";
+import { useTabs } from "@/components/shell";
 import { Avatar } from "@/components/debtors/bits";
 import { ArrowRightIcon, CommandIcon, DownloadIcon, LogoutIcon, MonitorIcon, MoonIcon, SearchIcon, SunIcon } from "@/components/icons";
 import { setTheme, useTheme } from "@/components/theme";
@@ -47,9 +47,10 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
   const [, start] = useTransition();
   const listId = useId();
   const listRef = useRef<HTMLUListElement>(null);
+  const tabs = useTabs();
 
   const items = useMemo<Item[]>(() => [
-    ...TABS.map((t) => {
+    ...tabs.map((t) => {
       const Icon = t.icon;
       return {
         id: t.href, group: "Go to", label: t.label, hint: path.startsWith(t.href) ? "Current" : `G ${t.key.toUpperCase()}`,
@@ -60,10 +61,10 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
       id: `person-${p.id}`, group: "People", label: p.name, hint: p.owes > 0 ? `owes ${taka(p.owes)}` : "all paid",
       icon: <Avatar text={p.initials} size={26} />, run: () => openRef.current(p.id),
     })),
-    {
+    ...(viewer ? [] : [{
       id: "export", group: "Actions", label: "Export everything as CSV", icon: <DownloadIcon size={16} />,
       run: () => { window.location.href = "/export"; },
-    },
+    }]),
     {
       id: "theme", group: "Actions", label: mode === "dark" ? "Switch to light mode" : "Switch to dark (night) mode",
       icon: mode === "dark" ? <SunIcon size={16} /> : <MoonIcon size={16} />,
@@ -81,7 +82,7 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
       id: "logout", group: "Actions", label: viewer ? "Leave view mode" : "Log out", icon: <LogoutIcon size={16} />,
       run: () => start(() => (viewer ? exitViewMode() : signOut())),
     },
-  ], [path, router, viewer, people, openRef, onShortcuts, mode]);
+  ], [tabs, path, router, viewer, people, openRef, onShortcuts, mode]);
 
   const ql = q.trim().toLowerCase();
   // Every typed word must appear somewhere in the label, in any order: "card city" finds "City Bank Credit Card".

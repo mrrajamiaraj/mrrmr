@@ -9,6 +9,7 @@ import { ProfileModal } from "@/components/debtors/profile-modal";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRow, totalRow } from "@/components/debtors/bits";
 import { SetupAccount } from "@/components/setup-forms";
+import { DebitUsed } from "@/components/debit-used";
 import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
 import { FlowChart, OwedRanking, type Flow } from "@/components/charts";
 import { SortTh, useSort } from "@/components/sortable";
@@ -104,6 +105,8 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
           </span>
         </div>
       </div>
+
+      <DebitUsed accountId={account.id} total={account.debit_used} />
 
       <div className="grid items-stretch gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <FlowChart title="Lending activity" sub={`Lent from ${account.name} and paid back, per month. Hover or use ← → for details.`}

@@ -29,7 +29,7 @@ export async function enterViewMode(_prev: AuthState, formData: FormData): Promi
   }
 
   viewLimit.clear(ip);
-  redirect("/account");
+  redirect("/research");
 }
 
 export async function exitViewMode() {

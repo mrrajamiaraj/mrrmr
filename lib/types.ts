@@ -5,6 +5,7 @@ export type Account = {
   name: string;
   holder_name: string | null;
   balance: number;
+  debit_used: number;
   updated_at: string;
 };
 

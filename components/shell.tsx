@@ -35,6 +35,11 @@ export const TABS = [
   { href: "/research", label: "Research Finance", nav: "Research", short: "Research", key: "r", icon: FlaskIcon },
 ];
 
+/** The sections this user may open: view mode sees Research Finance only (the proxy enforces it). */
+export function useTabs() {
+  return useViewer() ? TABS.filter((t) => t.href === "/research") : TABS;
+}
+
 // Side padding grows with the screen, and never less than a landscape iPhone's notch.
 const pad = "pl-[max(clamp(16px,4vw,40px),env(safe-area-inset-left))] pr-[max(clamp(16px,4vw,40px),env(safe-area-inset-right))]";
 const ghostBtn = "inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line bg-surface px-2.5 text-[13.5px] text-slate-700 hover:border-line-strong hover:bg-soft sm:px-3";
@@ -53,8 +58,9 @@ function PendingBar() {
 /** Sticky app header: logo, section tabs with a sliding underline, search, export and account buttons. Mounted once in the layout. */
 export function TopBar() {
   const admin = useContext(AdminContext);
+  const tabs = useTabs();
   const path = usePathname();
-  const active = TABS.find((t) => path.startsWith(t.href))?.href;
+  const active = tabs.find((t) => path.startsWith(t.href))?.href;
   const router = useRouter();
   const { ref, box } = useSlidingIndicator<HTMLElement>(active);
   const [scrolled, setScrolled] = useState(false);
@@ -85,7 +91,7 @@ export function TopBar() {
       if (e.key === "?") { e.preventDefault(); setHelp(true); return; }
       if (goPending.current && performance.now() - goPending.current < 1200) {
         goPending.current = 0;
-        const tab = TABS.find((t) => t.key === k);
+        const tab = tabs.find((t) => t.key === k);
         if (tab) { e.preventDefault(); router.push(tab.href); }
         return;
       }
@@ -97,7 +103,7 @@ export function TopBar() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [router]);
+  }, [router, tabs]);
 
   // Spotlight: any `.spot` surface gets a soft glow that follows the pointer (CSS reads --mx / --my).
   useEffect(() => {
@@ -123,13 +129,13 @@ export function TopBar() {
       >
         {/* Phones: logo and buttons on one row; the sections live in the bottom tab bar. */}
         <div className="mx-auto flex max-w-[1200px] items-center gap-x-6">
-          <Link href="/account" aria-label="RMR Finance, home" className="group flex flex-none items-center py-3 text-[15px]">
+          <Link href={tabs[0].href} aria-label="RMR Finance, home" className="group flex flex-none items-center py-3 text-[15px]">
             <Wordmark compact />
           </Link>
           {/* Phones use the tab bar at the bottom of the screen instead (MobileNav). */}
           <nav ref={ref} aria-label="Sections"
             className="relative -mb-px hidden min-w-0 flex-auto gap-1 overflow-x-auto [scrollbar-width:none] md:flex">
-            {TABS.map((t) => {
+            {tabs.map((t) => {
               const on = t.href === active;
               const Icon = t.icon;
               return (
@@ -159,10 +165,12 @@ export function TopBar() {
               <kbd className="hidden rounded border border-line bg-soft px-1.5 font-sans text-[11px] text-slate-500 2xl:inline">Ctrl K</kbd>
             </button>
             {/* Phones reach Export from search (Ctrl K / the magnifier) to keep this row to four buttons. */}
-            <a href="/export" download aria-label="Export CSV" title="Export CSV" className="hidden min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-[13.5px] text-slate-600 hover:bg-soft hover:text-ink sm:inline-flex">
-              <DownloadIcon size={15} />
-              <span className="sr-only">Export</span>
-            </a>
+            {!admin.viewer && (
+              <a href="/export" download aria-label="Export CSV" title="Export CSV" className="hidden min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-[13.5px] text-slate-600 hover:bg-soft hover:text-ink sm:inline-flex">
+                <DownloadIcon size={15} />
+                <span className="sr-only">Export</span>
+              </a>
+            )}
             <ThemeToggle />
             {admin.viewer ? (
               <form action={exitViewMode}>
@@ -186,20 +194,20 @@ export function TopBar() {
         </div>
       </header>
       {palette && <CommandPalette viewer={admin.viewer} onClose={() => setPalette(false)} onShortcuts={showHelp} />}
-      {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
-      <MobileNav active={active} />
+      {help && <ShortcutsDialog tabs={tabs} onClose={() => setHelp(false)} />}
+      <MobileNav tabs={tabs} active={active} />
       <BackToTop />
     </>
   );
 }
 
 /** Phones: the sections as a thumb-reach tab bar fixed to the bottom edge. */
-function MobileNav({ active }: { active?: string }) {
+function MobileNav({ tabs, active }: { tabs: typeof TABS; active?: string }) {
   return (
     <nav aria-label="Sections"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md backdrop-saturate-150 md:hidden">
       <div className="mx-auto flex max-w-[560px]">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const on = t.href === active;
           const Icon = t.icon;
           return (
@@ -218,17 +226,16 @@ function MobileNav({ active }: { active?: string }) {
   );
 }
 
-const SHORTCUTS: [string[], string][] = [
-  [["Ctrl", "K"], "Search pages, people and actions"],
-  [["/"], "Open search"],
-  ...TABS.map((t): [string[], string] => [["G", t.key.toUpperCase()], `Go to ${t.label}`]),
-  [["T"], "Switch day / night mode"],
-  [["←", "→"], "Move between months in a chart"],
-  [["Esc"], "Close a dialog"],
-  [["?"], "Show this list"],
-];
-
-function ShortcutsDialog({ onClose }: { onClose: () => void }) {
+function ShortcutsDialog({ tabs, onClose }: { tabs: typeof TABS; onClose: () => void }) {
+  const SHORTCUTS: [string[], string][] = [
+    [["Ctrl", "K"], "Search pages, people and actions"],
+    [["/"], "Open search"],
+    ...tabs.map((t): [string[], string] => [["G", t.key.toUpperCase()], `Go to ${t.label}`]),
+    [["T"], "Switch day / night mode"],
+    [["←", "→"], "Move between months in a chart"],
+    [["Esc"], "Close a dialog"],
+    [["?"], "Show this list"],
+  ];
   return (
     <Modal title="Shortcuts & appearance" onClose={onClose} maxWidth={460}>
       <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3.5">

@@ -14,6 +14,8 @@ function friendly(error: NonNullable<DbError>): string {
   const m = error.message;
   if ((error.code === "PGRST202" || /could not find the function/i.test(m)) && /delete_record/.test(m))
     return "Deleting needs one more database function. Run supabase/migrations/0004_delete_records.sql in the Supabase SQL Editor, then try again.";
+  if ((error.code === "PGRST202" || /could not find the function/i.test(m)) && /add_debit_use/.test(m))
+    return "The debit card total needs one more database function. Run supabase/migrations/0006_debit_card_used.sql in the Supabase SQL Editor, then try again.";
   if (error.code === "PGRST202" || /could not find the function/i.test(m))
     return "The database functions are missing. Run supabase/migrations/0002_finance_functions.sql in the Supabase SQL Editor, then try again.";
   if (/balance_check/.test(m)) return "That would make the balance go below ৳0.";
@@ -45,6 +47,22 @@ export async function setAccountBalance(accountId: string, balance: number): Pro
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
   const supabase = await writer();
   const { error } = await supabase.from("accounts").update({ balance: b }).eq("id", accountId);
+  return done(error);
+}
+
+export async function addDebitUse(accountId: string, amount: number): Promise<ActionResult> {
+  const a = money(amount);
+  if (!(a > 0)) return { error: "Enter an amount above 0." };
+  const supabase = await writer();
+  const { error } = await supabase.rpc("add_debit_use", { p_account_id: accountId, p_amount: a });
+  return done(error);
+}
+
+export async function setDebitUsed(accountId: string, total: number): Promise<ActionResult> {
+  const t = money(total);
+  if (!(t >= 0)) return { error: "Enter a total of 0 or more." };
+  const supabase = await writer();
+  const { error } = await supabase.from("accounts").update({ debit_used: t }).eq("id", accountId);
   return done(error);
 }
 
