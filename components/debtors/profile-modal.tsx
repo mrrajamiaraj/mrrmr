@@ -8,7 +8,8 @@ import { Avatar, StatusPill } from "@/components/debtors/bits";
 import { useViewer } from "@/components/shell";
 import { RepayForm, repayTargets, type RepayTarget } from "@/components/debtors/repay-form";
 import { dateLong, taka } from "@/lib/format";
-import { amountSigned, CARD_NAMES, cardTitle, type CardProfile, type EventKind, type HistoryEvent, type Profile } from "@/lib/ledger";
+import { amountSigned, CARD_NAMES, cardTitle, type CardProfile, type EventKind, type HistoryEvent, type PlanStatus, type Profile } from "@/lib/ledger";
+import { EmiSchedules } from "@/components/debtors/emi-schedule";
 import type { Card } from "@/lib/types";
 
 const hth = "whitespace-nowrap px-3 py-2 text-[11.5px] font-medium uppercase tracking-[0.04em] text-slate-500";
@@ -53,6 +54,8 @@ export function ProfileModal({
   cards,
   account,
   card,
+  plans,
+  today,
   onClose,
   onMore,
   onSaved,
@@ -62,6 +65,9 @@ export function ProfileModal({
   cards: Card[];
   account: { id: string; name: string } | null;
   card?: Card;
+  /** Card page only: this person's payment plans on the card, for the EMI schedule. */
+  plans?: PlanStatus[];
+  today?: string;
   onClose: () => void;
   onMore: () => void;
   onSaved: (msg: string) => void;
@@ -168,6 +174,8 @@ export function ProfileModal({
             )}
           </dl>
         )}
+
+        {isCard && plans && today && <EmiSchedules plans={plans} today={today} />}
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">

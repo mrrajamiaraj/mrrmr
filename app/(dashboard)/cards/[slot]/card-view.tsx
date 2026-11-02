@@ -15,7 +15,7 @@ import { FlowChart, OUT_COLOR, Ring, type Flow } from "@/components/charts";
 import { SortTh, useSort } from "@/components/sortable";
 import { usePalettePeople } from "@/components/command-palette";
 import { setCardBalance } from "@/lib/actions";
-import { buildCardProfiles, byOwesThenName, CARD_NAMES, cardPlanStatus, cardTitle, type PlanStatus } from "@/lib/ledger";
+import { buildCardProfiles, byOwesThenName, CARD_NAMES, cardPlanStatus, cardTitle, emiSummary, type PlanStatus } from "@/lib/ledger";
 import { dateLong, dateShort, initials, taka, timestampLong } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
 
@@ -31,7 +31,7 @@ function PlanCell({ status: s, today }: { status: PlanStatus | undefined; today:
   return s.plan === "emi" ? (
     <span className="flex flex-col leading-snug">
       <span className="font-medium text-slate-700">EMI {s.of} × {taka(s.perMonth)} <span className="font-normal text-slate-500">· {s.paidCount}/{s.of} paid</span></span>
-      {when}
+      <span>{when}{s.left > 0 && <span className="text-slate-500"> · {taka(s.left)} left</span>}</span>
     </span>
   ) : (
     <span className="flex flex-col leading-snug">
@@ -69,6 +69,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
     ...data.repayments.filter((r) => r.applies_to === "card" && r.card_id === card.id).map((r) => ({ iso: r.paid_on, amount: r.amount, dir: "in" as const })),
   ] : [], [uses, data.repayments, card]);
   const plans = useMemo(() => (card ? cardPlanStatus(data, card.id) : new Map<string, PlanStatus>()), [data, card]);
+  const plansOf = (personId: string) => [...plans.values()].filter((s) => s.personId === personId);
   usePalettePeople(profiles, setOpenId);
 
   if (!card) {
@@ -215,7 +216,10 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                   <td data-label="Used" className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
                   <td data-label="Paid back" className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
                   <td data-label="Still owes" className={`${td} money text-right text-owed`}>{taka(p.owes)}</td>
-                  <td data-label="Due" className={td}><DuePill kind={p.dueKind}>{p.dueShort}</DuePill></td>
+                  <td data-label="Due" className={td}>
+                    <DuePill kind={p.dueKind}>{p.dueShort}</DuePill>
+                    {emiSummary(plansOf(p.id)) && <div className="whitespace-nowrap text-[12px] text-slate-500">{emiSummary(plansOf(p.id))}</div>}
+                  </td>
                   <td data-label="Available after" className={`${td} money text-right`}>{p.run != null ? taka(p.run) : "—"}</td>
                 </tr>
               ))}
@@ -305,6 +309,8 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
           card={card}
           cards={data.cards}
           account={account}
+          plans={plansOf(pv.id)}
+          today={today}
           onClose={() => setOpenId(null)}
           onMore={() => { setOpenId(null); openAdd(pv.name); }}
           onSaved={(text) => setFlash({ text, at: "" })}

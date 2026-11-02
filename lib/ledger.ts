@@ -92,7 +92,8 @@ function dueInfo(due: string | null, owes: number, today: string, next?: Pending
 // ---- credit card payment plans -------------------------------------------------
 
 export type Installment = { useId: string; iso: string; amount: number; n: number; of: number };
-export type PendingInstallment = Installment & { left: number };
+/** `paidOn`: the repayment date that cleared it (or last went toward it, if only partly paid). */
+export type PendingInstallment = Installment & { left: number; paidOn: string | null };
 
 const isEmi = (u: CardUse) => u.pay_plan === "emi" && (u.emi_months ?? 0) > 1;
 
@@ -113,50 +114,89 @@ export function emiPerMonth(amount: number, months: number) {
   return Math.floor((amount / months) * 100) / 100;
 }
 
-/** Applies what was paid to installments, earliest due first; returns each with what's still left on it. */
-function settle(sched: Installment[], paid: number): PendingInstallment[] {
-  let pot = paid;
-  return [...sched]
+type Payment = { iso: string; amount: number };
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Applies repayments, oldest first, to installments, earliest due first (like a card statement).
+ * Returns each installment with what's still left on it and when it was paid.
+ */
+function settle(sched: Installment[], pays: Payment[]): PendingInstallment[] {
+  const out: PendingInstallment[] = [...sched]
     .sort((a, b) => a.iso.localeCompare(b.iso) || a.n - b.n)
-    .map((s) => {
-      const cover = Math.min(pot, s.amount);
-      pot -= cover;
-      return { ...s, left: Math.round((s.amount - cover) * 100) / 100 };
-    });
+    .map((s) => ({ ...s, left: s.amount, paidOn: null }));
+  let i = 0;
+  for (const p of [...pays].sort((a, b) => a.iso.localeCompare(b.iso))) {
+    let pot = p.amount;
+    while (pot > 0.005 && i < out.length) {
+      const take = Math.min(pot, out[i].left);
+      out[i].left = round2(out[i].left - take);
+      out[i].paidOn = p.iso || null;
+      pot = round2(pot - take);
+      if (out[i].left <= 0.005) { out[i].left = 0; i++; }
+    }
+  }
+  return out;
 }
 
 export type PlanStatus = {
+  useId: string;
+  personId: string;
   plan: PayPlan;
+  reason: string;
+  usedOn: string;
+  amount: number;
   of: number;
   perMonth: number;
   paidCount: number;
+  /** what is still unpaid on this use's installments */
+  left: number;
   next: PendingInstallment | null;
   last: string | null;
+  installments: PendingInstallment[];
 };
 
-/** For every card use on one card: its plan, how many installments are paid, and the next one due. */
+/** For every card use on one card: its plan, each installment's paid/left state, and the next one due. */
 export function cardPlanStatus(data: FinanceData, cardId: string): Map<string, PlanStatus> {
   const uses = data.cardUses.filter((u) => u.card_id === cardId && u.person_id);
   const out = new Map<string, PlanStatus>();
   for (const person of new Set(uses.map((u) => u.person_id!))) {
     const mine = uses.filter((u) => u.person_id === person);
-    const paid = data.repayments
+    const pays = data.repayments
       .filter((r) => r.applies_to === "card" && r.card_id === cardId && r.person_id === person)
-      .reduce((t, r) => t + r.amount, 0);
-    const settled = settle(mine.flatMap(installmentsOf), paid);
+      .map((r) => ({ iso: r.paid_on, amount: r.amount }));
+    const settled = settle(mine.flatMap(installmentsOf), pays);
     for (const u of mine) {
       const own = settled.filter((s) => s.useId === u.id);
       out.set(u.id, {
+        useId: u.id,
+        personId: person,
         plan: isEmi(u) ? "emi" : "full",
+        reason: u.reason_or_place,
+        usedOn: u.used_on,
+        amount: u.amount,
         of: own.length,
         perMonth: isEmi(u) ? emiPerMonth(u.amount, u.emi_months!) : u.amount,
-        paidCount: own.filter((s) => s.left <= 0.005).length,
-        next: own.find((s) => s.left > 0.005) ?? null,
+        paidCount: own.filter((s) => s.left <= 0).length,
+        left: round2(own.reduce((t, s) => t + s.left, 0)),
+        next: own.find((s) => s.left > 0) ?? null,
         last: own.length ? own[own.length - 1].iso : null,
+        installments: own,
       });
     }
   }
   return out;
+}
+
+/** One line for a person's EMIs on a card, e.g. "EMI 2/6 paid · ৳20,000 left". Null if they have none. */
+export function emiSummary(plans: PlanStatus[]): string | null {
+  const emis = plans.filter((s) => s.plan === "emi");
+  if (!emis.length) return null;
+  const left = emis.reduce((t, s) => t + s.left, 0);
+  if (left <= 0) return emis.length === 1 ? `EMI ${emis[0].of}/${emis[0].of} paid` : `${emis.length} EMIs paid off`;
+  return emis.length === 1
+    ? `EMI ${emis[0].paidCount}/${emis[0].of} paid · ${taka(left)} left`
+    : `${emis.length} EMIs · ${taka(left)} left`;
 }
 
 function planDetail(u: CardUse) {
@@ -288,7 +328,7 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
       const owes = Math.max(used - paid, 0);
 
       // Cards: payments clear installments earliest first, so the next due is the first one not fully paid.
-      const next = isCard && owes > 0 ? settle(U.flatMap((u) => u.sched), paid).find((s) => s.left > 0.005) ?? null : null;
+      const next = isCard && owes > 0 ? settle(U.flatMap((u) => u.sched), [{ iso: "", amount: paid }]).find((s) => s.left > 0) ?? null : null;
       const dues = U.map((u) => u.due).filter((d): d is string => !!d).sort();
       const late = dues.filter((d) => d < today);
       const due = owes <= 0 ? null : isCard ? next?.iso ?? null : (late.length ? late[late.length - 1] : dues[0] ?? null);
