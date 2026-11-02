@@ -16,6 +16,15 @@ export function addDays(iso: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Same day n months later, clamped to the month's last day (Jan 31 + 1 → Feb 28). */
+export function addMonths(iso: string, n: number) {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1 + n, 1));
+  const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+  t.setUTCDate(Math.min(d, last));
+  return t.toISOString().slice(0, 10);
+}
+
 export function daysBetween(fromIso: string, toIso: string) {
   return Math.round((Date.parse(toIso + "T00:00:00Z") - Date.parse(fromIso + "T00:00:00Z")) / 86400000);
 }

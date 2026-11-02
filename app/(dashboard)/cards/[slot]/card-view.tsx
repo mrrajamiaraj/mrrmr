@@ -15,9 +15,31 @@ import { FlowChart, OUT_COLOR, Ring, type Flow } from "@/components/charts";
 import { SortTh, useSort } from "@/components/sortable";
 import { usePalettePeople } from "@/components/command-palette";
 import { setCardBalance } from "@/lib/actions";
-import { buildCardProfiles, byOwesThenName, CARD_NAMES, cardTitle } from "@/lib/ledger";
-import { dateLong, initials, taka, timestampLong } from "@/lib/format";
+import { buildCardProfiles, byOwesThenName, CARD_NAMES, cardPlanStatus, cardTitle, type PlanStatus } from "@/lib/ledger";
+import { dateLong, dateShort, initials, taka, timestampLong } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
+
+/** "Full · by Dec 5" or "EMI 2/6 paid · next ৳5,000 Dec 5", red when late. */
+function PlanCell({ status: s, today }: { status: PlanStatus | undefined; today: string }) {
+  if (!s || !s.of) return <span className="text-slate-400">—</span>;
+  const late = !!s.next && s.next.iso < today;
+  const when = s.next ? (
+    <span className={late ? "font-medium text-[#9B3426]" : "text-slate-600"}>
+      {late ? "Late — " : ""}{s.plan === "emi" ? `next ${taka(s.next.left)} ` : "by "}{dateShort(s.next.iso)}
+    </span>
+  ) : <span className="text-brand-2">Paid</span>;
+  return s.plan === "emi" ? (
+    <span className="flex flex-col leading-snug">
+      <span className="font-medium text-slate-700">EMI {s.of} × {taka(s.perMonth)} <span className="font-normal text-slate-500">· {s.paidCount}/{s.of} paid</span></span>
+      {when}
+    </span>
+  ) : (
+    <span className="flex flex-col leading-snug">
+      <span className="font-medium text-slate-700">Full payment</span>
+      {when}
+    </span>
+  );
+}
 
 /**
  * One card on its own: limit, available now, what people will give back, and available after.
@@ -46,6 +68,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
     ...uses.map((u) => ({ iso: u.used_on, amount: u.amount, dir: "out" as const })),
     ...data.repayments.filter((r) => r.applies_to === "card" && r.card_id === card.id).map((r) => ({ iso: r.paid_on, amount: r.amount, dir: "in" as const })),
   ] : [], [uses, data.repayments, card]);
+  const plans = useMemo(() => (card ? cardPlanStatus(data, card.id) : new Map<string, PlanStatus>()), [data, card]);
   usePalettePeople(profiles, setOpenId);
 
   if (!card) {
@@ -212,13 +235,14 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       <SectionCard>
         <SectionHead id="log-h" title="Transactions" sub="Every use of this card. Tap a name to open their profile, or a heading to sort." />
         <div className="overflow-x-auto">
-          <table className="stack-table w-full min-w-[640px] border-collapse text-[14px]">
+          <table className="stack-table w-full min-w-[820px] border-collapse text-[14px]">
             <thead>
               <tr className={theadRow}>
                 <SortTh k="date" label="Date" sort={sort} onSort={toggle} />
                 <SortTh k="person" label="Person" sort={sort} onSort={toggle} text />
                 <th scope="col" className={th}>Why / where</th>
                 <SortTh k="amount" label="Amount" sort={sort} onSort={toggle} right />
+                <th scope="col" className={th}>Pay back</th>
                 <th scope="col" className={th}><span className="sr-only">Delete</span></th>
               </tr>
             </thead>
@@ -239,6 +263,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                     </th>
                     <td data-label="Why / where" className={td}>{u.reason_or_place}</td>
                     <td data-label="Amount" className={`${td} money text-right ${me ? "text-slate-500" : ""}`}>{taka(u.amount)}</td>
+                    <td data-label="Pay back" className={`${td} text-[13px]`}><PlanCell status={plans.get(u.id)} today={today} /></td>
                     <td className="stack-corner px-2 text-right">
                       <DeleteButton label={`Delete ${name}'s card use, ${taka(u.amount)}`} onClick={() => setDeleting({
                         kind: "card_use", id: u.id, amount: u.amount, iso: u.used_on,
@@ -250,7 +275,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                 );
               })}
               {uses.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">Nothing recorded on this card yet.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">Nothing recorded on this card yet.</td></tr>
               )}
             </tbody>
           </table>

@@ -1,5 +1,5 @@
-import { addDays, dateLong, dateShort, firstName, initials, pct, taka } from "@/lib/format";
-import type { Card, FinanceData, Status } from "@/lib/types";
+import { addDays, addMonths, dateLong, dateShort, firstName, initials, pct, taka } from "@/lib/format";
+import type { Card, CardUse, FinanceData, PayPlan, Status } from "@/lib/types";
 
 export type EventKind = "Took loan" | "Used my card" | "Paid back";
 
@@ -79,12 +79,89 @@ export function cardTitle(card: Card) {
   return `${card.bank} ${card.name}`.trim();
 }
 
-function dueInfo(due: string | null, owes: number, today: string) {
+function dueInfo(due: string | null, owes: number, today: string, next?: PendingInstallment | null) {
   const dueKind: DueKind = !due ? "later" : due < today ? "late" : due <= addDays(today, 7) ? "soon" : "later";
   const dueText =
-    owes <= 0 ? "All paid back" : due ? (due < today ? `Was due ${dateLong(due)}` : `Pay back by ${dateLong(due)}`) : "No pay-back date set";
+    owes <= 0 ? "All paid back"
+    : due && next && next.of > 1 ? `EMI ${next.n} of ${next.of}: ${taka(next.left)} ${due < today ? "was due" : "due"} ${dateLong(due)}`
+    : due ? (due < today ? `Was due ${dateLong(due)}` : `Pay back by ${dateLong(due)}`) : "No pay-back date set";
   const dueShort = !due ? "Not set" : due < today ? `Late — ${dateShort(due)}` : dateShort(due);
   return { dueKind, dueText, dueShort };
+}
+
+// ---- credit card payment plans -------------------------------------------------
+
+export type Installment = { useId: string; iso: string; amount: number; n: number; of: number };
+export type PendingInstallment = Installment & { left: number };
+
+const isEmi = (u: CardUse) => u.pay_plan === "emi" && (u.emi_months ?? 0) > 1;
+
+/** One installment for a full payment, or one per month for EMI (the last absorbs rounding). */
+export function installmentsOf(u: CardUse): Installment[] {
+  if (!u.due_on) return [];
+  if (!isEmi(u)) return [{ useId: u.id, iso: u.due_on, amount: u.amount, n: 1, of: 1 }];
+  const of = u.emi_months!;
+  const per = Math.floor((u.amount / of) * 100) / 100;
+  return Array.from({ length: of }, (_, i) => ({
+    useId: u.id, iso: addMonths(u.due_on!, i), n: i + 1, of,
+    amount: i === of - 1 ? Math.round((u.amount - per * (of - 1)) * 100) / 100 : per,
+  }));
+}
+
+/** Per-month amount of an EMI use. */
+export function emiPerMonth(amount: number, months: number) {
+  return Math.floor((amount / months) * 100) / 100;
+}
+
+/** Applies what was paid to installments, earliest due first; returns each with what's still left on it. */
+function settle(sched: Installment[], paid: number): PendingInstallment[] {
+  let pot = paid;
+  return [...sched]
+    .sort((a, b) => a.iso.localeCompare(b.iso) || a.n - b.n)
+    .map((s) => {
+      const cover = Math.min(pot, s.amount);
+      pot -= cover;
+      return { ...s, left: Math.round((s.amount - cover) * 100) / 100 };
+    });
+}
+
+export type PlanStatus = {
+  plan: PayPlan;
+  of: number;
+  perMonth: number;
+  paidCount: number;
+  next: PendingInstallment | null;
+  last: string | null;
+};
+
+/** For every card use on one card: its plan, how many installments are paid, and the next one due. */
+export function cardPlanStatus(data: FinanceData, cardId: string): Map<string, PlanStatus> {
+  const uses = data.cardUses.filter((u) => u.card_id === cardId && u.person_id);
+  const out = new Map<string, PlanStatus>();
+  for (const person of new Set(uses.map((u) => u.person_id!))) {
+    const mine = uses.filter((u) => u.person_id === person);
+    const paid = data.repayments
+      .filter((r) => r.applies_to === "card" && r.card_id === cardId && r.person_id === person)
+      .reduce((t, r) => t + r.amount, 0);
+    const settled = settle(mine.flatMap(installmentsOf), paid);
+    for (const u of mine) {
+      const own = settled.filter((s) => s.useId === u.id);
+      out.set(u.id, {
+        plan: isEmi(u) ? "emi" : "full",
+        of: own.length,
+        perMonth: isEmi(u) ? emiPerMonth(u.amount, u.emi_months!) : u.amount,
+        paidCount: own.filter((s) => s.left <= 0.005).length,
+        next: own.find((s) => s.left > 0.005) ?? null,
+        last: own.length ? own[own.length - 1].iso : null,
+      });
+    }
+  }
+  return out;
+}
+
+function planDetail(u: CardUse) {
+  if (isEmi(u)) return ` · EMI ${u.emi_months} × ${taka(emiPerMonth(u.amount, u.emi_months!))} from ${dateShort(u.due_on)}`;
+  return u.due_on ? ` · pay back by ${dateShort(u.due_on)}` : "";
 }
 
 /**
@@ -121,7 +198,7 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
       })),
       ...C.map((x) => ({
         id: x.id, iso: x.used_on, created: x.created_at, o: 1, kind: "Used my card" as const, amount: x.amount, sign: 1 as const,
-        detail: `${x.reason_or_place} · ${cardLabel(cardsById.get(x.card_id))}`,
+        detail: `${x.reason_or_place} · ${cardLabel(cardsById.get(x.card_id))}${isEmi(x) ? ` · EMI ${x.emi_months} months` : ""}`,
       })),
       ...R.map((x) => ({
         id: x.id, iso: x.paid_on, created: x.created_at, o: 2, kind: "Paid back" as const, amount: x.amount, sign: -1 as const,
@@ -194,9 +271,9 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
     ? data.cardUses
         .filter((u) => u.card_id === scope.cardId && u.person_id)
         .map((u) => ({ id: u.id, person: u.person_id!, iso: u.used_on, created: u.created_at, amount: u.amount, due: u.due_on, reason: u.reason_or_place,
-          detail: `${u.reason_or_place} · #${u.category}${u.due_on ? ` · pay back by ${dateShort(u.due_on)}` : ""}` }))
+          sched: installmentsOf(u), detail: `${u.reason_or_place} · #${u.category}${planDetail(u)}` }))
     : data.loans.map((l) => ({ id: l.id, person: l.person_id, iso: l.taken_on, created: l.created_at, amount: l.amount, due: l.due_on, reason: l.reason,
-        detail: `${l.reason} · ${l.method}${l.due_on ? ` · pay back by ${dateShort(l.due_on)}` : ""}` }));
+        sched: [] as Installment[], detail: `${l.reason} · ${l.method}${l.due_on ? ` · pay back by ${dateShort(l.due_on)}` : ""}` }));
   const repays = data.repayments.filter((r) => (isCard ? r.applies_to === "card" && r.card_id === scope.cardId : r.applies_to === "loan"));
   const ids = [...new Set([...takes.map((t) => t.person), ...repays.map((r) => r.person_id)])];
 
@@ -210,9 +287,11 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
       const paid = R.reduce((t, x) => t + x.amount, 0);
       const owes = Math.max(used - paid, 0);
 
+      // Cards: payments clear installments earliest first, so the next due is the first one not fully paid.
+      const next = isCard && owes > 0 ? settle(U.flatMap((u) => u.sched), paid).find((s) => s.left > 0.005) ?? null : null;
       const dues = U.map((u) => u.due).filter((d): d is string => !!d).sort();
       const late = dues.filter((d) => d < today);
-      const due = owes > 0 ? (late.length ? late[late.length - 1] : dues[0] ?? null) : null;
+      const due = owes <= 0 ? null : isCard ? next?.iso ?? null : (late.length ? late[late.length - 1] : dues[0] ?? null);
       const status: Status = owes <= 0 ? "Repaid" : paid > 0 ? "Partially Paid" : "Pending";
 
       const raw = [
@@ -243,7 +322,7 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
         loanOut: isCard ? 0 : owes,
         cardOut: isCard ? owes : 0,
         pct: pct(paid, used),
-        status, due, ...dueInfo(due, owes, today),
+        status, due, ...dueInfo(due, owes, today, next),
         lastIso: raw.length ? raw[raw.length - 1].iso : null,
         txCount: raw.length,
         reasons: U.map((u) => u.reason),

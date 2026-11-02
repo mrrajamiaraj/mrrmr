@@ -11,7 +11,7 @@ import { DuePill, Flash, PersonButton, SectionCard, SectionHead, td, th, theadRo
 import { SetupAccount } from "@/components/setup-forms";
 import { DebitUsed } from "@/components/debit-used";
 import { DeleteButton, DeleteRecordDialog, undoText, type DeleteTarget } from "@/components/delete-record-dialog";
-import { FlowChart, OwedRanking, type Flow } from "@/components/charts";
+import { OwedRanking } from "@/components/charts";
 import { SortTh, useSort } from "@/components/sortable";
 import { usePalettePeople } from "@/components/command-palette";
 import { setAccountBalance } from "@/lib/actions";
@@ -35,12 +35,8 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
   const peopleById = useMemo(() => new Map(data.people.map((p) => [p.id, p])), [data.people]);
   const nameOf = (id: string) => peopleById.get(id)?.name ?? "Unknown";
   const { sorted: loanRows, sort, toggle } = useSort(loans, {
-    date: (l) => l.taken_on, person: (l) => nameOf(l.person_id), amount: (l) => l.amount, due: (l) => l.due_on,
+    date: (l) => l.taken_on, person: (l) => nameOf(l.person_id), amount: (l) => l.amount,
   });
-  const flows = useMemo<Flow[]>(() => [
-    ...loans.map((l) => ({ iso: l.taken_on, amount: l.amount, dir: "out" as const })),
-    ...data.repayments.filter((r) => r.applies_to === "loan").map((r) => ({ iso: r.paid_on, amount: r.amount, dir: "in" as const })),
-  ], [loans, data.repayments]);
   usePalettePeople(profiles, setOpenId);
 
   if (!account) {
@@ -108,11 +104,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
 
       <DebitUsed accountId={account.id} total={account.debit_used} />
 
-      <div className="grid items-stretch gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-        <FlowChart title="Lending activity" sub={`Lent from ${account.name} and paid back, per month. Hover or use ← → for details.`}
-          flows={flows} today={today} outLabel="Lent" inLabel="Paid back" />
-        <OwedRanking items={profiles} onOpen={open} />
-      </div>
+      <OwedRanking items={profiles} onOpen={open} />
 
       <Flash text={flash.text} />
 
@@ -136,7 +128,6 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                 <th scope="col" className={th}>Why</th>
                 <th scope="col" className={th}>How</th>
                 <SortTh k="amount" label="Amount" sort={sort} onSort={toggle} right />
-                <SortTh k="due" label="Pay back by" sort={sort} onSort={toggle} />
                 <th scope="col" className={th}><span className="sr-only">Delete</span></th>
               </tr>
             </thead>
@@ -154,7 +145,6 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                     <td data-label="Why" className={td}>{l.reason}</td>
                     <td data-label="How" className={`${td} text-slate-600`}>{l.method}</td>
                     <td data-label="Amount" className={`${td} money text-right`}>{taka(l.amount)}</td>
-                    <td data-label="Pay back by" className={`${td} whitespace-nowrap`}>{dateLong(l.due_on)}</td>
                     <td className="stack-corner px-2 text-right">
                       <DeleteButton label={`Delete loan to ${name}, ${taka(l.amount)}`} onClick={() => setDeleting({
                         kind: "loan", id: l.id, amount: l.amount, iso: l.taken_on, what: `Loan to ${name} — ${l.reason}`,
@@ -165,7 +155,7 @@ export function AccountView({ data, today }: { data: FinanceData; today: string 
                 );
               })}
               {loans.length === 0 && (
-                <tr><td colSpan={7}className="px-4 py-6 text-center text-slate-500">No loans from this account yet.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">No loans from this account yet.</td></tr>
               )}
             </tbody>
           </table>

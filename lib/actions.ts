@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { writer } from "@/lib/viewer";
 import { passwordProblems } from "@/lib/password";
 import { cleanText, siteOrigin } from "@/lib/security";
+import { EMI_MONTHS, type PayPlan } from "@/lib/types";
 
 export type ActionResult = { error?: string; personId?: string | null };
 
@@ -16,6 +17,8 @@ function friendly(error: NonNullable<DbError>): string {
     return "Deleting needs one more database function. Run supabase/migrations/0004_delete_records.sql in the Supabase SQL Editor, then try again.";
   if ((error.code === "PGRST202" || /could not find the function/i.test(m)) && /add_debit_use/.test(m))
     return "The debit card total needs one more database function. Run supabase/migrations/0006_debit_card_used.sql in the Supabase SQL Editor, then try again.";
+  if ((error.code === "PGRST202" || /could not find the function/i.test(m)) && /add_card_use/.test(m) && /p_emi_months|p_pay_plan/.test(m))
+    return "EMI needs a database update. Run supabase/migrations/0008_card_emi.sql in the Supabase SQL Editor, then try again.";
   if (error.code === "PGRST202" || /could not find the function/i.test(m))
     return "The database functions are missing. Run supabase/migrations/0002_finance_functions.sql in the Supabase SQL Editor, then try again.";
   if (/balance_check/.test(m)) return "That would make the balance go below ৳0.";
@@ -171,11 +174,17 @@ export async function addCardUse(input: {
   category: string;
   dueOn: string;
   addToBalance: boolean;
+  plan?: PayPlan;
+  emiMonths?: number;
 }): Promise<ActionResult> {
   const amount = money(input.amount);
   if (!req(input.name, NAME)) return { error: "Enter who used the card (or “Me” for your own spending)." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
   if (!req(input.reason)) return { error: "Enter why or where it was used." };
+  const emi = input.plan === "emi";
+  if (input.plan && input.plan !== "full" && !emi) return { error: "Pick full payment or EMI." };
+  if (emi && !(EMI_MONTHS as readonly number[]).includes(Number(input.emiMonths))) return { error: "Pick how many months the EMI runs." };
+  if (emi && !orNull(input.dueOn)) return { error: "Pick the first installment date." };
   const supabase = await writer();
   const { data, error } = await supabase.rpc("add_card_use", {
     p_card_id: input.cardId,
@@ -186,6 +195,8 @@ export async function addCardUse(input: {
     p_category: req(input.category, 40),
     p_due_on: orNull(input.dueOn),
     p_add_to_balance: input.addToBalance,
+    // Only sent for EMI, so full-payment uses keep working before migration 0008 is run.
+    ...(emi ? { p_pay_plan: "emi", p_emi_months: Number(input.emiMonths) } : {}),
   });
   return done(error, { personId: (data as string | null) ?? null });
 }

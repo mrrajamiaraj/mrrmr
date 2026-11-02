@@ -3,8 +3,9 @@
 import { useId, useState, useTransition } from "react";
 import { Modal, ErrorBox, btnGhost, btnPrimary } from "@/components/modal";
 import { addCardUse, addLoan } from "@/lib/actions";
-import { addDays, taka, todayIso } from "@/lib/format";
-import { CARD_CATEGORIES, LOAN_METHODS, type Card } from "@/lib/types";
+import { addDays, addMonths, dateLong, taka, todayIso } from "@/lib/format";
+import { emiPerMonth } from "@/lib/ledger";
+import { CARD_CATEGORIES, EMI_MONTHS, LOAN_METHODS, type Card, type PayPlan } from "@/lib/types";
 
 type Common = {
   title: string;
@@ -33,10 +34,14 @@ export function AddDebtorDialog(props: Props) {
     why: "",
     how: LOAN_METHODS[0] as string,
     cat: "Shopping",
-    due: addDays(today, 14),
+    due: props.mode === "card" && props.card.pay_by && props.card.pay_by >= today ? props.card.pay_by : addDays(today, 14),
     notes: "",
   });
   const [flag, setFlag] = useState(true); // deduct from account / add to card balance
+  // Card only: pay back in full by one date (defaults to the card's own pay-by date), or monthly EMI.
+  const fullDue = props.mode === "card" && props.card.pay_by && props.card.pay_by >= today ? props.card.pay_by : addDays(today, 14);
+  const [plan, setPlan] = useState<PayPlan>("full");
+  const [months, setMonths] = useState<number>(6);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -45,6 +50,16 @@ export function AddDebtorDialog(props: Props) {
   };
 
   const isMe = !isLoan && f.name.trim().toLowerCase() === "me";
+  const emi = !isLoan && !isMe && plan === "emi";
+  const amtNum = Math.round(Number(f.amt) * 100) / 100;
+  const perMonth = amtNum > 0 ? emiPerMonth(amtNum, months) : 0;
+
+  function choosePlan(p: PayPlan) {
+    setPlan(p);
+    setError("");
+    // Real cards: the first EMI installment is a month after the purchase; a full payment is due on the card's pay-by date.
+    setF((cur) => ({ ...cur, due: p === "emi" ? addMonths(cur.date || today, 1) : fullDue }));
+  }
 
   function save() {
     const name = f.name.trim();
@@ -54,6 +69,8 @@ export function AddDebtorDialog(props: Props) {
       : !f.amt || !(amt > 0) ? "Enter an amount above 0."
       : !f.why.trim() ? (isLoan ? "Enter why they took it." : "Enter why or where it was used.")
       : isLoan && f.initial && !(Number(f.initial) >= 0 && Number(f.initial) <= amt) ? "Initial repaid must be between 0 and the loan amount."
+      : emi && !f.due ? "Pick the first installment date."
+      : emi && f.date && f.due < f.date ? "The first installment can't be before the card was used."
       : "";
     if (err) return setError(err);
 
@@ -74,11 +91,14 @@ export function AddDebtorDialog(props: Props) {
         const r = await addCardUse({
           cardId: props.card.id, name, amount: amt, reason: f.why, usedOn: f.date,
           category: f.cat, dueOn: isMe ? "" : f.due, addToBalance: flag,
+          plan: emi ? "emi" : "full", emiMonths: emi ? months : undefined,
         });
         if (r.error) return setError(r.error);
         props.onAdded(
           r.personId ?? null,
-          `${isMe ? "Your own spending" : name} added — used ${taka(amt)} for ${f.why.trim()}` + (flag ? ". Added to the card balance." : ".")
+          `${isMe ? "Your own spending" : name} added — used ${taka(amt)} for ${f.why.trim()}`
+            + (emi ? ` on EMI: ${months} × ${taka(emiPerMonth(amt, months))} a month from ${dateLong(f.due)}` : "")
+            + (flag ? ". Added to the card balance." : ".")
         );
       }
     });
@@ -169,11 +189,53 @@ export function AddDebtorDialog(props: Props) {
           </label>
         )}
 
+        {!isLoan && !isMe && (
+          <div className="col-span-full">
+            <div className="field-label" id={`${listId}-plan`}>How will they pay it back?</div>
+            <div role="radiogroup" aria-labelledby={`${listId}-plan`} className="mt-1.5 grid grid-cols-2 gap-2">
+              {([
+                ["full", "Full payment", "All at once, by one date"],
+                ["emi", "EMI", "Monthly installments"],
+              ] as const).map(([v, title, sub]) => (
+                <button key={v} type="button" role="radio" aria-checked={plan === v} onClick={() => choosePlan(v)}
+                  className={`min-h-11 rounded-md border px-3 py-2 text-left transition-colors ${
+                    plan === v ? "border-brand-2 bg-good-tint" : "border-line bg-surface hover:bg-subtle"}`}>
+                  <span className="block text-[14.5px] font-semibold">{title}</span>
+                  <span className="block text-[12.5px] text-slate-500">{sub}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {emi && (
+          <label className={label}>
+            EMI tenure
+            <select value={months} onChange={(e) => setMonths(Number(e.target.value))} className={`${input} px-3`}>
+              {EMI_MONTHS.map((m) => <option key={m} value={m}>{m} months</option>)}
+            </select>
+          </label>
+        )}
+
         {!isMe && (
           <label className={label}>
-            {props.mode === "loan" && props.extended ? "Settlement due date" : "Pay back by"}
+            {props.mode === "loan" && props.extended ? "Settlement due date" : emi ? "First installment date" : "Pay back by"}
             <input type="date" value={f.due} onChange={set("due")} className={input} />
           </label>
+        )}
+
+        {emi && (
+          <div className="col-span-full rounded-md border border-line bg-subtle px-3.5 py-2.5 text-[13.5px] text-slate-600">
+            {perMonth > 0 && f.due ? (
+              <>
+                <span className="money text-slate-800">{taka(perMonth)}</span> a month for {months} months
+                {" · "}first on <span className="font-medium text-slate-800">{dateLong(f.due)}</span>
+                {" · "}last on <span className="font-medium text-slate-800">{dateLong(addMonths(f.due, months - 1))}</span>
+              </>
+            ) : (
+              "Enter the amount and first installment date to see the monthly payment."
+            )}
+          </div>
         )}
 
         {props.mode === "loan" && props.extended && !props.lockedPerson && (

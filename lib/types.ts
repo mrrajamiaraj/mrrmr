@@ -50,9 +50,15 @@ export type CardUse = {
   used_on: string;
   reason_or_place: string;
   category: string;
+  /** Full payment: pay back by this date. EMI: the first installment date. */
   due_on: string | null;
+  /** Missing until migration 0008 runs; treat as "full". */
+  pay_plan?: PayPlan;
+  emi_months?: number | null;
   created_at: string;
 };
+
+export type PayPlan = "full" | "emi";
 
 export type Repayment = {
   id: string;
@@ -97,4 +103,5 @@ export type FinanceData = {
 
 export const LOAN_METHODS = ["Bank transfer", "Cash withdrawal", "Cheque", "bKash from bank"] as const;
 export const REPAY_VIA = ["Bank transfer", "Cash", "bKash", "Nagad"] as const;
+export const EMI_MONTHS = [3, 6, 9, 12, 18, 24, 36] as const;
 export const CARD_CATEGORIES = ["Shopping", "Food", "Groceries", "Travel", "Transport", "Electronics", "Health", "Bills", "Subscription", "Other"] as const;
