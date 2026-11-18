@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { HeaderButton, Shell } from "@/components/shell";
 import { Figure, Statement } from "@/components/balance-editor";
-import { PlusIcon } from "@/components/icons";
+import { DownloadIcon, PlusIcon } from "@/components/icons";
+import { Badge } from "@/components/ui";
+import { subMoney, sumBy, toPaisa } from "@/lib/money";
 import { ErrorBox, Modal, btnDanger, btnGhost, btnPrimary } from "@/components/modal";
 import { Spinner, UnderlineTabs } from "@/components/motion";
 import { Flash } from "@/components/debtors/bits";
@@ -22,13 +24,24 @@ export function ResearchView({ data }: { data: ResearchData }) {
   const [dialog, setDialog] = useState<DialogState>(null);
   const [flash, setFlash] = useState("");
 
-  const { expenses, contributions } = data;
-  const facilities = mergeNames(DEFAULT_FACILITIES, expenses.map((e) => e.facility));
-  const members = mergeNames(DEFAULT_MEMBERS, [...expenses.map((e) => e.member), ...contributions.map((c) => c.member)]);
+  // Date range applies to every view, the totals, the reconciliation and the export.
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const inRange = (iso: string) => (!from || iso >= from) && (!to || iso <= to);
+  const expenses = data.expenses.filter((e) => inRange(e.spent_on));
+  const contributions = data.contributions.filter((c) => inRange(c.paid_on));
+  const facilities = mergeNames(DEFAULT_FACILITIES, data.expenses.map((e) => e.facility));
+  const members = mergeNames(DEFAULT_MEMBERS, [...data.expenses.map((e) => e.member), ...data.contributions.map((c) => c.member)]);
 
-  const totalExp = expenses.reduce((s, e) => s + e.amount, 0);
-  const totalCon = contributions.reduce((s, c) => s + c.amount, 0);
-  const net = totalCon - totalExp;
+  const totalExp = sumBy(expenses, (e) => e.amount);
+  const totalCon = sumBy(contributions, (c) => c.amount);
+  const net = subMoney(totalCon, totalExp);
+  // Reconciliation: every member's contributed and spent must add up to the ledger totals (to the paisa).
+  const perMember = members.map((m) => ({
+    m, con: sumBy(contributions.filter((c) => c.member === m), (c) => c.amount), exp: sumBy(expenses.filter((e) => e.member === m), (e) => e.amount),
+  }));
+  const reconciled = toPaisa(sumBy(perMember, (x) => x.con)) === toPaisa(totalCon) && toPaisa(sumBy(perMember, (x) => x.exp)) === toPaisa(totalExp);
+  const exportHref = `/research/export${from || to ? `?${new URLSearchParams({ ...(from && { from }), ...(to && { to }) })}` : ""}`;
   const avg = expenses.length ? totalExp / expenses.length : 0;
   const peak = expenses.reduce((m, e) => Math.max(m, e.amount), 0);
 
@@ -70,6 +83,18 @@ export function ResearchView({ data }: { data: ResearchData }) {
 
   return (
     <Shell subtitle={subtitle} actions={actions}>
+      {/* Its own ledger: never mixed with personal bank, loan or card figures. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-info-line bg-info-tint px-4 py-3">
+        <Badge tone="info">Separate ledger</Badge>
+        <span className="min-w-0 flex-auto text-[13px] text-slate-700">Team research money only — not part of your bank, cards or loans.</span>
+        <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">From
+          <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
+        <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">To
+          <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
+        {(from || to) && <button type="button" onClick={() => { setFrom(""); setTo(""); }} className="text-[13px] font-medium text-info underline underline-offset-2">All dates</button>}
+        <a href={exportHref} download className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-info-line bg-surface px-3 text-[13px] font-medium text-info hover:bg-subtle"><DownloadIcon size={14} />Export CSV</a>
+      </div>
+
       <Statement label="Key figures" cols={4}>
         <Figure label="Spent" value={totalExp} note={`${expenses.length} expenses`} />
         <Figure label="Contributed" value={totalCon} note={`${contributions.length} member payments`} />
@@ -77,6 +102,11 @@ export function ResearchView({ data }: { data: ResearchData }) {
           note={net < 0 ? "Contributions don't cover spending yet" : "Contributions cover all spending"} />
         <Figure label="Average expense" value={takaDec(Math.round(avg * 100) / 100)} note={`Largest ${taka(peak)}`} />
       </Statement>
+
+      <p role="status" className={`m-0 -mt-2 flex items-center gap-1.5 text-[12.5px] ${reconciled ? "text-slate-500" : "font-medium text-bad"}`}>
+        {reconciled ? "✓ Reconciled:" : "⚠ Doesn't reconcile:"} members' contributions add up to {taka(sumBy(perMember, (x) => x.con))} and their spending to {taka(sumBy(perMember, (x) => x.exp))}
+        {from || to ? ` (${from ? dateLong(from) : "start"} – ${to ? dateLong(to) : "today"})` : ""}.
+      </p>
 
       <div className="border-b border-line">
         <UnderlineTabs label="Research views" tabs={tabs} value={tab} onChange={setTab} />
@@ -148,7 +178,7 @@ function ExpenseDialog({ row, facilities, members, onClose, onSaved }: {
       </>}>
       <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
         <label className="field-label">Date<input type="date" className="field-input" value={f.spent_on} onChange={set("spent_on")} /></label>
-        <label className="field-label">Amount (৳) *<input type="number" min="1" inputMode="decimal" className="field-input font-mono" value={f.amount} onChange={set("amount")} placeholder="0" /></label>
+        <label className="field-label">Amount (৳) *<input type="number" min="1" inputMode="decimal" className="field-input tabular-nums" value={f.amount} onChange={set("amount")} placeholder="0" /></label>
         <label className="field-label">Facility / center *
           <input list="research-facilities" className="field-input border-2 border-brand-2" value={f.facility} onChange={set("facility")} autoComplete="off" />
           <datalist id="research-facilities">{facilities.map((x) => <option key={x} value={x} />)}</datalist>
@@ -200,7 +230,7 @@ function ContributionDialog({ row, member, members, onClose, onSaved }: {
           <input list="research-members-c" className="field-input border-2 border-info" value={f.member} onChange={set("member")} autoComplete="off" placeholder="e.g. Adnan, Somik" />
           <datalist id="research-members-c">{members.map((x) => <option key={x} value={x} />)}</datalist>
         </label>
-        <label className="field-label">Amount (৳) *<input type="number" min="1" inputMode="decimal" className="field-input font-mono" value={f.amount} onChange={set("amount")} placeholder="0" /></label>
+        <label className="field-label">Amount (৳) *<input type="number" min="1" inputMode="decimal" className="field-input tabular-nums" value={f.amount} onChange={set("amount")} placeholder="0" /></label>
         <label className="field-label">Date<input type="date" className="field-input" value={f.paid_on} onChange={set("paid_on")} /></label>
         <label className="field-label sm:col-span-2">Notes &amp; reference
           <input list="research-notes" className="field-input" value={f.note} onChange={set("note")} autoComplete="off" />

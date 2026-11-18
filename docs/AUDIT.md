@@ -84,7 +84,7 @@ Every money column is `numeric(14,2)`.
 * **EMI schedule:** not stored. Derived from `amount`, `emi_months` and `due_on` (first installment). Rule: each month =
   amount ÷ months rounded **down** to the paisa, and the last month takes the remainder.
 * **Repayment allocation (cards):** a person's card repayments, oldest first, clear that card's installments, earliest
-  due first. Loans have **no** per-loan allocation; they are pooled per person.
+  due first. Loans (since 2026-11-19, §I.3): a person's loan repayments clear their loans earliest pay-back date first.
 * **Stored balances** (`accounts.balance`, `cards.balance`, `debit_used`) are mutable running numbers. There is no
   ledger they can be rebuilt from.
 
@@ -102,7 +102,7 @@ Severity: **H** = can produce wrong money or expose data; **M** = integrity/trac
 | C4 | M | **Over-repayment check is pooled and racy.** It compares against the person's *total* (loans + all cards), not the selected loan pool or card, and runs outside the RPC transaction. | `actions.ts:220-221` | Needs a business-rule decision (I2); then enforce inside `record_repayment`. (P3) |
 | C5 | M | **Viewer credentials in source.** `VIEWER_PASSWORD` fallback is committed. With 0007 applied, direct login exposes **research data only** (verified), not finance. | `lib/viewer.ts:13` | Rotate the password; set `VIEWER_PASSWORD`/`VIEW_PASSCODE` in Vercel; then delete the fallback (fail closed). (manual + P2) |
 | C6 | M | **Unrelated SECURITY DEFINER RPC in the same project.** `public.tracker_api(jsonb)` (a key-gated patient case tracker writing `tracker.*`) is executable by `anon`. It does not touch finance tables, but it shares the project, its blast radius and its backups. | Supabase advisor | Not part of this repo — **left untouched**. Decide whether it belongs in a separate project (I7). |
-| C7 | M | **Next.js advisory.** Installed `next@16.4.0` (lockfile 16.4.3) is in range 16.2.0–16.4.4 (GHSA-mfr8-8qww-v76h, GHSA-vc7v-qv4w-wrv8). Both concern `'use cache'`/`unstable_cache`, which this app does **not** use, so exposure is low. `node_modules` is also out of sync with `package.json`. | `npm audit` | Bump to ≥16.4.5 and reinstall (awaiting approval). |
+| C7 | ~~M~~ | ~~**Next.js advisory**~~ (GHSA-mfr8-8qww-v76h, GHSA-vc7v-qv4w-wrv8, 16.2.0–16.4.4). | `npm audit` | **Fixed 2026-11-19:** `next@16.4.6`; `npm audit` reports 0 vulnerabilities. |
 | C8 | L→M | **Float money arithmetic.** Sums and EMI splits used JS doubles; ~1.3% of amount/month pairs got a 1-paisa-low EMI installment; `1.005` rounded to `1.00`. | `ledger.ts`, `actions.ts` | **Fixed in P1** for all domain/server code (`lib/money.ts`). UI-only page totals still use `reduce` (display rounds to whole ৳). (P2) |
 | C9 | L | Hard-coded hex status colours ignored night mode. | `ledger.ts STATUS_PILL` | **Fixed in P1.** Research chips still hex (P2). |
 | C10 | L | Leaked-password protection is off in Supabase Auth. | advisor | Manual toggle. |
@@ -197,8 +197,15 @@ Rules: UI components never compute authoritative money. They get figures from `l
 ## I. Decisions needed from the owner
 
 1. **Undo for legacy records** (C1): for rows saved before P3, keep asking "did the balance change?" (recommended), or treat them as non-undoable?
-2. **Over-repayment rule** (C4): should a repayment be capped by what is owed *to that source* (bank loans or that specific card), or, as today, by the person's total across everything?
-3. **Loan allocation:** loans are pooled per person, and the "late" date shown is the latest past-due loan even if older loans are paid. Keep pooled, or allocate repayments oldest-loan-first like cards?
+2. ~~**Over-repayment rule** (C4)~~ — **Decided 2026-11-19: per source.** A repayment can't exceed what the person owes
+   on bank loans, or on the one card it is for. Enforced in `recordRepayment` (`owedToSource`), and it fails closed if
+   the check can't run. The same check inside `record_repayment`, under a per-person lock, is written as
+   `supabase/migrations/0009_repayment_limit.sql` (function-only, with an exact DOWN). **Not applied yet.**
+3. ~~**Loan allocation**~~ — **Decided 2026-11-19: earliest-due loan first** (no date = last; same date = older loan
+   first), like card installments. Totals are unchanged; only *which* loan is paid changes, and with it the due/late
+   date. The Debtors page now uses the same rule instead of the view's `next_due`. That column only considers future
+   dates (in UTC), ignores repayments, and so could never show "late". Applied to live data, this changed 1 Bank
+   page date and 4 Debtors page dates, and no totals.
 4. **Card balance below zero:** the DB forbids negative card balances (a credit). Keep clamping at ৳0, or allow a credit balance?
 5. **Product name:** UI says "RMR Finance", the request says "MRRMR". Rename everywhere (title, manifest, icons)?
 6. **Paisa display:** money is shown in whole taka (`৳1,43,345`) while stored to the paisa. Keep that, or show paisa where non-zero?

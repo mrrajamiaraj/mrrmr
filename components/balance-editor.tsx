@@ -14,7 +14,7 @@ export function Statement({ label, cols = 3, children }: { label: string; cols?:
   return (
     <section
       aria-label={label}
-      className={`spot grid overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-card)] ${cols === 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-2 md:grid-cols-3 max-md:[&>*:first-child]:col-span-2 max-md:[&>*:nth-child(3)]:border-l"} [&>*]:border-line [&>*+*]:border-t md:[&>*+*]:border-l md:[&>*+*]:border-t-0`}
+      className={`spot surface-card grid overflow-hidden ${cols === 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-2 md:grid-cols-3 max-md:[&>*:first-child]:col-span-2 max-md:[&>*:nth-child(3)]:border-l"} [&>*]:border-line [&>*+*]:border-t md:[&>*+*]:border-l md:[&>*+*]:border-t-0`}
     >
       {children}
     </section>
@@ -26,14 +26,14 @@ export function Figure({ label, value, note, tone = "ink", action }: {
   label: React.ReactNode; value: string | number; note?: React.ReactNode; tone?: Tone; action?: React.ReactNode;
 }) {
   return (
-    <div className="group/fig relative flex min-w-0 flex-col gap-1 px-4 py-4 sm:px-5 transition-colors duration-200 hover:bg-subtle">
+    <div className="group/fig relative flex min-w-0 flex-col gap-1.5 px-4 py-4 transition-colors duration-200 hover:bg-subtle sm:px-5 sm:py-5">
       {/* Tone marker: a short bar at the top edge that widens on hover. */}
-      <span aria-hidden="true" className={`absolute left-4 top-0 h-[3px] sm:left-5 w-6 rounded-b-full transition-[width] duration-300 ease-[var(--ease-out-expo)] group-hover/fig:w-12 ${ACCENT[tone]}`} />
+      <span aria-hidden="true" className={`absolute left-4 top-0 h-[3px] w-6 rounded-b-full transition-[width] duration-300 ease-[var(--ease-out-expo)] group-hover/fig:w-12 sm:left-5 ${ACCENT[tone]}`} />
       <div className="flex min-h-7 items-center justify-between gap-2">
-        <span className="caption">{label}</span>
+        <span className="eyebrow">{label}</span>
         {action}
       </div>
-      <div className={`money text-[clamp(24px,2.6vw,30px)] leading-tight tracking-[-0.02em] ${TONE[tone]}`}>
+      <div data-money className={`money text-figure ${TONE[tone]}`}>
         {typeof value === "number" ? <CountUp value={value} format={taka} /> : value}
       </div>
       {note && <div className="text-[12.5px] text-slate-500">{note}</div>}
@@ -79,7 +79,8 @@ export function BalanceEditor({
         note={footnote}
         action={!viewer && (
           <button type="button" onClick={() => { setDraft(String(value)); setError(""); setEditing(true); }}
-            className="rounded-md border border-transparent px-2 py-0.5 text-[12.5px] font-medium text-brand-2 opacity-80 hover:border-good-line hover:bg-good-tint hover:opacity-100 group-hover/fig:opacity-100">
+            aria-label={`Edit ${label}`}
+            className="inline-flex min-h-8 items-center rounded-md border border-line px-2.5 text-[12.5px] font-medium text-brand-2 hover:border-good-line hover:bg-good-tint">
             Edit
           </button>
         )}
@@ -91,7 +92,7 @@ export function BalanceEditor({
     <div className="flex animate-fade-in flex-col gap-2 bg-subtle px-5 py-4">
       <label className="flex flex-col gap-1.5">
         <span className="caption">{inputLabel}</span>
-        <span className="flex min-h-11 items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2 focus-within:shadow-[0_0_0_3px_rgba(46,107,82,0.12)]">
+        <span className="flex min-h-11 items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2 focus-within:shadow-[var(--shadow-focus)]">
           <span aria-hidden="true" className="money text-slate-500">৳</span>
           <input
             type="number" min="0" step="1" autoFocus value={draft}

@@ -1,15 +1,14 @@
 /** Shown under the header while a section's data loads: the same shapes as the real page, shimmering. */
 export default function Loading() {
   return (
-    <main aria-busy="true" aria-label="Loading" className="px-[clamp(16px,4vw,40px)] pb-16 pt-6 sm:pb-20 sm:pt-8">
-      <div className="mx-auto flex max-w-[1200px] animate-fade-in flex-col gap-5 sm:gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="skeleton hidden size-11 rounded-xl sm:block" />
-            <div className="flex flex-col gap-2">
-              <div className="skeleton h-7 w-56" />
-              <div className="skeleton h-4 w-[min(420px,70vw)]" />
-            </div>
+    <main aria-busy="true" aria-label="Loading" className="page-gutter pb-16 pt-5 sm:pb-20 sm:pt-7 lg:pt-10">
+      <span className="sr-only" role="status">Loading…</span>
+      <div className="mx-auto flex max-w-[1180px] animate-fade-in flex-col gap-5 sm:gap-6">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5 sm:pb-6">
+          <div className="flex flex-col gap-2.5">
+            <div className="skeleton h-3 w-24" />
+            <div className="skeleton h-9 w-64" />
+            <div className="skeleton h-4 w-[min(460px,70vw)]" />
           </div>
           <div className="skeleton h-10 w-32 rounded-lg" />
         </div>

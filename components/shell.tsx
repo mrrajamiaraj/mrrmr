@@ -3,13 +3,16 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AdminButton } from "@/components/admin-button";
+import { AdminButton, AdminDialog } from "@/components/admin-button";
 import { CommandPalette, PaletteProvider } from "@/components/command-palette";
 import { Modal } from "@/components/modal";
 import { Wordmark } from "@/components/brand";
-import { setTheme, ThemeSegment, ThemeToggle } from "@/components/theme";
-import { Indicator, useSlidingIndicator } from "@/components/motion";
-import { ArrowUpIcon, BankIcon, CardIcon, DownloadIcon, EyeIcon, FlaskIcon, LogoutIcon, PeopleIcon, SearchIcon } from "@/components/icons";
+import { setTheme, ThemeSegment, ThemeToggle, THEME_NAMES, useTheme } from "@/components/theme";
+import { Badge, buttonClass, Kbd, Menu, type MenuItem } from "@/components/ui";
+import {
+  ArrowUpIcon, CardIcon, CommandIcon, DownloadIcon, EyeIcon, FlaskIcon, HistoryIcon, HomeIcon, LockIcon, LogoutIcon, MoonIcon,
+  MoreIcon, PeopleIcon, SearchIcon, SettingsIcon, ShieldIcon, SunIcon, TrendIcon,
+} from "@/components/icons";
 import { exitViewMode } from "@/app/view/actions";
 import { signOut } from "@/app/login/actions";
 import { CARD_NAMES } from "@/lib/ledger";
@@ -26,25 +29,29 @@ export function useViewer() {
   return useContext(AdminContext).viewer;
 }
 
-/** `label` is the page title, `nav` fits the desktop header, `short` the phone tab bar. `key` is the second key of each "G then …" shortcut. */
+/**
+ * The sections. `label` is the page title, `nav` the sidebar name, `short` the phone tab bar, `group` the sidebar
+ * heading and page eyebrow. `key` is the second key of each "G then …" shortcut.
+ */
 export const TABS = [
-  { href: "/account", label: "Bank Account", nav: "Bank Account", short: "Bank", key: "b", icon: BankIcon },
-  { href: "/debtors", label: "Debtors & Loans", nav: "Debtors & Loans", short: "Debtors", key: "d", icon: PeopleIcon },
-  { href: "/cards/1", label: CARD_NAMES[1], nav: "City Bank Card", short: "Card 1", key: "1", icon: CardIcon },
-  { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Card", short: "Card 2", key: "2", icon: CardIcon },
-  { href: "/research", label: "Research Finance", nav: "Research", short: "Research", key: "r", icon: FlaskIcon },
+  { href: "/account", label: "Overview", nav: "Overview", short: "Home", group: "Money", key: "b", icon: HomeIcon, primary: true },
+  { href: "/debtors", label: "Debtors & Loans", nav: "Debtors & Loans", short: "Debtors", group: "Lending", key: "d", icon: PeopleIcon, primary: true },
+  { href: "/repayments", label: "Repayment Center", nav: "Repayments", short: "Repay", group: "Lending", key: "p", icon: TrendIcon, primary: false },
+  { href: "/cards/1", label: CARD_NAMES[1], nav: "City Bank Card", short: "Card 1", group: "Credit cards", key: "1", icon: CardIcon, primary: true },
+  { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Card", short: "Card 2", group: "Credit cards", key: "2", icon: CardIcon, primary: true },
+  { href: "/reports", label: "Reports & Outlook", nav: "Reports & Outlook", short: "Reports", group: "Insight", key: "i", icon: HistoryIcon, primary: false },
+  { href: "/reconcile", label: "Reconcile & Audit", nav: "Reconcile & Audit", short: "Reconcile", group: "Insight", key: "c", icon: ShieldIcon, primary: false },
+  { href: "/research", label: "Research Finance", nav: "Research Ledger", short: "Research", group: "Ledgers", key: "r", icon: FlaskIcon, primary: true },
+  { href: "/settings", label: "Settings", nav: "Settings", short: "Settings", group: "Workspace", key: "s", icon: SettingsIcon, primary: false },
 ];
+type Tab = (typeof TABS)[number];
 
 /** The sections this user may open: view mode sees Research Finance only (the proxy enforces it). */
 export function useTabs() {
   return useViewer() ? TABS.filter((t) => t.href === "/research") : TABS;
 }
 
-// Side padding grows with the screen, and never less than a landscape iPhone's notch.
-const pad = "pl-[max(clamp(16px,4vw,40px),env(safe-area-inset-left))] pr-[max(clamp(16px,4vw,40px),env(safe-area-inset-right))]";
-const ghostBtn = "inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line bg-surface px-2.5 text-[13.5px] text-slate-700 hover:border-line-strong hover:bg-soft sm:px-3";
-
-/** Thin bar across the top of the window while a clicked tab's page is still loading. */
+/** Thin bar across the top of the window while a clicked section's page is still loading. */
 function PendingBar() {
   const { pending } = useLinkStatus();
   return (
@@ -55,29 +62,25 @@ function PendingBar() {
   );
 }
 
-/** Sticky app header: logo, section tabs with a sliding underline, search, export and account buttons. Mounted once in the layout. */
+/**
+ * The app chrome, mounted once in the dashboard layout:
+ *  - ≥1024px: a fixed sidebar (brand, search, grouped sections, theme, export, account, sign out);
+ *  - <1024px: a compact top bar (brand, search, theme, "More" menu) and a bottom tab bar for the sections.
+ * Keyboard: Ctrl/⌘K or "/" search · G then B/D/1/2/R jump · T theme · ? shortcuts. Ignored while typing.
+ */
 export function TopBar() {
   const admin = useContext(AdminContext);
   const tabs = useTabs();
   const path = usePathname();
   const active = tabs.find((t) => path.startsWith(t.href))?.href;
   const router = useRouter();
-  const { ref, box } = useSlidingIndicator<HTMLElement>(active);
-  const [scrolled, setScrolled] = useState(false);
   const [palette, setPalette] = useState(false);
   const [help, setHelp] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const goPending = useRef(0);
   const showHelp = useCallback(() => setHelp(true), []);
+  const openPalette = useCallback(() => setPalette(true), []);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // ⌘K / Ctrl+K anywhere, or "/" when not typing, opens the command palette.
-  // "G" then a section key jumps there (G B, G D, G 1, G 2, G R); "?" lists every shortcut.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = (e.target as HTMLElement)?.closest?.("input, textarea, select, [contenteditable]");
@@ -86,7 +89,7 @@ export function TopBar() {
         setPalette((o) => !o);
         return;
       }
-      if (typing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('[role="dialog"]')) return;
+      if (typing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('[role="dialog"], [role="menu"]')) return;
       const k = e.key.toLowerCase();
       if (e.key === "?") { e.preventDefault(); setHelp(true); return; }
       if (goPending.current && performance.now() - goPending.current < 1200) {
@@ -98,7 +101,7 @@ export function TopBar() {
       if (k === "g") goPending.current = performance.now();
       if (k === "t") {
         const dark = document.documentElement.dataset.theme === "dark";
-        setTheme(dark ? "light" : "dark", { x: innerWidth - 60, y: 28 });
+        setTheme(dark ? "light" : "dark", { x: 40, y: innerHeight - 40 });
       }
     };
     document.addEventListener("keydown", onKey);
@@ -121,127 +124,224 @@ export function TopBar() {
 
   return (
     <>
-      <header
-        style={{ viewTransitionName: "site-header" }}
-        className={`sticky top-0 z-40 border-b bg-surface/85 pt-[env(safe-area-inset-top)] backdrop-blur-md backdrop-saturate-150 transition-[border-color,box-shadow] duration-200 ${pad} ${
-          scrolled ? "border-line shadow-[0_6px_20px_-14px_rgba(28,27,24,0.3)]" : "border-line"
-        }`}
-      >
-        {/* Phones: logo and buttons on one row; the sections live in the bottom tab bar. */}
-        <div className="mx-auto flex max-w-[1200px] items-center gap-x-6">
-          <Link href={tabs[0].href} aria-label="RMR Finance, home" className="group flex flex-none items-center py-3 text-[15px]">
-            <Wordmark compact />
-          </Link>
-          {/* Phones use the tab bar at the bottom of the screen instead (MobileNav). */}
-          <nav ref={ref} aria-label="Sections"
-            className="relative -mb-px hidden min-w-0 flex-auto gap-1 overflow-x-auto [scrollbar-width:none] md:flex">
-            {tabs.map((t) => {
-              const on = t.href === active;
-              const Icon = t.icon;
-              return (
-                <Link
-                  key={t.href}
-                  href={t.href}
-                  aria-current={on ? "page" : undefined}
-                  className={`group/tab relative isolate flex items-center gap-1.5 whitespace-nowrap px-2 py-3.5 text-[13.5px] ${
-                    on ? "font-medium text-ink" : "text-slate-500 hover:text-ink"
-                  }`}
-                >
-                  <span aria-hidden="true" className="absolute inset-x-0 inset-y-2 -z-10 rounded-md bg-soft opacity-0 transition-opacity group-hover/tab:opacity-100" />
-                  <Icon size={15} className={on ? "text-brand-2" : "text-slate-400 group-hover/tab:text-slate-600"} />
-                  {/* Laptops and up get the header names; tablets the short ones. */}
-                  <span className="hidden xl:inline">{t.nav}</span>
-                  <span className="xl:hidden">{t.short}</span>
-                  <PendingBar />
-                </Link>
-              );
-            })}
-            <Indicator box={box} />
-          </nav>
-          <div className="ml-auto flex flex-none items-center gap-1.5 sm:gap-2">
-            <button type="button" onClick={() => setPalette(true)} aria-label="Search and jump (Ctrl+K)"
-              className={`${ghostBtn} text-slate-500 2xl:min-w-[150px] 2xl:justify-between`}>
-              <span className="inline-flex items-center gap-1.5"><SearchIcon size={14} /><span className="hidden lg:inline">Jump to…</span></span>
-              <kbd className="hidden rounded border border-line bg-soft px-1.5 font-sans text-[11px] text-slate-500 2xl:inline">Ctrl K</kbd>
-            </button>
-            {/* Phones reach Export from search (Ctrl K / the magnifier) to keep this row to four buttons. */}
-            {!admin.viewer && (
-              <a href="/export" download aria-label="Export CSV" title="Export CSV" className="hidden min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-[13.5px] text-slate-600 hover:bg-soft hover:text-ink sm:inline-flex">
-                <DownloadIcon size={15} />
-                <span className="sr-only">Export</span>
-              </a>
-            )}
-            <ThemeToggle />
-            {admin.viewer ? (
-              <form action={exitViewMode}>
-                <button type="submit" aria-label="Log out" title="Log out" className={ghostBtn}>
-                  <LogoutIcon size={15} />
-                  <span className="hidden sm:inline">Log out</span>
-                </button>
-              </form>
-            ) : (
-              <>
-                <AdminButton email={admin.email} lastChanged={admin.lastChanged} />
-                <form action={signOut}>
-                  <button type="submit" aria-label="Log out" title="Log out" className={ghostBtn}>
-                    <LogoutIcon size={15} />
-                    <span className="hidden sm:inline">Log out</span>
-                  </button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <a href="#main" className="fixed left-3 top-3 z-[80] -translate-y-20 rounded-lg bg-ink px-3 py-2 text-[14px] font-medium text-on-ink focus:translate-y-0">
+        Skip to content
+      </a>
+      <Sidebar tabs={tabs} active={active} admin={admin} onSearch={openPalette} onHelp={showHelp} />
+      <MobileHeader admin={admin} onSearch={openPalette} onHelp={showHelp} onAdmin={() => setAdminOpen(true)} />
       {palette && <CommandPalette viewer={admin.viewer} onClose={() => setPalette(false)} onShortcuts={showHelp} />}
       {help && <ShortcutsDialog tabs={tabs} onClose={() => setHelp(false)} />}
+      {adminOpen && <AdminDialog email={admin.email} lastChanged={admin.lastChanged} onClose={() => setAdminOpen(false)} />}
       <MobileNav tabs={tabs} active={active} />
       <BackToTop />
     </>
   );
 }
 
-/** Phones: the sections as a thumb-reach tab bar fixed to the bottom edge. */
-function MobileNav({ tabs, active }: { tabs: typeof TABS; active?: string }) {
+const railRow =
+  "group/row relative flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-[14px] text-slate-600 hover:bg-soft hover:text-ink";
+
+/** ≥1024px: the fixed navigation rail. */
+function Sidebar({ tabs, active, admin, onSearch, onHelp }: {
+  tabs: Tab[]; active?: string; admin: AdminInfo; onSearch: () => void; onHelp: () => void;
+}) {
+  const groups = [...new Set(tabs.map((t) => t.group))];
+  return (
+    <aside style={{ viewTransitionName: "site-rail" }} aria-label="App"
+      className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-w)] flex-col border-r border-line bg-rail lg:flex">
+      <div className="px-5 pb-4 pt-6">
+        <Link href={tabs[0].href} aria-label="MRRMR, home" className="group inline-flex rounded-lg text-[15px]">
+          <Wordmark size={32} tagline />
+        </Link>
+      </div>
+
+      <div className="px-3">
+        <button type="button" onClick={onSearch} aria-label="Search pages, people and actions (Ctrl K)"
+          className="flex min-h-10 w-full items-center gap-2.5 rounded-lg border border-line bg-surface px-3 text-[13.5px] text-slate-500 shadow-[var(--shadow-card)] hover:border-line-strong hover:text-ink">
+          <SearchIcon size={15} />
+          <span className="flex-auto text-left">Search…</span>
+          <Kbd>Ctrl K</Kbd>
+        </button>
+      </div>
+
+      <nav aria-label="Sections" className="mt-4 flex-auto overflow-y-auto px-3 pb-4">
+        {groups.map((g) => (
+          <div key={g} className="mt-3 first:mt-0">
+            <div className="eyebrow px-3 pb-1.5 pt-2">{g}</div>
+            <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+              {tabs.filter((t) => t.group === g).map((t) => {
+                const on = t.href === active;
+                const Icon = t.icon;
+                return (
+                  <li key={t.href}>
+                    <Link href={t.href} aria-current={on ? "page" : undefined}
+                      className={`${railRow} ${on ? "bg-surface font-medium text-ink shadow-[var(--shadow-card)] ring-1 ring-line" : ""}`}>
+                      {/* Active marker: a short jade bar on the inner edge. */}
+                      <span aria-hidden="true" className={`absolute -left-3 top-2 bottom-2 w-[3px] rounded-r-full bg-brand-2 transition-opacity ${on ? "opacity-100" : "opacity-0"}`} />
+                      <Icon size={17} className={on ? "text-brand-2" : "text-slate-400 group-hover/row:text-slate-600"} />
+                      <span className="flex-auto truncate">{t.nav}</span>
+                      <span aria-hidden="true" className="text-[11px] text-slate-400 opacity-0 group-hover/row:opacity-100">G {t.key.toUpperCase()}</span>
+                      <PendingBar />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      <div className="flex flex-col gap-1 border-t border-line p-3">
+        {admin.viewer && (
+          <div className="mb-1 flex items-center gap-2 rounded-lg border border-info-line bg-info-tint px-3 py-2 text-[12.5px] text-info">
+            <EyeIcon size={14} /> View only — Research Ledger
+          </div>
+        )}
+        <ThemeRow />
+        {!admin.viewer && (
+          <a href="/export" download className={railRow}>
+            <DownloadIcon size={17} className="text-slate-400 group-hover/row:text-slate-600" />
+            Export CSV backup
+          </a>
+        )}
+        <button type="button" onClick={onHelp} className={railRow}>
+          <CommandIcon size={17} className="text-slate-400 group-hover/row:text-slate-600" />
+          <span className="flex-auto text-left">Shortcuts</span>
+          <Kbd>?</Kbd>
+        </button>
+        {!admin.viewer && (
+          <AdminButton email={admin.email} lastChanged={admin.lastChanged} className={railRow}>
+            <LockIcon size={17} className="text-slate-400 group-hover/row:text-slate-600" />
+            <span className="flex min-w-0 flex-auto flex-col text-left leading-tight">
+              Admin
+              <span className="truncate text-[11.5px] text-slate-500">{admin.email}</span>
+            </span>
+          </AdminButton>
+        )}
+        <form action={admin.viewer ? exitViewMode : signOut}>
+          <button type="submit" className={railRow}>
+            <LogoutIcon size={17} className="text-slate-400 group-hover/row:text-slate-600" />
+            {admin.viewer ? "Exit view mode" : "Log out"}
+          </button>
+        </form>
+      </div>
+    </aside>
+  );
+}
+
+/** Sidebar row that flips the theme; says which theme you are in and which you'll get. */
+function ThemeRow() {
+  const { mode } = useTheme();
+  const next = mode === "dark" ? "light" : "dark";
+  return (
+    <button type="button" className={railRow}
+      aria-label={`Theme: ${THEME_NAMES[mode]}. Switch to ${THEME_NAMES[next]} (T)`}
+      onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTheme(next, { x: r.left + 20, y: r.top + r.height / 2 }); }}>
+      {mode === "dark" ? <MoonIcon size={17} className="text-slate-400 group-hover/row:text-slate-600" /> : <SunIcon size={17} className="text-slate-400 group-hover/row:text-slate-600" />}
+      <span className="flex min-w-0 flex-auto flex-col text-left leading-tight">
+        {THEME_NAMES[mode]}
+        <span className="truncate text-[11.5px] text-slate-500">Switch to {next === "dark" ? "dark" : "light"}</span>
+      </span>
+      <Kbd>T</Kbd>
+    </button>
+  );
+}
+
+/** <1024px: compact top bar. Sections live in the bottom tab bar; secondary actions in the "More" menu. */
+function MobileHeader({ admin, onSearch, onHelp, onAdmin }: {
+  admin: AdminInfo; onSearch: () => void; onHelp: () => void; onAdmin: () => void;
+}) {
+  const tabs = useTabs();
+  const [scrolled, setScrolled] = useState(false);
+  const exitRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Sections that don't fit the bottom tab bar live here on phones and tablets.
+  const secondary: MenuItem[] = tabs.filter((t) => !t.primary).map((t) => {
+    const Icon = t.icon;
+    return { kind: "link" as const, label: t.nav, icon: <Icon size={17} />, href: t.href };
+  });
+  const items: MenuItem[] = [
+    ...secondary,
+    ...(secondary.length ? [{ kind: "separator" as const }] : []),
+    ...(!admin.viewer ? [{ kind: "link" as const, label: "Export CSV backup", icon: <DownloadIcon size={17} />, href: "/export", download: true }] : []),
+    { label: "Shortcuts & appearance", icon: <CommandIcon size={17} />, onSelect: onHelp },
+    ...(!admin.viewer ? [{ label: "Admin password", icon: <LockIcon size={17} />, onSelect: onAdmin }] : []),
+    { kind: "separator" },
+    { label: admin.viewer ? "Exit view mode" : "Log out", icon: <LogoutIcon size={17} />, danger: true, onSelect: () => exitRef.current?.requestSubmit() },
+  ];
+
+  return (
+    <header style={{ viewTransitionName: "site-header" }}
+      className={`page-gutter sticky top-0 z-40 border-b bg-page/90 pt-[env(safe-area-inset-top)] backdrop-blur-md transition-[border-color,box-shadow] duration-200 lg:hidden ${
+        scrolled ? "border-line shadow-[0_8px_24px_-18px_rgba(10,13,19,0.4)]" : "border-transparent"
+      }`}>
+      <div className="flex min-h-14 items-center gap-1.5">
+        <Link href={tabs[0].href} aria-label="MRRMR, home" className="group mr-auto flex items-center rounded-lg py-2 text-[14px]">
+          <Wordmark size={28} />
+        </Link>
+        {admin.viewer && <Badge tone="info" className="mr-1 max-[359px]:hidden"><EyeIcon size={12} />View only</Badge>}
+        <button type="button" onClick={onSearch} aria-label="Search pages, people and actions"
+          className="inline-grid size-10 place-items-center rounded-lg text-slate-600 hover:bg-soft hover:text-ink">
+          <SearchIcon size={19} />
+        </button>
+        <ThemeToggle className="border-transparent bg-transparent" />
+        <Menu label="More" trigger={<MoreIcon size={20} />} items={items} />
+        <form ref={exitRef} action={admin.viewer ? exitViewMode : signOut} className="hidden" />
+      </div>
+    </header>
+  );
+}
+
+/** <1024px: the sections as a thumb-reach tab bar fixed to the bottom edge, clear of the home indicator. */
+function MobileNav({ tabs, active }: { tabs: Tab[]; active?: string }) {
   return (
     <nav aria-label="Sections"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md backdrop-saturate-150 md:hidden">
-      <div className="mx-auto flex max-w-[560px]">
-        {tabs.map((t) => {
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+      <ul className="m-0 mx-auto flex max-w-[640px] list-none p-0">
+        {tabs.filter((t) => t.primary).map((t) => {
           const on = t.href === active;
           const Icon = t.icon;
           return (
-            <Link key={t.href} href={t.href} aria-current={on ? "page" : undefined}
-              className={`relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 text-[11px] ${on ? "font-medium text-ink" : "text-slate-500"}`}>
-              <span className={`grid h-7 w-12 place-items-center rounded-full transition-[background-color,scale] duration-300 ease-[var(--ease-spring)] ${on ? "scale-100 bg-good-tint-2 text-brand-ink" : "scale-90"}`}>
-                <Icon size={19} />
-              </span>
-              {t.short}
-              <PendingBar />
-            </Link>
+            <li key={t.href} className="flex flex-1">
+              <Link href={t.href} aria-current={on ? "page" : undefined}
+                className={`relative flex min-h-[var(--bottom-nav-h)] flex-1 flex-col items-center justify-center gap-1 text-[11px] ${on ? "font-semibold text-ink" : "text-slate-500"}`}>
+                <span className={`grid h-7 w-14 place-items-center rounded-full transition-[background-color,scale] duration-300 ease-[var(--ease-spring)] ${on ? "scale-100 bg-good-tint-2 text-brand-ink" : "scale-90"}`}>
+                  <Icon size={19} />
+                </span>
+                {t.short}
+                <PendingBar />
+              </Link>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </nav>
   );
 }
 
-function ShortcutsDialog({ tabs, onClose }: { tabs: typeof TABS; onClose: () => void }) {
+function ShortcutsDialog({ tabs, onClose }: { tabs: Tab[]; onClose: () => void }) {
   const SHORTCUTS: [string[], string][] = [
     [["Ctrl", "K"], "Search pages, people and actions"],
     [["/"], "Open search"],
     ...tabs.map((t): [string[], string] => [["G", t.key.toUpperCase()], `Go to ${t.label}`]),
-    [["T"], "Switch day / night mode"],
+    [["T"], "Switch Executive Minimal / Midnight Finance"],
     [["←", "→"], "Move between months in a chart"],
-    [["Esc"], "Close a dialog"],
+    [["Esc"], "Close a dialog or menu"],
     [["?"], "Show this list"],
   ];
   return (
-    <Modal title="Shortcuts & appearance" onClose={onClose} maxWidth={460}>
-      <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3.5">
-        <span className="text-[14px] font-medium">Theme</span>
-        <div className="w-[min(240px,60%)]"><ThemeSegment /></div>
+    <Modal title="Shortcuts & appearance" onClose={onClose} maxWidth={440} side>
+      <div className="flex flex-col gap-2 border-b border-line px-5 py-4">
+        <span className="eyebrow">Theme</span>
+        <ThemeSegment stacked />
       </div>
+      <div className="px-5 pt-4"><span className="eyebrow">Keyboard</span></div>
       <ul className="m-0 flex list-none flex-col p-2">
         {SHORTCUTS.map(([keys, what]) => (
           <li key={what} className="flex min-h-11 items-center justify-between gap-4 rounded-lg px-3 text-[14px] hover:bg-subtle">
@@ -249,8 +349,8 @@ function ShortcutsDialog({ tabs, onClose }: { tabs: typeof TABS; onClose: () => 
             <span className="flex flex-none items-center gap-1">
               {keys.map((k, i) => (
                 <span key={k} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-[11px] text-slate-400">{keys[0] === "G" ? "then" : ""}</span>}
-                  <kbd className="min-w-7 rounded-md border border-line border-b-line-strong bg-surface px-1.5 py-0.5 text-center font-sans text-[12px] font-medium text-slate-600 shadow-[0_1px_0_#D6D3CB]">{k}</kbd>
+                  {i > 0 && keys[0] === "G" && <span className="text-[11px] text-slate-400">then</span>}
+                  <Kbd>{k}</Kbd>
                 </span>
               ))}
             </span>
@@ -269,9 +369,9 @@ function BackToTop() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   return (
-    <button type="button" aria-label="Back to top" tabIndex={show ? 0 : -1}
-      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      className={`fixed bottom-[calc(74px+env(safe-area-inset-bottom))] right-4 z-30 grid md:bottom-5 md:right-5 size-11 place-items-center rounded-full border border-line bg-surface text-slate-600 shadow-[var(--shadow-lift)] hover:text-ink ${
+    <button type="button" aria-label="Back to top" tabIndex={show ? 0 : -1} aria-hidden={!show}
+      onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}
+      className={`fixed bottom-[calc(var(--bottom-nav-h)+12px+env(safe-area-inset-bottom))] right-4 z-30 grid size-11 place-items-center rounded-full border border-line bg-surface text-slate-600 shadow-[var(--shadow-lift)] hover:text-ink lg:bottom-6 lg:right-6 ${
         show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
       } duration-300`}>
       <ArrowUpIcon size={18} />
@@ -279,15 +379,18 @@ function BackToTop() {
   );
 }
 
-/** The page title, its one-line description and the page's buttons, then the page itself. */
+/** Contextual page header (eyebrow, title, one-line description, the page's actions), then the page. */
 export function Shell({
   subtitle,
   actions,
   children,
+  hero,
 }: {
   subtitle: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
+  /** replaces the standard page header (the Overview's financial hero) */
+  hero?: React.ReactNode;
 }) {
   const admin = useContext(AdminContext);
   const path = usePathname();
@@ -295,38 +398,29 @@ export function Shell({
   const Icon = tab?.icon;
 
   return (
-    <main className={`${pad} pb-[calc(96px+env(safe-area-inset-bottom))] pt-6 sm:pt-8 md:pb-20`}>
+    <main id="main" tabIndex={-1}
+      className="page-gutter pb-[calc(var(--bottom-nav-h)+40px+env(safe-area-inset-bottom))] pt-5 outline-none sm:pt-7 lg:pb-20 lg:pt-10">
       {/* Keyed by route so each page plays its entrance, including Card 1 → Card 2 which reuses the same component. */}
-      <div key={path} className="page-enter mx-auto flex max-w-[1200px] flex-col gap-5 sm:gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex min-w-0 max-w-[760px] items-start gap-3.5">
-            {Icon && (
-              <span aria-hidden="true" className="mt-0.5 hidden size-11 flex-none place-items-center rounded-xl border border-good-line bg-gradient-to-b from-good-tint to-good-tint-2 text-brand-ink sm:grid">
-                <Icon size={21} />
-              </span>
-            )}
-            <div className="min-w-0">
-              <h1 className="m-0 flex flex-wrap items-center gap-2.5 text-[22px] font-semibold leading-tight tracking-[-0.02em] sm:text-[26px]">
-                {tab?.label ?? "Finance"}
-                {admin.viewer && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-2 py-0.5 text-[11.5px] font-medium tracking-normal text-slate-600">
-                    <EyeIcon size={12} />
-                    View only
-                  </span>
-                )}
-              </h1>
-              <p className="m-0 mt-1 text-[14px] text-slate-500">{subtitle}</p>
+      <div key={path} className="page-enter mx-auto flex max-w-[1180px] flex-col gap-5 sm:gap-6">
+        {hero ?? <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-line pb-5 sm:pb-6">
+          <div className="min-w-0 max-w-[720px]">
+            <div className="eyebrow flex items-center gap-2">
+              {Icon && <Icon size={14} className="text-brand-2" />}
+              {tab?.group ?? "MRRMR"}
+              {admin.viewer && <Badge tone="info" className="ml-1 normal-case tracking-normal"><EyeIcon size={12} />View only</Badge>}
             </div>
+            <h1 className="m-0 mt-2 font-display text-title font-normal text-ink">{tab?.label ?? "Finance"}</h1>
+            <p className="m-0 mt-2 text-[14.5px] text-slate-500">{subtitle}</p>
           </div>
           {!admin.viewer && actions && <div className="flex w-full flex-wrap gap-2 sm:w-auto">{actions}</div>}
-        </div>
+        </header>}
         {children}
       </div>
     </main>
   );
 }
 
-/** Page-level button next to the title: solid for the main action, outlined for the rest. */
+/** Page-level button in the header: solid for the main action, outlined for the rest. */
 export function HeaderButton({
   onClick,
   children,
@@ -337,15 +431,8 @@ export function HeaderButton({
   variant?: "green" | "outline";
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex min-h-10 flex-auto items-center justify-center gap-2 rounded-lg px-4 text-[14px] font-medium sm:flex-none ${
-        variant === "green"
-          ? "bg-brand text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-brand-hover hover:shadow-[0_6px_16px_-6px_rgba(31,77,58,0.55)]"
-          : "border border-line-strong bg-surface text-ink shadow-[var(--shadow-card)] hover:border-slate-400 hover:bg-subtle"
-      }`}
-    >
+    <button type="button" onClick={onClick}
+      className={buttonClass(variant === "green" ? "primary" : "secondary", "md", "flex-auto sm:flex-none")}>
       {children}
     </button>
   );

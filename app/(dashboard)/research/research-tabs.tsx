@@ -21,8 +21,8 @@ export const takaDec = (n: number) =>
 
 const pct1 = (part: number, whole: number) => (whole ? Math.round((part / whole) * 1000) / 10 : 0);
 const select = "min-h-9 min-w-0 flex-auto cursor-pointer rounded-lg border border-line-strong bg-surface px-2.5 text-[13.5px] hover:border-slate-400 sm:flex-none";
-const card = "overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-card)]";
-const hth = "px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.04em] text-slate-500";
+const card = "surface-card overflow-hidden";
+const hth = "px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-slate-500";
 
 // Facilities and members are told apart by a small colour mark next to the name, not by filled badges.
 function FacilityChip({ name }: { name: string }) {
@@ -41,11 +41,12 @@ function MemberChip({ name }: { name: string; dot?: boolean }) {
     </span>
   );
 }
-function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+/** Edit / delete for one row. `what` names the row for screen readers ("Edit expense: BHS, ৳1,200, Oct 12"). */
+function RowActions({ onEdit, onDelete, what }: { onEdit: () => void; onDelete: () => void; what: string }) {
   return (
     <span className="inline-flex gap-1">
-      <button type="button" aria-label="Edit" title="Edit" onClick={onEdit} className="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-soft hover:text-ink"><PencilIcon size={16} /></button>
-      <button type="button" aria-label="Delete" title="Delete" onClick={onDelete} className="flex size-9 items-center justify-center rounded-lg text-slate-400 hover:bg-bad-tint hover:text-bad"><TrashIcon size={16} /></button>
+      <button type="button" aria-label={`Edit ${what}`} title="Edit" onClick={onEdit} className="flex size-10 items-center justify-center rounded-lg text-slate-500 hover:bg-soft hover:text-ink"><PencilIcon size={16} /></button>
+      <button type="button" aria-label={`Delete ${what}`} title="Delete" onClick={onDelete} className="flex size-10 items-center justify-center rounded-lg text-slate-500 hover:bg-bad-tint hover:text-bad"><TrashIcon size={16} /></button>
     </span>
   );
 }
@@ -152,7 +153,8 @@ export function LedgerTab({ expenses, facilities, members, setDialog }: {
                 </td>
                 <td data-label="Amount" className="money px-4 py-2.5 text-right">{taka(e.amount)}</td>
                 {!viewer && <td className="stack-corner px-4 py-1.5 text-right">
-                  <RowActions onEdit={() => setDialog({ kind: "expense", row: e })} onDelete={() => setDialog({ kind: "delete-expense", row: e })} />
+                  <RowActions what={`expense: ${e.facility}, ${taka(e.amount)}, ${dateLong(e.spent_on)}`}
+                    onEdit={() => setDialog({ kind: "expense", row: e })} onDelete={() => setDialog({ kind: "delete-expense", row: e })} />
                 </td>}
               </tr>
             ))}
@@ -218,7 +220,8 @@ export function ContributionsTab({ contributions, members, setDialog }: {
                 <td data-label="Notes" className="px-4 py-2.5 text-slate-700">{c.note ?? "—"}</td>
                 <td data-label="Amount" className="money px-4 py-2.5 text-right text-info">{taka(c.amount)}</td>
                 {!viewer && <td className="stack-corner px-4 py-1.5 text-right">
-                  <RowActions onEdit={() => setDialog({ kind: "contribution", row: c })} onDelete={() => setDialog({ kind: "delete-contribution", row: c })} />
+                  <RowActions what={`contribution: ${c.member}, ${taka(c.amount)}, ${dateLong(c.paid_on)}`}
+                    onEdit={() => setDialog({ kind: "contribution", row: c })} onDelete={() => setDialog({ kind: "delete-contribution", row: c })} />
                 </td>}
               </tr>
             ))}

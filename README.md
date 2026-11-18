@@ -8,7 +8,7 @@ Supabase (`@supabase/ssr`). Amounts are Bangladeshi Taka with Indian grouping (�
 
 | Page | Route | Design |
 | --- | --- | --- |
-| Bank Account (home; `/` redirects here) | `/account` | `design/Accounts.dc.html` |
+| Overview dashboard (home; `/` redirects here) — includes the City Bank tools | `/account` | `docs/METRICS.md` (definitions) |
 | Debtors & Loans | `/debtors` | `design/Lending.dc.html` |
 | City Bank Credit Card | `/cards/1` | `design/Cards.dc.html` |
 | Community Bank Credit Card | `/cards/2` | `design/Card2.dc.html` |
@@ -144,6 +144,10 @@ You can run it by hand from the Actions tab (“Run workflow”) to check it wor
 - **Card EMI:** a card use is paid back in full by one date, or in 3–36 monthly installments (migration 0008).
   Each installment is the amount ÷ months rounded down to the paisa; the last one takes the remainder. A person's
   card repayments clear that card's installments oldest-payment-first, earliest-due-first.
+- **Which loan is repaid:** a person's loan repayments pay off their loans earliest pay-back date first (loans with
+  no date last; same date → older loan first). The due date and “late” label shown everywhere is the first loan or
+  card installment that is not fully paid.
+- **Repayment limit:** a repayment can't be more than the person owes on bank loans, or on the one card it is for.
 - **Debit card:** `debit_used` on the account is a running total you raise one entry at a time (migration 0006).
 - **Monthly view:** there is no Overview page (`/` opens Bank Account). Each page has a per-month “money out vs paid
   back” chart, and Research has its own Monthly tab.
@@ -166,7 +170,9 @@ lib/
   actions.ts            server actions (all writes)
   format.ts             ৳ formatting and dates (Asia/Dhaka)
 proxy.ts                sends signed-out visitors to /login (Next.js 16's name for middleware)
-supabase/migrations/    0001 schema (reference) … 0008 card EMI — all applied in production
+supabase/migrations/    0001 schema (reference) … 0008 card EMI — all applied in production;
+                        0009 repayment limit in the database — written, NOT yet applied (review, then run once)
+                        0010 split purchases + EMI charges (includes 0009) — written, NOT yet applied
 tests/                  security, money and ledger tests (npm test)
 docs/AUDIT.md           architecture, mutation map, risk register and roadmap
 design/                 the approved HTML designs

@@ -35,7 +35,7 @@ export function DebitUsed({ accountId, total }: { accountId: string; total: numb
         <div className="flex flex-col gap-2 px-4 py-4 sm:px-5">
           <label className="flex flex-col gap-1.5">
             <span className="caption">City Mastercard debit card — now used</span>
-            <span className="flex min-h-11 items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2 focus-within:shadow-[0_0_0_3px_rgba(46,107,82,0.12)]">
+            <span className="flex min-h-11 items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2 focus-within:shadow-[var(--shadow-focus)]">
               <span aria-hidden="true" className="money text-slate-500">৳</span>
               <input
                 type="number" min="0" step="1" inputMode="decimal" placeholder="0" value={draft}

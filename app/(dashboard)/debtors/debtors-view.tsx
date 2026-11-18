@@ -17,6 +17,9 @@ import { deletePerson, updatePerson } from "@/lib/actions";
 import { amountSigned, buildProfiles, byOwesThenName, type EventKind, type Profile } from "@/lib/ledger";
 import { dateLong, pct, taka } from "@/lib/format";
 import type { FinanceData, Status } from "@/lib/types";
+import Link from "next/link";
+import { computeDashboard } from "@/lib/dashboard";
+import { sumBy } from "@/lib/money";
 
 type Tab = "portfolio" | "table" | "ledger";
 type TypeF = "ALL" | "LENT" | "REPAID";
@@ -54,11 +57,17 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
   const account = data.accounts[0] ? { id: data.accounts[0].id, name: data.accounts[0].name } : null;
   const ql = q.trim().toLowerCase();
 
+  const [sortBy, setSortBy] = useState<"owes" | "due" | "activity" | "name">("owes");
   const people = all.filter(
     (p) =>
       matchStatus(p, statusF) &&
       (!ql || `${p.name} ${p.reasons.join(" ")} ${p.notes ?? ""} ${p.relation ?? ""}`.toLowerCase().includes(ql))
-  );
+  ).sort((a, b) =>
+    sortBy === "due" ? (a.owes > 0 && a.due ? a.due : "9999").localeCompare(b.owes > 0 && b.due ? b.due : "9999") || b.owes - a.owes
+    : sortBy === "activity" ? (b.lastIso ?? "").localeCompare(a.lastIso ?? "")
+    : sortBy === "name" ? a.name.localeCompare(b.name)
+    : b.owes - a.owes || a.name.localeCompare(b.name));
+  const dash = useMemo(() => computeDashboard(data, today), [data, today]);
 
   const ledgerAll = all.flatMap((p) => p.events.map((e) => ({ ...e, person: p.name, personId: p.id })));
   const ledger = ledgerAll
@@ -66,9 +75,9 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
     .filter((e) => !ql || `${e.person} ${e.detail}`.toLowerCase().includes(ql))
     .sort((a, b) => b.iso.localeCompare(a.iso));
 
-  const totLent = all.reduce((s, p) => s + p.taken, 0);
-  const totRepaid = all.reduce((s, p) => s + p.paid, 0);
-  const totOwes = all.reduce((s, p) => s + p.owes, 0);
+  const totLent = sumBy(all, (p) => p.taken);
+  const totRepaid = sumBy(all, (p) => p.paid);
+  const totOwes = sumBy(all, (p) => p.owes);
   const pTot = people.reduce(
     (s, p) => ({ lent: s.lent + p.taken, rep: s.rep + p.paid, left: s.left + p.owes, loans: s.loans + p.loanCount + p.cardCount }),
     { lent: 0, rep: 0, left: 0, loans: 0 }
@@ -110,10 +119,12 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
         <HeaderButton onClick={() => setDialog({ kind: "new" })}><PersonIcon size={15} />Add debtor</HeaderButton>
       }
     >
-      <Statement label="Loan figures">
+      <Statement label="Receivable figures" cols={4}>
         <Figure label="Lent out" value={totLent} note="Loans and card use by others" />
-        <Figure label="Paid back" value={totRepaid} tone="good" note={`${pct(totRepaid, totLent, 1)}% recovered`} />
-        <Figure label="Still owed" value={totOwes} tone="owed" note={`${owingCount} ${owingCount === 1 ? "person" : "people"} still owe`} />
+        <Figure label="Collected" value={totRepaid} tone="good" note={`${pct(totRepaid, totLent, 1)}% recovered`} />
+        <Figure label="Outstanding" value={totOwes} tone="owed" note={`${owingCount} ${owingCount === 1 ? "person" : "people"} still owe`} />
+        <Figure label="Overdue" value={dash.overdue.amount} tone={dash.overdue.amount ? "owed" : "muted"}
+          note={`${dash.dueWeek.count ? `${taka(dash.dueWeek.amount)} due in 7 days` : "Nothing due in 7 days"}`} />
       </Statement>
 
       {late.length > 0 && (
@@ -157,6 +168,15 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
+          {tab === "portfolio" && (
+            <label className="flex items-center gap-1.5 text-slate-500">Sort
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="min-h-8 rounded-lg border border-line-strong bg-surface px-2 text-[13px] text-ink">
+                <option value="owes">Outstanding (highest)</option><option value="due">Due date (soonest)</option>
+                <option value="activity">Recent activity</option><option value="name">Name</option>
+              </select>
+            </label>
+          )}
           {tab !== "ledger" ? (
             <div role="group" aria-label="Filter by status" className="flex flex-wrap items-center gap-1">
               <span className="mr-1.5 text-slate-500">Status</span>
@@ -234,6 +254,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                     {!viewer && <button type="button" onClick={() => setDialog({ kind: "loan", p })} className={textBtn}>Add loan</button>}
                     {!viewer && <button type="button" onClick={() => setDialog({ kind: "repay", p })} disabled={p.owes <= 0} className={textBtn}>Record repayment</button>}
                     <button type="button" onClick={() => setExpanded(isOpen ? null : p.id)} aria-expanded={isOpen} className={textBtn}>{isOpen ? "Hide history" : "History"}</button>
+                    <Link href={`/debtors/${p.id}`} className={`${textBtn} inline-flex items-center`}>Profile</Link>
                     {!viewer && (
                       <span className="ml-auto flex">
                         <IconBtn label="Edit debtor" onClick={() => setDialog({ kind: "edit", p })}><PencilIcon size={15} /></IconBtn>

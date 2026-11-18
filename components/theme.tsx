@@ -5,7 +5,9 @@ import { MonitorIcon, MoonIcon, SunIcon } from "@/components/icons";
 import { THEME_KEY as KEY } from "@/lib/theme-script";
 
 export type ThemePref = "light" | "dark" | "system";
-const PAGE = { light: "#F5F4F0", dark: "#111110" };
+/** The two MRRMR themes, by their names. `light`/`dark` stay the stored keys, so saved choices keep working. */
+export const THEME_NAMES = { light: "Executive Minimal", dark: "Midnight Finance" } as const;
+const PAGE = { light: "#F4F4F1", dark: "#0A0D13" };
 
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
@@ -54,10 +56,10 @@ export function setTheme(pref: ThemePref, from?: { x: number; y: number }) {
 /** The saved choice and what is actually showing. Server render assumes light; the script has already painted. */
 export function useTheme() {
   const pref = useSyncExternalStore(subscribe, readPref, () => "system" as ThemePref);
-  const mode = useSyncExternalStore(
+  const mode = useSyncExternalStore<"light" | "dark">(
     subscribe,
     () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light"),
-    () => "light" as const
+    () => "light"
   );
 
   // While following the system, follow it live too.
@@ -81,10 +83,11 @@ const centre = (el: HTMLElement) => {
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { mode } = useTheme();
   const next = mode === "dark" ? "light" : "dark";
+  const label = `Switch to ${THEME_NAMES[next]} (${next}) — shortcut T`;
   return (
     <button type="button" onClick={(e) => setTheme(next, centre(e.currentTarget))}
-      aria-label={`Switch to ${next} mode`} title={`Switch to ${next} mode`}
-      className={`group relative grid size-9 flex-none place-items-center overflow-hidden rounded-md border border-line bg-surface text-slate-600 hover:border-line-strong hover:bg-soft hover:text-ink ${className}`}>
+      aria-label={label} title={label}
+      className={`group relative grid size-10 flex-none place-items-center overflow-hidden rounded-lg border border-line bg-surface text-slate-600 hover:border-line-strong hover:bg-soft hover:text-ink ${className}`}>
       <span key={mode} className="grid animate-[theme-icon_420ms_var(--ease-spring)_both] place-items-center">
         {mode === "dark" ? <SunIcon size={16} /> : <MoonIcon size={16} />}
       </span>
@@ -92,23 +95,41 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   );
 }
 
-/** Light / Dark / System as a segmented control, for the shortcuts sheet and settings-like places. */
-export function ThemeSegment() {
+/**
+ * Executive Minimal / Midnight Finance / Auto as a radio group. Arrow keys move between options (WAI-ARIA radio
+ * pattern): only the checked option is in the Tab order.
+ */
+export function ThemeSegment({ stacked = false }: { stacked?: boolean }) {
   const { pref } = useTheme();
-  const opts: [ThemePref, string, React.ReactNode][] = [
-    ["light", "Light", <SunIcon key="l" size={14} />],
-    ["dark", "Dark", <MoonIcon key="d" size={14} />],
-    ["system", "Auto", <MonitorIcon key="s" size={14} />],
+  const opts: [ThemePref, string, string, React.ReactNode][] = [
+    ["light", THEME_NAMES.light, "Light", <SunIcon key="l" size={14} />],
+    ["dark", THEME_NAMES.dark, "Dark", <MoonIcon key="d" size={14} />],
+    ["system", "Auto", "Follows your device", <MonitorIcon key="s" size={14} />],
   ];
+  const onKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+    if (!dir) return;
+    e.preventDefault();
+    const i = (opts.findIndex(([k]) => k === pref) + dir + opts.length) % opts.length;
+    const btn = e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[i];
+    btn?.focus();
+    setTheme(opts[i][0], btn ? centre(btn) : undefined);
+  };
   return (
-    <div role="radiogroup" aria-label="Theme" className="flex rounded-lg border border-line bg-soft p-0.5">
-      {opts.map(([k, label, icon]) => (
-        <button key={k} type="button" role="radio" aria-checked={pref === k}
+    <div role="radiogroup" aria-label="Theme" onKeyDown={onKey}
+      className={`flex gap-0.5 rounded-lg border border-line bg-soft p-0.5 ${stacked ? "flex-col" : ""}`}>
+      {opts.map(([k, name, hint, icon]) => (
+        <button key={k} type="button" role="radio" aria-checked={pref === k} tabIndex={pref === k ? 0 : -1}
+          aria-label={k === "system" ? "Auto, follows your device" : `${name} (${hint.toLowerCase()})`}
           onClick={(e) => setTheme(k, centre(e.currentTarget))}
-          className={`inline-flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-md px-3 text-[13px] font-medium ${
-            pref === k ? "bg-surface text-ink shadow-[0_1px_2px_rgba(0,0,0,0.12)]" : "text-slate-500 hover:text-ink"
+          className={`inline-flex min-h-9 flex-1 items-center gap-2 rounded-md px-3 text-[13px] font-medium ${stacked ? "justify-start py-1.5 text-left" : "justify-center"} ${
+            pref === k ? "bg-surface text-ink shadow-[var(--shadow-card)]" : "text-slate-500 hover:text-ink"
           }`}>
-          {icon}{label}
+          {icon}
+          <span className="flex flex-col leading-tight">
+            {stacked ? name : k === "system" ? "Auto" : name.split(" ")[0]}
+            {stacked && <span className="text-[11.5px] font-normal text-slate-500">{hint}</span>}
+          </span>
         </button>
       ))}
     </div>

@@ -8,7 +8,10 @@ import { changePassword, sendPasswordReset } from "@/lib/actions";
 import { signOut } from "@/app/login/actions";
 import { passwordProblems } from "@/lib/password";
 
-export function AdminButton({ email, lastChanged }: { email: string; lastChanged: string }) {
+/** Opens the admin password dialog. `className` lets the sidebar render it as a full-width row. */
+export function AdminButton({ email, lastChanged, className, children }: {
+  email: string; lastChanged: string; className?: string; children?: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -16,18 +19,17 @@ export function AdminButton({ email, lastChanged }: { email: string; lastChanged
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label="Admin"
-        className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-2.5 text-[13.5px] text-slate-700 hover:bg-soft sm:px-3"
+        aria-label={children ? undefined : "Admin password"}
+        className={className ?? "inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line px-3 text-[13.5px] text-slate-700 hover:bg-soft"}
       >
-        <LockIcon size={14} />
-        <span className="hidden sm:inline">Admin</span>
+        {children ?? <><LockIcon size={14} /><span className="hidden sm:inline">Admin</span></>}
       </button>
       {open && <AdminDialog email={email} lastChanged={lastChanged} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function AdminDialog({ email, lastChanged, onClose }: { email: string; lastChanged: string; onClose: () => void }) {
+export function AdminDialog({ email, lastChanged, onClose }: { email: string; lastChanged: string; onClose: () => void }) {
   const [cur, setCur] = useState("");
   const [nw, setNw] = useState("");
   const [conf, setConf] = useState("");

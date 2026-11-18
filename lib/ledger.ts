@@ -100,12 +100,21 @@ export type PendingInstallment = Installment & { left: number; paidOn: string | 
 
 const isEmi = (u: CardUse) => u.pay_plan === "emi" && (u.emi_months ?? 0) > 1;
 
-/** One installment for a full payment, or one per month for EMI (the last absorbs rounding). */
+/**
+ * What the buyer owes for one card use: the purchase amount plus any EMI charges recorded from the card statement
+ * (owner decision 2026-11-19: the buyer pays EMI charges). Before migration 0010, and for every row without
+ * charges, this is exactly `amount` — so every existing figure is unchanged.
+ */
+export function owedOf(u: Pick<CardUse, "amount" | "emi_charges">): number {
+  return u.emi_charges ? sumBy([u.amount, u.emi_charges], (x) => x) : u.amount;
+}
+
+/** One installment for a full payment, or one per month for EMI (the last absorbs rounding). EMIs split principal + charges. */
 export function installmentsOf(u: CardUse): Installment[] {
   if (!u.due_on) return [];
-  if (!isEmi(u)) return [{ useId: u.id, iso: u.due_on, amount: u.amount, n: 1, of: 1 }];
+  if (!isEmi(u)) return [{ useId: u.id, iso: u.due_on, amount: owedOf(u), n: 1, of: 1 }];
   const of = u.emi_months!;
-  return splitInstallments(u.amount, of).map((amount, i) => ({
+  return splitInstallments(owedOf(u), of).map((amount, i) => ({
     useId: u.id, iso: addMonths(u.due_on!, i), n: i + 1, of, amount,
   }));
 }
@@ -144,7 +153,7 @@ export function settle(sched: Installment[], pays: Payment[]): PendingInstallmen
 // ---- bank loans: which loan a repayment pays off -------------------------------------------------------
 
 /** Sorts after every real date: loans with no pay-back date are paid off last. */
-const NO_DUE = "9999-12-31";
+export const NO_DUE = "9999-12-31";
 
 /**
  * A person's loans in the order repayments pay them off: earliest pay-back date first, loans with no date last,
@@ -190,7 +199,12 @@ export type PlanStatus = {
   plan: PayPlan;
   reason: string;
   usedOn: string;
+  /** total payable: principal + charges */
   amount: number;
+  /** the purchase amount as charged to the card */
+  principal: number;
+  /** EMI charges recorded from the statement (0 = none recorded) */
+  charges: number;
   of: number;
   perMonth: number;
   paidCount: number;
@@ -219,9 +233,11 @@ export function cardPlanStatus(data: FinanceData, cardId: string): Map<string, P
         plan: isEmi(u) ? "emi" : "full",
         reason: u.reason_or_place,
         usedOn: u.used_on,
-        amount: u.amount,
+        amount: owedOf(u),
+        principal: u.amount,
+        charges: u.emi_charges ?? 0,
         of: own.length,
-        perMonth: isEmi(u) ? emiPerMonth(u.amount, u.emi_months!) : u.amount,
+        perMonth: isEmi(u) ? emiPerMonth(owedOf(u), u.emi_months!) : owedOf(u),
         paidCount: own.filter((s) => s.left <= 0).length,
         left: sumBy(own, (s) => s.left),
         next: own.find((s) => s.left > 0) ?? null,
@@ -245,7 +261,7 @@ export function emiSummary(plans: PlanStatus[]): string | null {
 }
 
 function planDetail(u: CardUse) {
-  if (isEmi(u)) return ` · EMI ${u.emi_months} × ${taka(emiPerMonth(u.amount, u.emi_months!))} from ${dateShort(u.due_on)}`;
+  if (isEmi(u)) return ` · EMI ${u.emi_months} × ${taka(emiPerMonth(owedOf(u), u.emi_months!))} from ${dateShort(u.due_on)}${u.emi_charges ? ` (incl. ${taka(u.emi_charges)} charges)` : ""}`;
   return u.due_on ? ` · pay back by ${dateShort(u.due_on)}` : "";
 }
 
@@ -264,7 +280,7 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
     const s = summaryById.get(person.id);
 
     const loanTotal = sumBy(L, (x) => x.amount);
-    const cardTotal = sumBy(C, (x) => x.amount);
+    const cardTotal = sumBy(C, owedOf);
     const paidLoan = sumBy(R.filter((r) => r.applies_to === "loan"), (x) => x.amount);
     const paidCard = sumBy(R.filter((r) => r.applies_to === "card"), (x) => x.amount);
     const paid = sumBy([paidLoan, paidCard], (x) => x);
@@ -274,7 +290,7 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
 
     // Per card, in paisa: card uses minus card repayments.
     const outP: Record<string, number> = {};
-    for (const c of C) outP[c.card_id] = (outP[c.card_id] ?? 0) + toPaisa(c.amount);
+    for (const c of C) outP[c.card_id] = (outP[c.card_id] ?? 0) + toPaisa(owedOf(c));
     for (const r of R) if (r.applies_to === "card" && r.card_id) outP[r.card_id] = (outP[r.card_id] ?? 0) - toPaisa(r.amount);
     const cardOutByCard: Record<string, number> = {};
     for (const [k, v] of Object.entries(outP)) if (v > 0) cardOutByCard[k] = fromPaisa(v);
@@ -285,8 +301,8 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
         detail: `${x.reason} · ${x.method}${x.due_on ? ` · pay back by ${dateShort(x.due_on)}` : ""}`,
       })),
       ...C.map((x) => ({
-        id: x.id, iso: x.used_on, created: x.created_at, o: 1, kind: "Used my card" as const, amount: x.amount, sign: 1 as const,
-        detail: `${x.reason_or_place} · ${cardLabel(cardsById.get(x.card_id))}${isEmi(x) ? ` · EMI ${x.emi_months} months` : ""}`,
+        id: x.id, iso: x.used_on, created: x.created_at, o: 1, kind: "Used my card" as const, amount: owedOf(x), sign: 1 as const,
+        detail: `${x.reason_or_place} · ${cardLabel(cardsById.get(x.card_id))}${isEmi(x) ? ` · EMI ${x.emi_months} months` : ""}${x.emi_charges ? ` · incl. ${taka(x.emi_charges)} charges` : ""}`,
       })),
       ...R.map((x) => ({
         id: x.id, iso: x.paid_on, created: x.created_at, o: 2, kind: "Paid back" as const, amount: x.amount, sign: -1 as const,
@@ -365,7 +381,7 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
   const takes = isCard
     ? data.cardUses
         .filter((u) => u.card_id === scope.cardId && u.person_id)
-        .map((u) => ({ id: u.id, person: u.person_id!, iso: u.used_on, created: u.created_at, amount: u.amount, due: u.due_on, reason: u.reason_or_place,
+        .map((u) => ({ id: u.id, person: u.person_id!, iso: u.used_on, created: u.created_at, amount: owedOf(u), due: u.due_on, reason: u.reason_or_place,
           sched: installmentsOf(u), detail: `${u.reason_or_place} · #${u.category}${planDetail(u)}` }))
     : data.loans.map((l) => ({ id: l.id, person: l.person_id, iso: l.taken_on, created: l.created_at, amount: l.amount, due: l.due_on, reason: l.reason,
         sched: [] as Installment[], detail: `${l.reason} · ${l.method}${l.due_on ? ` · pay back by ${dateShort(l.due_on)}` : ""}` }));

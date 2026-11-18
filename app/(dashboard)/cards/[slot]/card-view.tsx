@@ -14,6 +14,11 @@ import { CardVisual } from "@/components/card-visual";
 import { FlowChart, OUT_COLOR, Ring, type Flow } from "@/components/charts";
 import { SortTh, useSort } from "@/components/sortable";
 import { usePalettePeople } from "@/components/command-palette";
+import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
+import { CardBreakdown, CardEmiPlans, TxnDrawer, TxnFilters, useTxnFilter } from "@/components/card-sections";
+import { computeDashboard } from "@/lib/dashboard";
+import type { CardUse } from "@/lib/types";
+import { Badge } from "@/components/ui";
 import { setCardBalance } from "@/lib/actions";
 import { buildCardProfiles, byOwesThenName, CARD_NAMES, cardPlanStatus, cardTitle, emiSummary, type PlanStatus } from "@/lib/ledger";
 import { dateLong, dateShort, initials, taka, timestampLong } from "@/lib/format";
@@ -24,7 +29,7 @@ function PlanCell({ status: s, today }: { status: PlanStatus | undefined; today:
   if (!s || !s.of) return <span className="text-slate-400">—</span>;
   const late = !!s.next && s.next.iso < today;
   const when = s.next ? (
-    <span className={late ? "font-medium text-[#9B3426]" : "text-slate-600"}>
+    <span className={late ? "font-medium text-bad" : "text-slate-600"}>
       {late ? "Late — " : ""}{s.plan === "emi" ? `next ${taka(s.next.left)} ` : "by "}{dateShort(s.next.iso)}
     </span>
   ) : <span className="text-brand-2">Paid</span>;
@@ -61,7 +66,11 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const uses = useMemo(() => (card ? data.cardUses.filter((u) => u.card_id === card.id) : []), [data.cardUses, card]);
   const peopleById = useMemo(() => new Map(data.people.map((p) => [p.id, p])), [data.people]);
   const nameOf = (id: string | null) => (!id ? "Me" : peopleById.get(id)?.name ?? "Unknown");
-  const { sorted: useRows, sort, toggle } = useSort(uses, {
+  const [buying, setBuying] = useState(false);
+  const [viewing, setViewing] = useState<CardUse | null>(null);
+  const txn = useTxnFilter(uses, nameOf);
+  const dash = useMemo(() => computeDashboard(data, today), [data, today]);
+  const { sorted: useRows, sort, toggle } = useSort(txn.rows, {
     date: (u) => u.used_on, person: (u) => nameOf(u.person_id), amount: (u) => u.amount,
   });
   const flows = useMemo<Flow[]>(() => card ? [
@@ -102,11 +111,11 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
 
   return (
     <Shell
-      subtitle={`${card.name}: what you can spend now, what people owe on it, and what frees up once they pay.`}
+      subtitle={`${card.name}: what you owe on it, how much of that others owe you, and what you can still spend.`}
       actions={
-        <HeaderButton onClick={() => openAdd()}>
+        <HeaderButton onClick={() => setBuying(true)}>
           <PersonIcon size={15} />
-          Add debtor
+          Add transaction
         </HeaderButton>
       }
     >
@@ -169,9 +178,13 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
             </div>
           )}
         </div>
-        <FlowChart title="Card activity" sub="Spent on this card and paid back by people, per month."
+        <FlowChart title="Card activity" sub="Spent on this card (by everyone, you included) and paid back by people."
           flows={flows} today={today} outLabel="Spent" inLabel="Paid back" />
       </div>
+
+      {(() => { const cs = dash.cards.find((c) => c.card.id === card.id); return cs ? <CardBreakdown c={cs} open={dash.open} today={today} /> : null; })()}
+
+      <CardEmiPlans plans={[...plans.values()]} names={new Map(data.people.map((p) => [p.id, p.name]))} today={today} />
 
       <Flash text={flash.text} />
 
@@ -181,7 +194,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
         tookLabel="Used"
         items={profiles.map((p) => ({ ...p, took: p.used }))}
         onOpen={setOpenId}
-        onAdd={() => openAdd()}
+        onAdd={() => setBuying(true)}
       />
 
       <SectionCard>
@@ -213,8 +226,8 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                   <th scope="row" className="px-4 py-1.5 text-left">
                     <PersonButton name={p.name} initials={p.initials} size={30} onClick={() => setOpenId(p.id)} />
                   </th>
-                  <td data-label="Used" className={`${td} text-right font-mono text-slate-600`}>{taka(p.used)}</td>
-                  <td data-label="Paid back" className={`${td} text-right font-mono text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
+                  <td data-label="Used" className={`${td} money text-right text-slate-600`}>{taka(p.used)}</td>
+                  <td data-label="Paid back" className={`${td} money text-right text-brand-2`}>{p.paid ? taka(p.paid) : "—"}</td>
                   <td data-label="Still owes" className={`${td} money text-right text-owed`}>{taka(p.owes)}</td>
                   <td data-label="Due" className={td}>
                     <DuePill kind={p.dueKind}>{p.dueShort}</DuePill>
@@ -237,7 +250,9 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       </SectionCard>
 
       <SectionCard>
-        <SectionHead id="log-h" title="Transactions" sub="Every use of this card. Tap a name to open their profile, or a heading to sort." />
+        <SectionHead id="log-h" title="Transactions" sub="Every use of this card. Tap a purchase for its details, a name for their profile, or a heading to sort." />
+        <TxnFilters f={txn.f} setF={txn.setF} shown={txn.rows.length} total={uses.length}
+          people={[...new Map(uses.filter((u) => u.person_id).map((u) => [u.person_id!, { id: u.person_id!, name: nameOf(u.person_id) }])).values()].sort((a, b) => a.name.localeCompare(b.name))} />
         <div className="overflow-x-auto">
           <table className="stack-table w-full min-w-[820px] border-collapse text-[14px]">
             <thead>
@@ -265,11 +280,16 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                         <PersonButton name={name} initials={initials(name)} onClick={() => setOpenId(u.person_id!)} />
                       )}
                     </th>
-                    <td data-label="Why / where" className={td}>{u.reason_or_place}</td>
+                    <td data-label="Why / where" className={td}>
+                      <button type="button" onClick={() => setViewing(u)} className="min-h-10 text-left underline decoration-line-strong underline-offset-4 hover:text-brand-ink hover:decoration-brand-2">
+                        {u.reason_or_place}
+                      </button>
+                      {u.purchase_group && <Badge tone="info" className="ml-1.5 text-[10.5px]">Split</Badge>}
+                    </td>
                     <td data-label="Amount" className={`${td} money text-right ${me ? "text-slate-500" : ""}`}>{taka(u.amount)}</td>
                     <td data-label="Pay back" className={`${td} text-[13px]`}><PlanCell status={plans.get(u.id)} today={today} /></td>
                     <td className="stack-corner px-2 text-right">
-                      <DeleteButton label={`Delete ${name}'s card use, ${taka(u.amount)}`} onClick={() => setDeleting({
+                      <DeleteButton label={u.person_id ? `Delete ${name}'s card use, ${taka(u.amount)}` : `Delete your own card spending, ${taka(u.amount)}, ${u.reason_or_place}`} onClick={() => setDeleting({
                         kind: "card_use", id: u.id, amount: u.amount, iso: u.used_on,
                         what: `${me ? "My spending" : `${name} used the card`} — ${u.reason_or_place}`,
                         undo: undoText("card_use", u.amount, CARD_NAMES[slot]),
@@ -280,6 +300,9 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
               })}
               {uses.length === 0 && (
                 <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">Nothing recorded on this card yet.</td></tr>
+              )}
+              {uses.length > 0 && txn.rows.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">No transactions match these filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -318,6 +341,26 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       )}
 
       {editingCard && <EditCardDialog card={card} onClose={() => setEditingCard(false)} />}
+
+      {buying && (
+        <CardPurchaseDialog cards={data.cards} initialCardId={card.id} knownNames={data.people.map((p) => p.name)}
+          onClose={() => setBuying(false)}
+          onSaved={(text, personId) => { setBuying(false); setFlash({ text, at: "added" }); if (personId) setOpenId(personId); }} />
+      )}
+
+      {viewing && (
+        <TxnDrawer u={viewing} all={uses} plan={plans.get(viewing.id)} nameOf={nameOf} viewer={viewer}
+          onClose={() => setViewing(null)}
+          onDelete={() => {
+            const u = viewing;
+            setViewing(null);
+            setDeleting({
+              kind: "card_use", id: u.id, amount: u.amount, iso: u.used_on,
+              what: `${u.person_id ? `${nameOf(u.person_id)} used the card` : "My spending"} — ${u.reason_or_place}`,
+              undo: undoText("card_use", u.amount, CARD_NAMES[slot]),
+            });
+          }} />
+      )}
 
       {deleting && (
         <DeleteRecordDialog target={deleting} onClose={() => setDeleting(null)}

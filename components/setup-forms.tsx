@@ -41,7 +41,7 @@ export function SetupAccount() {
         <label className="field-label">Account name *<input className="field-input" value={f.name} onChange={set("name")} /></label>
         <label className="field-label">Holder name<input className="field-input" value={f.holder_name} onChange={set("holder_name")} placeholder="e.g. Raja Mia Raj" /></label>
         <label className="field-label sm:col-span-2">Money in the account now (৳)
-          <input className="field-input font-mono" type="number" min="0" value={f.balance} onChange={set("balance")} placeholder="0" />
+          <input className="field-input tabular-nums" type="number" min="0" value={f.balance} onChange={set("balance")} placeholder="0" />
         </label>
         {error && <ErrorBox className="sm:col-span-2">{error}</ErrorBox>}
         <button type="submit" disabled={pending} className={`${btnPrimary} sm:col-span-2`}>{pending ? "Saving…" : "Save account"}</button>
@@ -84,9 +84,9 @@ export function SetupCard({ slot }: { slot: 1 | 2 }) {
         <label className="field-label">Bank *<input className="field-input" value={f.bank} onChange={set("bank")} /></label>
         <label className="field-label">Card name *<input className="field-input" value={f.name} onChange={set("name")} /></label>
         <label className="field-label">Network<input className="field-input" value={f.network} onChange={set("network")} /></label>
-        <label className="field-label">Last 4 digits<input className="field-input font-mono" value={f.last4} onChange={set("last4")} maxLength={4} inputMode="numeric" /></label>
-        <label className="field-label">Credit limit (৳)<input className="field-input font-mono" type="number" min="0" value={f.credit_limit} onChange={set("credit_limit")} /></label>
-        <label className="field-label">Balance owed now (৳)<input className="field-input font-mono" type="number" min="0" value={f.balance} onChange={set("balance")} placeholder="0" /></label>
+        <label className="field-label">Last 4 digits<input className="field-input tabular-nums" value={f.last4} onChange={set("last4")} maxLength={4} inputMode="numeric" /></label>
+        <label className="field-label">Credit limit (৳)<input className="field-input tabular-nums" type="number" min="0" value={f.credit_limit} onChange={set("credit_limit")} /></label>
+        <label className="field-label">Balance owed now (৳)<input className="field-input tabular-nums" type="number" min="0" value={f.balance} onChange={set("balance")} placeholder="0" /></label>
         <label className="field-label sm:col-span-2">Pay by<input className="field-input" type="date" value={f.pay_by} onChange={set("pay_by")} /></label>
         {error && <ErrorBox className="sm:col-span-2">{error}</ErrorBox>}
         <button type="submit" disabled={pending} className={`${btnPrimary} sm:col-span-2`}>{pending ? "Saving…" : "Save card"}</button>
@@ -127,7 +127,7 @@ export function EditCardDialog({ card, onClose }: { card: Card; onClose: () => v
       }
     >
       <div className="flex flex-col gap-4 p-5">
-        <label className="field-label">Credit limit (৳)<input className="field-input font-mono" type="number" min="0" value={limit} onChange={(e) => setLimit(e.target.value)} /></label>
+        <label className="field-label">Credit limit (৳)<input className="field-input tabular-nums" type="number" min="0" value={limit} onChange={(e) => setLimit(e.target.value)} /></label>
         <label className="field-label">Pay by (this bill)<input className="field-input" type="date" value={payBy} onChange={(e) => setPayBy(e.target.value)} /></label>
         {error && <ErrorBox>{error}</ErrorBox>}
       </div>

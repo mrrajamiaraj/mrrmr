@@ -55,6 +55,10 @@ export type CardUse = {
   /** Missing until migration 0008 runs; treat as "full". */
   pay_plan?: PayPlan;
   emi_months?: number | null;
+  /** EMI interest / fees from the card statement, owed by the buyer on top of `amount`. Missing until 0010 → 0. */
+  emi_charges?: number;
+  /** Links the shares of one split purchase. Missing until 0010. */
+  purchase_group?: string | null;
   created_at: string;
 };
 

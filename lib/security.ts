@@ -19,6 +19,24 @@ export function safeNextPath(value: unknown, fallback = "/"): string {
   }
 }
 
+/** Paths anyone can open without signing in. */
+export const PUBLIC_PATHS = ["/login", "/auth", "/view"];
+/** The ONLY signed-in paths view mode may open: Research Finance and its own export. Everything else redirects. */
+export const VIEWER_PATHS = ["/research"];
+
+const under = (path: string, roots: string[]) => roots.some((p) => path === p || path.startsWith(p + "/"));
+export const isPublicPath = (path: string) => under(path, PUBLIC_PATHS);
+/**
+ * Whether a view-mode session may open `path`. Allow-list, not block-list: a page added later is private by default.
+ * Normalises case and repeated or trailing slashes first, so "/RESEARCH/../account" tricks can't slip through.
+ */
+export function viewerMayOpen(path: string): boolean {
+  let p: string;
+  try { p = new URL(path, "https://x.invalid").pathname.toLowerCase().replace(/\/{2,}/g, "/"); } catch { return false; }
+  if (p.length > 1) p = p.replace(/\/+$/, "");
+  return isPublicPath(p) || under(p, VIEWER_PATHS);
+}
+
 /** Compares two secrets in constant time, so response timing reveals nothing about how much of a guess was right. */
 export function secretEquals(given: string, expected: string): boolean {
   // Hashing first makes both sides the same length, which timingSafeEqual requires, without leaking the length.

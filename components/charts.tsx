@@ -5,6 +5,8 @@ import { Avatar, SectionCard, SectionHead } from "@/components/debtors/bits";
 import { CountUp } from "@/components/motion";
 import { ChevronRight } from "@/components/icons";
 import { monthLabel, taka } from "@/lib/format";
+import { subMoney, sumBy, sumMoney } from "@/lib/money";
+import { usePrefs } from "@/components/prefs";
 import type { DueKind } from "@/lib/ledger";
 
 // Validated pair (dataviz validator, light surface): amber = money going out, green = money coming back.
@@ -39,8 +41,10 @@ function shiftMonth(key: string, by: number) {
 }
 
 export type Flow = { iso: string; amount: number; dir: "out" | "in" };
-type Range = "6" | "12" | "all";
-const RANGES: [Range, string][] = [["6", "6M"], ["12", "12M"], ["all", "All"]];
+type Range = "6" | "12" | "all" | "year";
+const RANGES: [Range, string][] = [["6", "6M"], ["12", "12M"], ["all", "All"], ["year", "Years"]];
+/** "Nov 2026" for a month key, "2026" for a year key. */
+const periodLabel = (key: string) => (key.length === 4 ? key : monthLabel(key));
 
 /**
  * Money out vs money back per month, as paired bars. Each month is one hit target (hover, focus, arrow keys)
@@ -51,11 +55,23 @@ export function FlowChart({
 }: {
   title: string; sub: string; flows: Flow[]; today: string; outLabel?: string; inLabel?: string;
 }) {
-  const [range, setRange] = useState<Range>("6");
+  const [range, setRange] = useState<Range>(usePrefs().chartRange);
   const [hover, setHover] = useState<number | null>(null);
   const [asTable, setAsTable] = useState(false);
 
   const months = useMemo(() => {
+    if (range === "year") {
+      // One bar pair per calendar year, from the first year with activity to this year.
+      const endY = Number(today.slice(0, 4));
+      const firstY = flows.reduce((m, f) => Math.min(m, Number(f.iso.slice(0, 4))), endY);
+      const byKey = new Map<string, { key: string; out: number; in: number }>();
+      for (let y = Math.max(firstY, endY - 9); y <= endY; y++) byKey.set(String(y), { key: String(y), out: 0, in: 0 });
+      for (const f of flows) {
+        const b = byKey.get(f.iso.slice(0, 4));
+        if (b) b[f.dir] = sumMoney([b[f.dir], f.amount]);
+      }
+      return [...byKey.values()];
+    }
     const end = ym(today);
     const first = flows.reduce((m, f) => (ym(f.iso) < m ? ym(f.iso) : m), end);
     let start = range === "all" ? first : shiftMonth(end, -(Number(range) - 1));
@@ -65,7 +81,7 @@ export function FlowChart({
     const byKey = new Map(keys.map((k) => [k, { key: k, out: 0, in: 0 }]));
     for (const f of flows) {
       const b = byKey.get(ym(f.iso));
-      if (b) b[f.dir] += f.amount;
+      if (b) b[f.dir] = sumMoney([b[f.dir], f.amount]);
     }
     return [...byKey.values()];
   }, [flows, range, today]);
@@ -75,8 +91,9 @@ export function FlowChart({
   const top = step * 4 || 4;
   // Nothing in range: just the baseline and a note, not a scale of ৳1–৳4.
   const ticks = max ? [4, 3, 2, 1, 0].map((i) => i * step) : [0];
-  const sumOut = months.reduce((s, m) => s + m.out, 0);
-  const sumIn = months.reduce((s, m) => s + m.in, 0);
+  const sumOut = sumBy(months, (m) => m.out);
+  const sumIn = sumBy(months, (m) => m.in);
+  const yearly = range === "year";
   const every = months.length > 18 ? 4 : months.length > 12 ? 2 : 1;
   const cur = hover != null ? months[hover] : null;
 
@@ -88,7 +105,7 @@ export function FlowChart({
             <div role="group" aria-label="Time range" className="flex rounded-lg border border-line bg-soft p-0.5">
               {RANGES.map(([k, label]) => (
                 <button key={k} type="button" aria-pressed={range === k} onClick={() => { setRange(k); setHover(null); }}
-                  className={`min-h-7 rounded-md px-2.5 text-[12.5px] font-medium ${range === k ? "bg-surface text-ink shadow-[0_1px_2px_rgba(28,27,24,0.12)]" : "text-slate-500 hover:text-ink"}`}>
+                  className={`min-h-7 rounded-md px-2.5 text-[12.5px] font-medium ${range === k ? "bg-surface text-ink shadow-[var(--shadow-card)]" : "text-slate-500 hover:text-ink"}`}>
                   {label}
                 </button>
               ))}
@@ -104,7 +121,7 @@ export function FlowChart({
         <Legend color={OUT_COLOR} label={outLabel} value={sumOut} />
         <Legend color={IN_COLOR} label={inLabel} value={sumIn} />
         <div className="ml-auto text-right">
-          <div className="caption">Recovered in range</div>
+          <div className="caption">Recovered vs lent, in range</div>
           <div className="money text-[15px]">{sumOut ? Math.round((sumIn / sumOut) * 100) : 0}%</div>
         </div>
       </div>
@@ -114,7 +131,7 @@ export function FlowChart({
           <table className="w-full border-collapse text-[13.5px]">
             <thead className="sticky top-0 bg-subtle">
               <tr className="text-left text-[12px] uppercase tracking-[0.04em] text-slate-500">
-                <th scope="col" className="px-4 py-2 font-medium sm:px-5">Month</th>
+                <th scope="col" className="px-4 py-2 font-medium sm:px-5">{yearly ? "Year" : "Month"}</th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">{outLabel}</th>
                 <th scope="col" className="px-4 py-2 text-right font-medium sm:pr-5">{inLabel}</th>
               </tr>
@@ -122,7 +139,7 @@ export function FlowChart({
             <tbody>
               {[...months].reverse().map((m) => (
                 <tr key={m.key} className="border-t border-soft">
-                  <th scope="row" className="px-4 py-2 text-left font-normal text-slate-600 sm:px-5">{monthLabel(m.key)}</th>
+                  <th scope="row" className="px-4 py-2 text-left font-normal text-slate-600 sm:px-5">{periodLabel(m.key)}</th>
                   <td className="money px-4 py-2 text-right">{m.out ? taka(m.out) : "—"}</td>
                   <td className="money px-4 py-2 text-right sm:pr-5">{m.in ? taka(m.in) : "—"}</td>
                 </tr>
@@ -146,7 +163,7 @@ export function FlowChart({
                 <span className={`h-px flex-auto ${t === 0 ? "bg-line-strong" : "bg-soft"}`} />
               </div>
             ))}
-            <div role="list" aria-label={`${title}, by month`} className="absolute inset-y-0 left-11 right-0 flex items-end"
+            <div role="list" aria-label={`${title}, by ${yearly ? "year" : "month"}`} className="absolute inset-y-0 left-11 right-0 flex items-end"
               onKeyDown={(e) => {
                 if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
                 e.preventDefault();
@@ -158,7 +175,7 @@ export function FlowChart({
                 const dim = hover != null && hover !== i;
                 return (
                   <div key={m.key} role="listitem" tabIndex={0}
-                    aria-label={`${monthLabel(m.key)}: ${outLabel} ${taka(m.out)}, ${inLabel} ${taka(m.in)}`}
+                    aria-label={`${periodLabel(m.key)}: ${outLabel} ${taka(m.out)}, ${inLabel} ${taka(m.in)}`}
                     onPointerEnter={() => setHover(i)} onFocus={() => setHover(i)}
                     className="group relative flex h-full flex-1 items-end justify-center gap-[2px] rounded-md outline-offset-0 focus-visible:bg-soft/60">
                     <span aria-hidden="true" className={`absolute inset-x-0.5 inset-y-0 rounded-md bg-soft transition-opacity ${hover === i ? "opacity-60" : "opacity-0"}`} />
@@ -172,12 +189,12 @@ export function FlowChart({
               <div role="presentation"
                 className="pointer-events-none absolute -top-1 z-10 w-[188px] animate-fade-in rounded-lg border border-line bg-surface/95 p-2.5 text-[12.5px] shadow-[var(--shadow-lift)] backdrop-blur"
                 style={{ left: `clamp(0px, calc(44px + (100% - 44px) * ${(hover + 0.5) / months.length} - 94px), calc(100% - 188px))` }}>
-                <div className="mb-1.5 font-medium text-slate-500">{monthLabel(cur.key)}</div>
+                <div className="mb-1.5 font-medium text-slate-500">{periodLabel(cur.key)}</div>
                 <TipRow color={OUT_COLOR} label={outLabel} value={cur.out} />
                 <TipRow color={IN_COLOR} label={inLabel} value={cur.in} />
                 <div className="mt-1.5 flex justify-between border-t border-soft pt-1.5 text-slate-500">
                   <span>Net</span>
-                  <span className="money text-ink">{cur.in - cur.out >= 0 ? "+" : "−"} {taka(cur.in - cur.out)}</span>
+                  <span className="money text-ink">{subMoney(cur.in, cur.out) >= 0 ? "+" : "−"} {taka(subMoney(cur.in, cur.out))}</span>
                 </div>
               </div>
             )}
@@ -190,7 +207,7 @@ export function FlowChart({
               const phoneHide = months.length > 6 && i % (every * 2) !== 0 && i !== months.length - 1;
               return (
                 <span key={m.key} className={`flex-1 whitespace-nowrap text-center text-[11px] ${hover === i ? "font-medium text-ink" : "text-slate-400"} ${phoneHide ? "max-sm:invisible" : ""}`}>
-                  {show ? (mo === "01" || i === 0 ? `${MON[Number(mo) - 1]} ’${y.slice(2)}` : MON[Number(mo) - 1]) : ""}
+                  {yearly ? m.key : show ? (mo === "01" || i === 0 ? `${MON[Number(mo) - 1]} ’${y.slice(2)}` : MON[Number(mo) - 1]) : ""}
                 </span>
               );
             })}

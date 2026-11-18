@@ -228,3 +228,35 @@ test("Debtors page: due date is the earliest really-unpaid loan or card installm
   assert.equal(p.dueKind, "late", "the view's future-only next_due could never show this");
   assert.equal(buildProfiles({ ...d, repayments: [] }, "2026-01-05")[0].due, "2026-01-10");
 });
+
+// ---- EMI charges (owner decision 2026-11-19: the buyer pays them). Previous vs new behaviour. -------------------
+import { owedOf } from "../lib/ledger.ts";
+
+test("BEFORE = AFTER when no charges are recorded (every existing row): amounts, schedule and totals unchanged", () => {
+  const base = use({ amount: 24000, pay_plan: "emi", emi_months: 6, due_on: "2026-11-30" });
+  for (const u of [base, { ...base, emi_charges: 0 }, { ...base, emi_charges: undefined }]) {
+    assert.equal(owedOf(u), 24000);
+    assert.deepEqual(installmentsOf(u).map((s) => s.amount), legacyInstallments(base).map((s) => s.amount), "same as the pre-change rule");
+  }
+});
+
+test("AFTER: EMI charges are owed by the buyer and spread over the installments (last absorbs rounding)", () => {
+  const u = use({ amount: 24000, pay_plan: "emi", emi_months: 6, due_on: "2026-11-30", emi_charges: 1000 });
+  assert.equal(owedOf(u), 25000);
+  const s = installmentsOf(u);
+  assert.deepEqual(s.map((x) => x.amount), [4166.66, 4166.66, 4166.66, 4166.66, 4166.66, 4166.7]);
+  assert.equal(Math.round(s.reduce((t, x) => t + x.amount * 100, 0)) / 100, 25000);
+  const st = cardPlanStatus(data({ cardUses: [u], repayments: [rep({ amount: 4166.66 })] }), "c1").get("u1");
+  assert.deepEqual([st.principal, st.charges, st.amount, st.perMonth, st.paidCount, st.left], [24000, 1000, 25000, 4166.66, 1, 20833.34]);
+});
+
+test("AFTER: charges flow into what the person owes, per card and overall", () => {
+  const d = data({ cardUses: [use({ amount: 600, pay_plan: "emi", emi_months: 3, due_on: "2026-12-01", emi_charges: 30 })], repayments: [rep({ amount: 100 })] });
+  const [card] = buildCardProfiles(d, "c1", "2026-11-19");
+  assert.equal(card.used, 630);
+  assert.equal(card.owes, 530);
+  const [p] = buildProfiles(d, "2026-11-19");
+  assert.equal(p.cardTotal, 630);
+  assert.deepEqual(p.cardOutByCard, { c1: 530 });
+  assert.equal(p.events.find((e) => e.kind === "Used my card").amount, 630, "history uses the amount owed so 'owes after' reconciles");
+});

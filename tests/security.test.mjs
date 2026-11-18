@@ -102,3 +102,22 @@ test("siteOrigin trusts SITE_URL, else only an Origin that matches the Host", ()
   assert.equal(siteOrigin(headers({ origin: "https://evil.com", host: "app.example.com" }), ""), null);
   assert.equal(siteOrigin(headers({ host: "app.example.com" }), ""), null);
 });
+
+import { viewerMayOpen, isPublicPath } from "../lib/security.ts";
+
+test("view mode may open ONLY Research (and public pages) — every private route is refused", () => {
+  for (const ok of ["/research", "/research/", "/research/export", "/RESEARCH", "/login", "/view", "/auth/reset"]) {
+    assert.equal(viewerMayOpen(ok), true, ok);
+  }
+  for (const no of ["/", "/account", "/debtors", "/debtors/abc", "/cards/1", "/cards/2", "/export", "/export?type=full",
+    "/repayments", "/reports", "/settings", "/reconcile", "/audit", "/researchers", "/research/../account",
+    "/research/%2e%2e/account", "//research/../export", "/account#research"]) {
+    assert.equal(viewerMayOpen(no), false, no);
+  }
+});
+
+test("public paths are exact roots, not prefixes", () => {
+  assert.equal(isPublicPath("/login"), true);
+  assert.equal(isPublicPath("/loginx"), false);
+  assert.equal(isPublicPath("/viewer-secrets"), false);
+});

@@ -2,10 +2,14 @@
 
 import { useEffect, useId, useRef } from "react";
 import { CloseIcon } from "@/components/icons";
+import { buttonClass } from "@/components/ui";
 
 const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled):not([type=hidden]), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
-/** Centered dialog: plain title row, content, and a footer for its buttons. */
+/**
+ * Dialog: a bottom sheet on phones; centred on larger screens, or a drawer from the right edge with `side`.
+ * Focus moves in on open, Tab is trapped, Esc and the backdrop close it, focus returns to the opener.
+ */
 export function Modal({
   title,
   onClose,
@@ -13,6 +17,7 @@ export function Modal({
   footer,
   maxWidth = 580,
   header,
+  side = false,
 }: {
   title: React.ReactNode;
   onClose: () => void;
@@ -21,6 +26,8 @@ export function Modal({
   maxWidth?: number;
   /** replaces the default title bar */
   header?: (titleId: string) => React.ReactNode;
+  /** drawer from the right edge on ≥640px instead of a centred dialog */
+  side?: boolean;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
@@ -43,7 +50,8 @@ export function Modal({
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    ref.current?.querySelector<HTMLElement>("input:not([type=hidden]),select,button")?.focus();
+    // A field marked data-autofocus wins (e.g. a search box); otherwise the first control.
+    (ref.current?.querySelector<HTMLElement>("[data-autofocus]") ?? ref.current?.querySelector<HTMLElement>("input:not([type=hidden]),select,button"))?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
@@ -55,17 +63,21 @@ export function Modal({
   return (
     <div
       data-float
-      className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-[rgba(28,27,24,0.42)] pt-4 backdrop-blur-[2px] sm:items-center sm:p-4"
+      className={`fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-[rgba(10,13,19,0.45)] pt-4 ${
+        side ? "sm:items-stretch sm:justify-end sm:p-0" : "sm:items-center sm:p-4"
+      }`}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      {/* Phones: a sheet from the bottom edge; larger screens: centered. dvh keeps it clear of mobile browser bars. */}
+      {/* Phones: a sheet from the bottom edge; larger screens: centred, or a right-hand drawer. dvh keeps it clear of mobile browser bars. */}
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         style={{ maxWidth }}
-        className="max-h-[calc(100dvh-16px)] w-full animate-sheet-up overflow-y-auto overscroll-contain rounded-t-2xl bg-surface text-left shadow-[var(--shadow-pop)] sm:max-h-[calc(100dvh-32px)] sm:animate-pop-in sm:rounded-xl"
+        className={`max-h-[calc(100dvh-16px)] w-full animate-sheet-up overflow-y-auto overscroll-contain rounded-t-2xl bg-surface pb-[env(safe-area-inset-bottom)] text-left shadow-[var(--shadow-pop)] ${
+          side ? "sm:max-h-none sm:animate-[pop-in_280ms_var(--ease-out-expo)_both] sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-line" : "sm:max-h-[calc(100dvh-32px)] sm:animate-pop-in sm:rounded-2xl"
+        }`}
       >
         {/* Grab handle so the phone sheet reads as a sheet. */}
         <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-line sm:hidden" />
@@ -102,6 +114,7 @@ export function ErrorBox({ children, className = "" }: { children: React.ReactNo
   );
 }
 
-export const btnPrimary = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-brand-hover hover:shadow-[0_6px_16px_-6px_rgba(31,77,58,0.55)]";
-export const btnDanger = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-bad-solid px-4 text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2)] hover:bg-bad-solid-hover hover:shadow-[0_6px_16px_-6px_rgba(155,52,38,0.55)]";
-export const btnGhost = "min-h-10 rounded-lg px-3.5 text-[14px] text-slate-700 hover:bg-soft";
+// Kept for existing call sites; they are the design-system recipes from components/ui.
+export const btnPrimary = buttonClass("primary");
+export const btnDanger = buttonClass("danger");
+export const btnGhost = buttonClass("ghost", "md", "px-3.5");

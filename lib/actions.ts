@@ -7,8 +7,10 @@ import { passwordProblems } from "@/lib/password";
 import { cleanText, siteOrigin } from "@/lib/security";
 import { EMI_MONTHS, type PayPlan } from "@/lib/types";
 import { compareMoney, roundMoney, subMoney, sumBy } from "@/lib/money";
+import { normalizeLayout } from "@/lib/dashboard-layout";
+import { normalizePrefs } from "@/lib/prefs";
 
-export type ActionResult = { error?: string; personId?: string | null };
+export type ActionResult = { error?: string; personId?: string | null; groupId?: string | null };
 
 type DbError = { message: string; code?: string } | null;
 
@@ -32,6 +34,11 @@ function done(error: DbError, extra: ActionResult = {}): ActionResult {
   if (error) return { error: friendly(error) };
   revalidatePath("/", "layout");
   return extra;
+}
+
+/** Today in Bangladesh time — the database's default for a repayment date when none is given. */
+function todayIsoServer() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date());
 }
 
 /** Exact two-decimal rounding of client input (half away from zero); NaN for anything that isn't an amount. */
@@ -202,6 +209,58 @@ export async function addCardUse(input: {
   return done(error, { personId: (data as string | null) ?? null });
 }
 
+export type PurchasePart = { name: string; amount: number; plan: PayPlan; emiMonths?: number; dueOn?: string; emiCharges?: number };
+
+/**
+ * Records one card purchase with one or more payers (you and/or others) in ONE transaction (add_card_purchase,
+ * migration 0010). Before 0010, a single-payer purchase without EMI charges falls back to add_card_use, which has
+ * always been atomic; splits and charges then return a clear "run migration 0010" message.
+ */
+export async function addCardPurchase(input: {
+  cardId: string; reason: string; usedOn: string; category: string; addToBalance: boolean; parts: PurchasePart[];
+}): Promise<ActionResult & { groupId?: string | null }> {
+  if (!req(input.reason)) return { error: "Enter why or where the card was used." };
+  if (!Array.isArray(input.parts) || input.parts.length < 1 || input.parts.length > 10) return { error: "A purchase can have 1 to 10 payers." };
+  const parts = [];
+  const seen = new Set<string>();
+  for (const p of input.parts) {
+    const name = req(p.name, NAME);
+    const amount = money(p.amount);
+    const charges = money(p.emiCharges ?? 0);
+    const me = name.toLowerCase() === "me";
+    if (!name) return { error: "Enter who pays each share (or “Me”)." };
+    if (seen.has(name.toLowerCase())) return { error: `“${name}” appears twice — combine their shares into one.` };
+    seen.add(name.toLowerCase());
+    if (!(amount > 0)) return { error: `${me ? "Your" : `${name}'s`} share must be above ৳0.` };
+    if (!(charges >= 0)) return { error: "EMI charges can't be negative." };
+    const emi = !me && p.plan === "emi";
+    if (emi && !(EMI_MONTHS as readonly number[]).includes(Number(p.emiMonths))) return { error: `Pick how many months ${name}'s EMI runs.` };
+    if (emi && !orNull(p.dueOn)) return { error: `Pick ${name}'s first installment date.` };
+    if (!emi && charges > 0) return { error: "Charges apply to EMI shares only." };
+    parts.push({
+      name, amount, plan: emi ? "emi" : "full", emi_months: emi ? Number(p.emiMonths) : null,
+      due_on: me ? null : orNull(p.dueOn), emi_charges: emi ? charges : 0,
+    });
+  }
+
+  const supabase = await writer();
+  const { data, error } = await supabase.rpc("add_card_purchase", {
+    p_card_id: input.cardId, p_reason: req(input.reason), p_used_on: orNull(input.usedOn),
+    p_category: req(input.category, 40), p_add_to_balance: input.addToBalance, p_parts: parts,
+  });
+  const missing = error && (error.code === "PGRST202" || /could not find the function/i.test(error.message));
+  if (!missing) return done(error, { groupId: (data as string | null) ?? null });
+
+  // Pre-0010 fallback: exactly what the old form did, for the cases the old function can represent.
+  const [only] = parts;
+  if (parts.length > 1) return { error: "Splitting a purchase needs a database update. Run supabase/migrations/0010_card_purchases.sql in the Supabase SQL Editor, then try again." };
+  if (only.emi_charges > 0) return { error: "Recording EMI charges needs a database update. Run supabase/migrations/0010_card_purchases.sql in the Supabase SQL Editor, then try again." };
+  return addCardUse({
+    cardId: input.cardId, name: only.name, amount: only.amount, reason: input.reason, usedOn: input.usedOn, category: input.category,
+    dueOn: only.due_on ?? "", addToBalance: input.addToBalance, plan: only.plan as PayPlan, emiMonths: only.emi_months ?? undefined,
+  });
+}
+
 export async function recordRepayment(input: {
   personId: string;
   amount: number;
@@ -212,12 +271,27 @@ export async function recordRepayment(input: {
   accountId: string | null;
   addToAccount: boolean;
   lowerCard: boolean;
-}): Promise<ActionResult> {
+  /** set after the user confirmed that an identical-looking repayment really is a second payment */
+  confirmDuplicate?: boolean;
+}): Promise<ActionResult & { duplicate?: boolean }> {
   const amount = money(input.amount);
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
   if (input.appliesTo === "card" && !input.cardId) return { error: "Pick which card this repayment is for." };
+  // Never put money in the bank without saying which account (and only for loan repayments).
+  if (input.addToAccount && (!input.accountId || input.appliesTo !== "loan")) return { error: "Only a loan repayment can be added to a bank account — pick the account." };
+  if (!input.addToAccount && input.accountId) return { error: "Inconsistent request: an account was given but the money isn't being added to it." };
 
   const supabase = await writer();
+  // Duplicate guard: the same person, amount, date and source recorded in the last 2 minutes is almost always a
+  // double-tap or a resubmitted form. Ask once; the user can confirm it is a genuinely separate payment.
+  if (!input.confirmDuplicate) {
+    let dq = supabase.from("repayments").select("id", { count: "exact", head: true })
+      .eq("person_id", input.personId).eq("amount", amount).eq("applies_to", input.appliesTo)
+      .eq("paid_on", orNull(input.paidOn) ?? todayIsoServer()).gte("created_at", new Date(Date.now() - 120_000).toISOString());
+    if (input.cardId) dq = dq.eq("card_id", input.cardId);
+    const { count } = await dq;
+    if (count) return { duplicate: true, error: `An identical repayment of ৳${amount.toLocaleString("en-IN")} was recorded moments ago. Is this a second, separate payment?` };
+  }
   // A repayment can't be more than the person owes to THAT source: bank loans, or the one card it is for.
   // (Not their total across everything — extra on one card must not hide what is still owed elsewhere.)
   const owed = await owedToSource(supabase, input.personId, input.appliesTo, input.cardId);
@@ -251,14 +325,16 @@ async function owedToSource(
   appliesTo: "loan" | "card",
   cardId: string | null
 ): Promise<number | null> {
+  // select("*") so this works before and after migration 0010 (emi_charges); card debt = amount + emi_charges.
   const taken = appliesTo === "loan"
     ? supabase.from("loans").select("amount").eq("person_id", personId)
-    : supabase.from("card_uses").select("amount").eq("person_id", personId).eq("card_id", cardId!);
+    : supabase.from("card_uses").select("*").eq("person_id", personId).eq("card_id", cardId!);
   let paidQ = supabase.from("repayments").select("amount").eq("person_id", personId).eq("applies_to", appliesTo);
   if (appliesTo === "card") paidQ = paidQ.eq("card_id", cardId!);
   const [t, p] = await Promise.all([taken, paidQ]);
   if (t.error || p.error) return null;
-  return Math.max(subMoney(sumBy(t.data ?? [], (r) => r.amount), sumBy(p.data ?? [], (r) => r.amount)), 0);
+  const owedRow = (r: { amount: unknown; emi_charges?: unknown }) => sumBy([r.amount, r.emi_charges ?? 0], (x) => x);
+  return Math.max(subMoney(sumBy(t.data ?? [], owedRow), sumBy(p.data ?? [], (r) => r.amount)), 0);
 }
 
 export async function updatePerson(
@@ -312,6 +388,28 @@ export async function deleteRecords(
     deleted++;
   }
   return done(null);
+}
+
+// ---- dashboard preferences ----------------------------------------------------
+
+/** Saves the Overview layout (section order and hidden sections) to the signed-in admin's user metadata. */
+export async function saveDashboardLayout(layout: unknown): Promise<ActionResult> {
+  const clean = normalizeLayout(layout);
+  const supabase = await writer();
+  const { error } = await supabase.auth.updateUser({ data: { dashboard_layout: clean } });
+  if (error) return { error: error.message };
+  revalidatePath("/account");
+  return {};
+}
+
+/** Saves personal preferences (landing page, density, paisa, chart range) to user metadata. Never touches records. */
+export async function savePrefs(prefs: unknown): Promise<ActionResult> {
+  const clean = normalizePrefs(prefs);
+  const supabase = await writer();
+  const { error } = await supabase.auth.updateUser({ data: { prefs: clean } });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return {};
 }
 
 // ---- admin password ---------------------------------------------------------

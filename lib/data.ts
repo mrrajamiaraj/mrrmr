@@ -32,7 +32,7 @@ export async function loadFinance(): Promise<FinanceData> {
     cards: nums(cards.data, ["balance", "credit_limit", "slot"]),
     people: people.data ?? [],
     loans: nums(loans.data, ["amount"]),
-    cardUses: nums(cardUses.data, ["amount"]),
+    cardUses: nums(cardUses.data, ["amount", "emi_charges"]),
     repayments: nums(repayments.data, ["amount"]),
     summary: nums(summary.data, [
       "loaned", "loan_count", "card_used", "card_use_count", "repaid", "repaid_loan",

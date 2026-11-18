@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { STATUS_PILL, DUE_PILL, type DueKind } from "@/lib/ledger";
 import { toast } from "@/components/toast";
+import { EmptyState } from "@/components/ui";
+import { DueIcon } from "@/components/icons";
 import type { Status } from "@/lib/types";
 
 // Muted tints so people are easy to tell apart at a glance; picked from the initials, so a person keeps their colour.
@@ -35,18 +37,24 @@ const STATUS_BG: Record<Status, string> = {
   Repaid: "bg-good-tint",
 };
 
-/** Status as a soft pill with a coloured dot. */
+/** Status as a soft pill with a coloured dot. The word carries the meaning; colour only reinforces it. */
 export function StatusPill({ status, className = "" }: { status: Status; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium ${STATUS_PILL[status]} ${STATUS_BG[status]} ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-transparent px-2 py-0.5 text-[12px] font-medium leading-5 ${STATUS_PILL[status]} ${STATUS_BG[status]} ${className}`}>
       <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {status}
     </span>
   );
 }
 
+/** Due date. A late one is marked with an icon and a "Late" word, not colour alone. */
 export function DuePill({ kind, children }: { kind: DueKind; children: React.ReactNode }) {
-  return <span className={`whitespace-nowrap text-[13px] ${DUE_PILL[kind]}`}>{children}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap text-[13px] ${DUE_PILL[kind]}`}>
+      {kind === "late" && <DueIcon size={13} />}
+      {children}
+    </span>
+  );
 }
 
 export function Tag({ children, white = false }: { children: React.ReactNode; white?: boolean }) {
@@ -69,24 +77,26 @@ export function PersonButton({ name, initials, onClick, size = 28 }: { name: str
   );
 }
 
-export function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`spot overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-card)] ${className}`}>{children}</section>;
+/** Design-system card for a page section (tables, lists). Labelled by its SectionHead when one is used. */
+export function SectionCard({ children, className = "", labelledBy }: { children: React.ReactNode; className?: string; labelledBy?: string }) {
+  return <section aria-labelledby={labelledBy} className={`spot surface-card overflow-hidden ${className}`}>{children}</section>;
 }
 
 export function SectionHead({ id, title, sub, action }: { id: string; title: string; sub?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3 px-4 pb-3 pt-4 sm:px-5">
-      <div>
-        <h2 id={id} className="m-0 text-[16px] font-semibold tracking-[-0.01em]">{title}</h2>
-        {sub && <div className="mt-0.5 text-[13px] text-slate-500">{sub}</div>}
+    <div className="flex flex-wrap items-end justify-between gap-3 px-4 pb-3.5 pt-4 sm:px-5 sm:pt-5">
+      <div className="min-w-0">
+        <h2 id={id} className="m-0 text-heading font-semibold tracking-[-0.01em]">{title}</h2>
+        {sub && <div className="mt-1 text-small text-slate-500">{sub}</div>}
       </div>
       {action}
     </div>
   );
 }
 
-export const th = "px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.04em] text-slate-500";
-export const td = "px-4 py-2.5";
+// Transaction-table recipes: hairline rows, quiet uppercase headers, tabular figures (set globally on tables).
+export const th = "px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-slate-500";
+export const td = "px-4 py-3";
 export const theadRow = "border-y border-line bg-subtle text-left";
 export const totalRow = "border-t border-line-strong bg-subtle font-medium";
 
@@ -96,14 +106,7 @@ export function Flash({ text }: { text: string }) {
   return null;
 }
 
+/** Legacy name for the design-system empty state (pages pass one line of guidance). */
 export function EmptyNote({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface/50 px-6 py-10 text-center text-[14px] text-slate-500">
-      <svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40" fill="none" className="text-slate-300">
-        <rect x="6" y="9" width="28" height="22" rx="4" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M6 16h28M12 23h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-      {children}
-    </div>
-  );
+  return <EmptyState title="Nothing here yet" compact>{children}</EmptyState>;
 }

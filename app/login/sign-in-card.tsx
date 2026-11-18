@@ -35,7 +35,7 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
     <main className="grid min-h-dvh bg-page lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       {/* Brand panel: large screens only. */}
       <section aria-hidden="true" onPointerMove={parallax} onPointerLeave={(e) => { e.currentTarget.style.setProperty("--px", "0"); e.currentTarget.style.setProperty("--py", "0"); }}
-        className="relative hidden overflow-hidden bg-brand text-white dark:bg-[#10271D] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+        className="relative hidden overflow-hidden bg-[linear-gradient(160deg,#0E5A48,#083529)] text-white dark:bg-[linear-gradient(160deg,#0F2A24,#0A0D13)] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:44px_44px] [translate:calc(var(--px,0)*-8px)_calc(var(--py,0)*-8px)] transition-[translate] duration-700 ease-out" />
         <div className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-[radial-gradient(circle,rgba(201,217,207,0.35),transparent_65%)] [translate:calc(var(--px,0)*24px)_calc(var(--py,0)*24px)] transition-[translate] duration-700 ease-out" />
         <div className="pointer-events-none absolute -bottom-48 -left-24 size-[460px] rounded-full bg-[radial-gradient(circle,rgba(46,107,82,0.9),transparent_70%)] [translate:calc(var(--px,0)*-18px)_calc(var(--py,0)*-18px)] transition-[translate] duration-700 ease-out" />
@@ -66,11 +66,11 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
         </div>
 
         <div className="relative animate-fade-up text-[18px]">
-          <Wordmark size={36} light />
+          <Wordmark size={38} light tagline />
         </div>
 
         <div className="relative flex max-w-[480px] flex-col gap-8">
-          <h2 className="m-0 animate-fade-up text-[38px] font-semibold leading-[1.1] tracking-[-0.03em] [animation-delay:80ms]">
+          <h2 className="m-0 animate-fade-up font-display text-[46px] font-normal leading-[1.04] tracking-[-0.01em] [animation-delay:80ms]">
             Know exactly where every taka is.
           </h2>
           <ul className="m-0 flex list-none flex-col gap-5 p-0">
@@ -98,7 +98,7 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
             <Wordmark size={32} />
           </div>
           <div>
-            <h1 className="m-0 text-[24px] font-semibold tracking-[-0.02em] text-ink">Welcome back</h1>
+            <h1 className="m-0 font-display text-[32px] font-normal leading-tight text-ink">Welcome back</h1>
             <p key={mode} className="m-0 mt-1 animate-fade-in text-[14px] text-slate-500">
               {mode === "viewer" ? "Enter the viewer key for a read-only look at the workspace." : "Sign in as admin to add and edit records."}
             </p>

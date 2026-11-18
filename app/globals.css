@@ -4,85 +4,137 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
- * Every colour in the app is one of these tokens, so night mode is a single override block (below the keyframes).
+ * MRRMR design tokens.
+ *
+ * Two themes, one vocabulary. Every colour in the app is one of these tokens, so a theme is a single block:
+ *   Executive Minimal  (light, below)  — porcelain paper, graphite ink, deep jade accent, brass for money owed.
+ *   Midnight Finance   (dark, further down) — midnight navy-black, cool silver ink, luminous jade, warm brass.
+ * Every text/background pair is checked against WCAG AA (≥ 4.5:1 for text, ≥ 3:1 for hints and strokes);
+ * the script that checks them is described in docs/DESIGN.md.
+ *
  * `static` keeps each variable in the output even if no utility uses it: components also read them via var().
  */
 @theme static {
   --font-sans: var(--font-plex-sans), var(--font-bangla), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), var(--font-bangla), ui-monospace, monospace;
+  /* Editorial display face for page titles and the wordmark. Never used for figures (no tabular digits). */
+  --font-display: var(--font-instrument), Georgia, "Times New Roman", serif;
 
-  /* Paper, surfaces and hairlines. */
-  --color-page: #F5F4F0;
+  /* ---- Type scale ------------------------------------------------------------------------------------------ */
+  --text-display: clamp(30px, 3.4vw, 40px);  /* hero balances */
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.025em;
+  --text-title: clamp(28px, 3vw, 36px);       /* page titles, in the display face */
+  --text-title--line-height: 1.05;
+  --text-title--letter-spacing: -0.015em;
+  --text-figure: clamp(22px, 2.4vw, 28px);    /* KPI figures */
+  --text-figure--line-height: 1.15;
+  --text-figure--letter-spacing: -0.02em;
+  --text-heading: 16px;                       /* section headings */
+  --text-heading--line-height: 1.3;
+  --text-body: 14.5px;
+  --text-body--line-height: 1.5;
+  --text-small: 13px;
+  --text-small--line-height: 1.45;
+  --text-micro: 11.5px;                       /* eyebrows, badges */
+  --text-micro--line-height: 1.3;
+  --text-micro--letter-spacing: 0.06em;
+
+  /* ---- Shape ----------------------------------------------------------------------------------------------- */
+  /* One radius ladder: controls 8–10px, cards 14px, sheets and hero panels 18px. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+
+  /* ---- Executive Minimal (light) --------------------------------------------------------------------------- */
+  --color-page: #F4F4F1;
   --color-surface: #FFFFFF;
-  --color-subtle: #FAF9F6;
-  --color-soft: #F0EEE9;
-  --color-line: #E3E1DA;
-  --color-line-strong: #D6D3CB;
-  --color-ink: #1C1B18;
+  --color-subtle: #F9F9F7;
+  --color-soft: #EEEEEA;
+  --color-line: #E3E3DE;
+  --color-line-strong: #D1D1CA;
+  --color-ink: #14161A;
   /* Text on an ink fill (selected chips, toasts). */
   --color-on-ink: #FFFFFF;
+  /* The navigation rail: a quiet step off the page. */
+  --color-rail: #FAFAF8;
 
-  /* Brand green: `brand` is the solid fill under white text, `brand-ink` is brand as text, `brand-2` the lighter accent. */
-  --color-brand: #1F4D3A;
-  --color-brand-hover: #173D2E;
-  --color-brand-ink: #1F4D3A;
-  --color-brand-2: #2E6B52;
-  --color-brand-3: #2E6B52;
-  --color-mint: #C9D9CF;
-  --color-good-tint: #F2F6F3;
-  --color-good-tint-2: #E6EFE9;
-  --color-good-line: #CADBD0;
+  /* Jade: `brand` is the solid fill under white text, `brand-ink` is brand as text, `brand-2` the lighter accent. */
+  --color-brand: #0E5A48;
+  --color-brand-hover: #0A4A3B;
+  --color-brand-ink: #0E5A48;
+  --color-brand-2: #16705A;
+  --color-brand-3: #16705A;
+  --color-mint: #BFDCD0;
+  --color-good-tint: #EFF6F3;
+  --color-good-tint-2: #E1EEE8;
+  --color-good-line: #C3DCD1;
 
-  /* Money owed (amber), problems (red), neutral info (blue). */
-  --color-owed: #85570F;
-  --color-owed-bar: #B9852F;
-  --color-owed-tint: #FAF6EC;
-  --color-owed-line: #E6D7B5;
-  --color-bad: #9B3426;
-  --color-bad-deep: #7E2A1F;
-  --color-bad-tint: #F5E4E0;
-  --color-bad-line: #EBCFC8;
-  --color-bad-solid: #9B3426;
-  --color-bad-solid-hover: #7E2A1F;
-  --color-info: #355276;
+  /* Money owed (brass), problems (red), neutral info (blue). */
+  --color-owed: #875709;
+  --color-owed-bar: #B8862E;
+  --color-owed-tint: #FAF5EA;
+  --color-owed-line: #E8D7B0;
+  --color-bad: #A1352A;
+  --color-bad-deep: #7F2920;
+  --color-bad-tint: #F7E6E2;
+  --color-bad-line: #ECCCC5;
+  --color-bad-solid: #A1352A;
+  --color-bad-solid-hover: #85291F;
+  --color-info: #2F5583;
+  --color-info-tint: #EDF2F8;
+  --color-info-line: #CBD8E8;
 
   /* Chart series (validated pair with --color-owed-bar). */
-  --color-chart-in: #25875E;
+  --color-chart-in: #1F8A62;
 
-  /* Warm greys instead of Tailwind's blue-tinted slate, so every text-slate-* reads as paper and ink. */
-  --color-slate-50: #FAF9F6;
-  --color-slate-100: #F0EEE9;
-  --color-slate-200: #E3E1DA;
-  --color-slate-300: #D6D3CB;
-  --color-slate-400: #A8A49A;
-  --color-slate-500: #7A766C;
-  --color-slate-600: #5F5B53;
-  --color-slate-700: #46433D;
-  --color-slate-800: #2E2C28;
-  --color-slate-900: #1C1B18;
+  /* Graphite neutrals instead of Tailwind's blue slate, so every text-slate-* reads as paper and ink. */
+  --color-slate-50: #F9F9F7;
+  --color-slate-100: #EEEEEA;
+  --color-slate-200: #E3E3DE;
+  --color-slate-300: #D1D1CA;
+  --color-slate-400: #8E8E86;
+  --color-slate-500: #6B6B64;
+  --color-slate-600: #55554F;
+  --color-slate-700: #3F3F3A;
+  --color-slate-800: #2B2B28;
+  --color-slate-900: #14161A;
 
-  --shadow-card: 0 1px 2px rgba(28, 27, 24, 0.04), 0 1px 0 rgba(28, 27, 24, 0.02);
-  --shadow-lift: 0 1px 2px rgba(28, 27, 24, 0.05), 0 8px 24px -8px rgba(28, 27, 24, 0.16);
-  --shadow-pop: 0 24px 60px -16px rgba(28, 27, 24, 0.35), 0 0 0 1px rgba(28, 27, 24, 0.06);
+  /* Elevation: three steps, hairline-first. */
+  --shadow-card: 0 1px 2px rgba(20, 22, 26, 0.04), 0 0 0 1px rgba(20, 22, 26, 0.015);
+  --shadow-lift: 0 1px 2px rgba(20, 22, 26, 0.05), 0 10px 28px -10px rgba(20, 22, 26, 0.18);
+  --shadow-pop: 0 28px 64px -18px rgba(20, 22, 26, 0.34), 0 0 0 1px rgba(20, 22, 26, 0.06);
+  /* Focus halo for fields; the outline ring is drawn separately for keyboard focus. */
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-brand-2) 16%, transparent);
+  --shadow-brand: 0 1px 2px rgba(20, 22, 26, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --shadow-brand-hover: 0 8px 18px -8px color-mix(in srgb, var(--color-brand) 60%, transparent);
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 
-  --animate-fade-up: fade-up 480ms var(--ease-out-expo) both;
-  --animate-fade-in: fade-in 240ms ease-out both;
-  --animate-pop-in: pop-in 320ms var(--ease-out-expo) both;
-  --animate-sheet-up: sheet-up 380ms var(--ease-out-expo) both;
-  --animate-grow-x: grow-x 900ms var(--ease-out-expo) both;
-  --animate-grow-y: grow-y 800ms var(--ease-out-expo) both;
+  --animate-fade-up: fade-up 420ms var(--ease-out-expo) both;
+  --animate-fade-in: fade-in 200ms ease-out both;
+  --animate-pop-in: pop-in 280ms var(--ease-out-expo) both;
+  --animate-sheet-up: sheet-up 340ms var(--ease-out-expo) both;
+  --animate-grow-x: grow-x 800ms var(--ease-out-expo) both;
+  --animate-grow-y: grow-y 700ms var(--ease-out-expo) both;
   --animate-shimmer: shimmer 1.4s linear infinite;
   --animate-spin: spin 0.7s linear infinite;
   --animate-highlight: highlight 2.4s ease-out both;
 }
 
+/* Layout constants (not colours, so not in @theme). */
+:root {
+  --sidebar-w: 256px;
+  --bottom-nav-h: 62px;
+}
+
 /* Top level rather than inside @theme so they are always emitted: some are referenced from inline styles. */
 /* Entrances animate `translate`/`scale`, not `transform`, so a finished entrance never pins `transform` and blocks hover lifts. */
 @keyframes fade-up {
-  from { opacity: 0; translate: 0 10px; }
+  from { opacity: 0; translate: 0 8px; }
   to { opacity: 1; translate: 0 0; }
 }
 @keyframes fade-in {
@@ -90,7 +142,7 @@
   to { opacity: 1; }
 }
 @keyframes pop-in {
-  from { opacity: 0; translate: 0 8px; scale: 0.97; }
+  from { opacity: 0; translate: 0 6px; scale: 0.98; }
   to { opacity: 1; translate: 0 0; scale: 1; }
 }
 @keyframes sheet-up {
@@ -126,61 +178,65 @@
 }
 
 /*
- * Night mode. The theme script in the root layout sets data-theme before first paint (from the saved choice, or the
- * system setting), so there is no flash. Each step is chosen for the dark surface, not flipped: text keeps ≥ 4.5:1,
- * solid fills keep white text readable, and the chart pair is re-validated against #1A1A18.
+ * Midnight Finance (dark). The theme script in the root layout sets data-theme before first paint (from the saved
+ * choice, or the system setting), so there is no flash. Each step is chosen for the dark surface, not flipped.
  */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-page: #111110;
-  --color-surface: #1A1A18;
-  --color-subtle: #1F1F1D;
-  --color-soft: #262623;
-  --color-line: #2D2C29;
-  --color-line-strong: #3B3A36;
-  --color-ink: #EDEBE5;
-  --color-on-ink: #151513;
+  --color-page: #0A0D13;
+  --color-surface: #11161F;
+  --color-subtle: #151B25;
+  --color-soft: #1A212D;
+  --color-line: #222A37;
+  --color-line-strong: #2E3846;
+  --color-ink: #E7EBF1;
+  --color-on-ink: #0D1118;
+  --color-rail: #0D1118;
 
-  --color-brand: #2F7A59;
-  --color-brand-hover: #398A67;
-  --color-brand-ink: #7FCBA5;
-  --color-brand-2: #67BE95;
-  --color-brand-3: #67BE95;
-  --color-good-tint: #16231C;
-  --color-good-tint-2: #1C2E25;
-  --color-good-line: #2B4A3A;
+  --color-brand: #1F7A64;
+  --color-brand-hover: #1A6B58;
+  --color-brand-ink: #7DD4B8;
+  --color-brand-2: #5CC4A2;
+  --color-brand-3: #5CC4A2;
+  --color-mint: #2B5A4C;
+  --color-good-tint: #0F201B;
+  --color-good-tint-2: #142B24;
+  --color-good-line: #1F4438;
 
-  --color-owed: #E3AE5C;
-  --color-owed-bar: #BD8A3A;
-  --color-owed-tint: #251F12;
-  --color-owed-line: #4A3C1F;
-  --color-bad: #EE8472;
-  --color-bad-deep: #F5A193;
-  --color-bad-tint: #2C1815;
-  --color-bad-line: #5A2C24;
-  --color-bad-solid: #B4432F;
-  --color-bad-solid-hover: #C4513C;
-  --color-info: #93B2DB;
-  --color-chart-in: #3FA57A;
+  --color-owed: #E8B264;
+  --color-owed-bar: #C08D3E;
+  --color-owed-tint: #1F1A10;
+  --color-owed-line: #45381D;
+  --color-bad: #F28B7A;
+  --color-bad-deep: #F7A698;
+  --color-bad-tint: #2A1513;
+  --color-bad-line: #57291F;
+  --color-bad-solid: #B23F2C;
+  --color-bad-solid-hover: #C24D39;
+  --color-info: #92B5E8;
+  --color-info-tint: #121C2B;
+  --color-info-line: #263852;
+  --color-chart-in: #3DAA80;
 
-  --color-slate-50: #1F1F1D;
-  --color-slate-100: #262623;
-  --color-slate-200: #2D2C29;
-  --color-slate-300: #3B3A36;
-  --color-slate-400: #7C786F;
-  --color-slate-500: #9D998F;
-  --color-slate-600: #B5B1A7;
-  --color-slate-700: #CCC8BE;
-  --color-slate-800: #DFDCD4;
-  --color-slate-900: #EDEBE5;
+  --color-slate-50: #151B25;
+  --color-slate-100: #1A212D;
+  --color-slate-200: #222A37;
+  --color-slate-300: #2E3846;
+  --color-slate-400: #7A8496;
+  --color-slate-500: #97A0B0;
+  --color-slate-600: #B0B8C5;
+  --color-slate-700: #C9CFD9;
+  --color-slate-800: #DDE2E9;
+  --color-slate-900: #E7EBF1;
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.015);
-  --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -8px rgba(0, 0, 0, 0.6);
-  --shadow-pop: 0 24px 60px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -10px rgba(0, 0, 0, 0.65);
+  --shadow-pop: 0 28px 64px -18px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-brand: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Theme switch: the new theme grows out of the toggle as a circle (View Transitions), the header included. */
-html.theme-vt header { view-transition-name: none !important; }
+html.theme-vt header, html.theme-vt aside { view-transition-name: none !important; }
 html.theme-vt::view-transition-old(root),
 html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 
@@ -190,8 +246,9 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
     text-size-adjust: 100%;
   }
   body {
-    @apply bg-page text-ink font-sans text-[14.5px] leading-[1.5];
+    @apply bg-page text-ink font-sans text-body;
     overflow-x: hidden;
+    font-feature-settings: "cv01", "ss02";
     /* Phones: no grey flash on tap (every control has its own pressed state), and no double-tap zoom delay. */
     -webkit-tap-highlight-color: transparent;
   }
@@ -203,7 +260,8 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   h1, h2, h3 { letter-spacing: -0.01em; }
   button { @apply cursor-pointer; }
   button:disabled { @apply cursor-not-allowed opacity-60; }
-  :where(button, a, input, select, [tabindex]):focus-visible {
+  /* Keyboard focus is always visible, on every theme, and never removed. */
+  :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
     outline: 2px solid var(--color-brand-2);
     outline-offset: 2px;
   }
@@ -212,15 +270,20 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   /* Every interactive surface eases its colours instead of snapping; a pressed button dips slightly. */
   :where(button, a, input, select, textarea, [role="tab"]) {
     transition-property: color, background-color, border-color, box-shadow, opacity, transform, translate, scale;
-    transition-duration: 160ms;
+    transition-duration: 150ms;
     transition-timing-function: ease-out;
   }
-  :where(button:not(:disabled), a[class*="rounded"]):active { transform: scale(0.97); }
+  :where(button:not(:disabled), a[class*="rounded"]):active { transform: scale(0.98); }
 
-  :where(.field-input, select):focus { border-color: var(--color-brand-2); box-shadow: 0 0 0 3px rgba(46, 107, 82, 0.12); outline: none; }
-  :where(label):has(> input[type="search"]):focus-within { box-shadow: 0 0 0 3px rgba(46, 107, 82, 0.12); }
+  :where(.field-input, select):focus { border-color: var(--color-brand-2); box-shadow: var(--shadow-focus); outline: none; }
+  :where(.field-input, select):focus-visible { outline: 2px solid var(--color-brand-2); outline-offset: 1px; }
+  :where(.field-input)[aria-invalid="true"] { border-color: var(--color-bad); }
+  :where(label):has(> input[type="search"]):focus-within { box-shadow: var(--shadow-focus); }
 
-  /* Thin, warm scrollbars for the sideways sliders and tables. */
+  /* Figures everywhere use tabular digits so columns of money line up. */
+  :where(table, .money, [data-money]) { font-variant-numeric: tabular-nums; }
+
+  /* Thin scrollbars for the sideways sliders and tables. */
   * { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
 
   /* Tables: rows warm up under the pointer. */
@@ -230,18 +293,22 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   }
 }
 
+/* Table density preference (Settings): compact tightens table rows; nothing else changes. */
+[data-density="compact"] :is(table) :is(td, th) { padding-top: 6px; padding-bottom: 6px; }
+[data-density="compact"] .stack-table tr { padding-top: 8px; padding-bottom: 8px; }
+
 /* Each page's sections rise in one after another. Floating layers (dialogs, toasts) are skipped: they have their own entrances. */
 .page-enter > :not([data-float]) { animation: var(--animate-fade-up); }
-.page-enter > :nth-child(2):not([data-float]) { animation-delay: 60ms; }
-.page-enter > :nth-child(3):not([data-float]) { animation-delay: 120ms; }
-.page-enter > :nth-child(4):not([data-float]) { animation-delay: 170ms; }
-.page-enter > :nth-child(n + 5):not([data-float]) { animation-delay: 210ms; }
+.page-enter > :nth-child(2):not([data-float]) { animation-delay: 40ms; }
+.page-enter > :nth-child(3):not([data-float]) { animation-delay: 80ms; }
+.page-enter > :nth-child(4):not([data-float]) { animation-delay: 120ms; }
+.page-enter > :nth-child(n + 5):not([data-float]) { animation-delay: 150ms; }
 
-/* Route-level page transitions use the View Transitions API where available; the header stays put. */
+/* Route-level page transitions use the View Transitions API where available; the header and rail stay put. */
 ::view-transition { pointer-events: none; }
-::view-transition-group(site-header) { animation: none; z-index: 100; }
-::view-transition-old(site-header) { display: none; }
-::view-transition-new(site-header) { animation: none; }
+::view-transition-group(site-header), ::view-transition-group(site-rail) { animation: none; z-index: 100; }
+::view-transition-old(site-header), ::view-transition-old(site-rail) { display: none; }
+::view-transition-new(site-header), ::view-transition-new(site-rail) { animation: none; }
 
 /* Motion is decoration here: people who ask for less get none of it. */
 @media (prefers-reduced-motion: reduce) {
@@ -268,7 +335,7 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 10px 16px;
+    padding: 12px 16px;
   }
   .stack-table :is(td, th) {
     display: flex;
@@ -300,7 +367,7 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   .stack-table :is(td, th):empty, .stack-table .stack-hide { display: none; }
   .stack-table :is(td, th)[colspan]:not(:empty) { justify-content: center; text-align: center; font-weight: 400; padding: 16px 0; }
   .stack-table tr:has(> .stack-corner) > :not([data-label], .stack-corner) { padding-right: 40px; }
-  .stack-table .stack-corner { position: absolute; top: 6px; right: 8px; padding: 0; }
+  .stack-table .stack-corner { position: absolute; top: 8px; right: 8px; padding: 0; }
 }
 
 @utility money {
@@ -310,10 +377,10 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
 }
 
 @utility field-input {
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--color-line-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   font-size: 14.5px;
   font-weight: 400;
   background: var(--color-surface);
@@ -332,7 +399,7 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
 
 /* Placeholder block for loading skeletons. */
 @utility skeleton {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(90deg, var(--color-soft) 25%, var(--color-subtle) 37%, var(--color-soft) 63%);
   background-size: 400% 100%;
   animation: var(--animate-shimmer);
@@ -346,7 +413,7 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   }
 }
 
-/* A surface with a soft green glow under the pointer. The header's pointer tracker sets --mx / --my. */
+/* A surface with a soft jade glow under the pointer. The shell's pointer tracker sets --mx / --my. */
 @utility spot {
   position: relative;
   &::after {
@@ -355,7 +422,7 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--color-brand-2) 9%, transparent), transparent 65%);
+    background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--color-brand-2) 7%, transparent), transparent 65%);
     opacity: 0;
     transition: opacity 300ms ease-out;
   }
@@ -375,4 +442,28 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   font-size: 12.5px;
   font-weight: 500;
   color: var(--color-slate-500);
+}
+
+/* Uppercase label above a group (sidebar sections, page eyebrows). */
+@utility eyebrow {
+  font-size: var(--text-micro);
+  line-height: var(--text-micro--line-height);
+  letter-spacing: var(--text-micro--letter-spacing);
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-slate-500);
+}
+
+/* Standard card: surface, hairline, card elevation. */
+@utility surface-card {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* Content padding that respects the phone notch in landscape. */
+@utility page-gutter {
+  padding-left: max(clamp(16px, 3.2vw, 40px), env(safe-area-inset-left));
+  padding-right: max(clamp(16px, 3.2vw, 40px), env(safe-area-inset-right));
 }

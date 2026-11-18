@@ -2,9 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hardenCookie } from "@/lib/supabase/cookies";
 import { isViewerEmail } from "@/lib/viewer";
+import { isPublicPath, viewerMayOpen } from "@/lib/security";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/view"];
-const VIEWER_PATHS = ["/research"];
+// Path rules live in lib/security.ts (unit-tested): public paths, and the viewer's allow-list.
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -33,7 +33,7 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const signedIn = Boolean(data?.claims);
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));
+  const isPublic = isPublicPath(path);
 
   if (!signedIn && !isPublic) {
     const url = request.nextUrl.clone();
@@ -48,7 +48,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
   // View mode sees Research Finance only: every other page (and the CSV export) sends the viewer there.
-  if (signedIn && isViewerEmail(data?.claims?.email as string | undefined) && !isPublic && !VIEWER_PATHS.some((p) => path === p || path.startsWith(p + "/"))) {
+  if (signedIn && isViewerEmail(data?.claims?.email as string | undefined) && !viewerMayOpen(path)) {
     const url = request.nextUrl.clone();
     url.pathname = "/research";
     url.search = "";

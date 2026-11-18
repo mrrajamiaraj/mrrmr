@@ -5,6 +5,7 @@ import { signIn, forgotPassword, type AuthState } from "./actions";
 import { ArrowRightIcon } from "@/components/icons";
 import { Spinner } from "@/components/motion";
 import { PasswordInput } from "@/components/password-input";
+import { buttonClass } from "@/components/ui";
 
 export function LoginForm({ next }: { next: string }) {
   const [signInState, signInAction, signingIn] = useActionState<AuthState, FormData>(signIn, {});
@@ -27,7 +28,7 @@ export function LoginForm({ next }: { next: string }) {
       {state.message && <div className="animate-pop-in rounded-lg border border-good-line bg-good-tint-2 px-3 py-2.5 text-sm text-brand-ink" role="status">{state.message}</div>}
 
       <button type="submit" disabled={signingIn}
-        className="group mt-1 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand text-[14.5px] font-medium text-white shadow-[0_1px_2px_rgba(28,27,24,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-brand-hover hover:shadow-[0_8px_20px_-8px_rgba(31,77,58,0.6)]">
+        aria-busy={signingIn || undefined} className={buttonClass("primary", "lg", "group mt-1")}>
         {signingIn ? <><Spinner />Signing in…</> : <>Sign in<ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-0.5" /></>}
       </button>
       {/* Stays after "Sign in": pressing Enter submits with the first submit button in the form. */}

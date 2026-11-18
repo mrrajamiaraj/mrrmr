@@ -5,6 +5,15 @@ export function taka(n: number) {
   return "৳" + Math.round(Math.abs(n)).toLocaleString("en-IN");
 }
 
+/**
+ * ৳353.33 — like `taka`, but keeps the paisa when an amount isn't whole. For installment amounts, where rounding to
+ * whole taka would hide the very difference being explained (৳353.33 vs a last installment of ৳353.35).
+ */
+export function takaExact(n: number) {
+  const a = Math.abs(n);
+  return "৳" + (Math.round(a * 100) % 100 === 0 ? Math.round(a).toLocaleString("en-IN") : a.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+}
+
 /** Today's date (YYYY-MM-DD) in Bangladesh time. */
 export function todayIso() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date());

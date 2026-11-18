@@ -29,31 +29,21 @@ export const DEFAULT_FACILITIES = ["BHS", "NICVD", "United Hospital", "BMRC"];
 export const DEFAULT_MEMBERS = ["Raja", "Somik", "Adnan", "Monir Sir"];
 export const CONTRIBUTION_NOTES = ["Cash", "Bank Transfer", "bKash", "Nagad"];
 
-// Categorical facility hues, fixed order (validated: lightness, chroma, CVD, contrast all pass).
-const FACILITY_COLORS = ["#3D7D61", "#3F5F87", "#B9852F", "#7A6890"];
-const FACILITY_SOFT = [
-  { bg: "#F2F6F3", border: "#CADBD0", chip: "bg-[#E3ECE6] text-[#1F4D3A] border-[#CADBD0]" },
-  { bg: "#F1F3F7", border: "#D3DBE5", chip: "bg-[#E2E7EE] text-[#2C4463] border-[#C5CFDC]" },
-  { bg: "#FAF6EC", border: "#E6D7B5", chip: "bg-[#F6EEDC] text-[#85570F] border-[#E6D7B5]" },
-  { bg: "#F4F2F6", border: "#DDD6E5", chip: "bg-[#ECE8F0] text-[#5B4A6E] border-[#CFC6DA]" },
-];
-const OTHER = { color: "#7A766C", bg: "#FAF9F6", border: "#E3E1DA", chip: "bg-soft text-slate-700 border-[#D6D3CB]" };
+// Categorical marks (the small bar/dot next to a name). Mid-tone hues chosen to read on both Executive Minimal and
+// Midnight Finance surfaces (≥ 3:1 as non-text marks on #FFFFFF and #11161F). The name is always written beside the
+// mark, so colour is never the only way to tell facilities or members apart.
+const FACILITY_COLORS = ["#3F9A75", "#5B80B0", "#A87D2E", "#8C7AA6"];
+const MEMBER_COLORS: Record<string, string> = { raja: "#3F9A75", somik: "#5B80B0", adnan: "#C2574A", "monir sir": "#A87D2E" };
+const OTHER_COLOR = "#8A8F98";
 
-/** Colour follows the facility, never its rank: known facilities keep their slot, others are gray. */
+/** Colour follows the facility, never its rank: known facilities keep their slot, others are grey. */
 export function facilityLook(name: string) {
   const i = DEFAULT_FACILITIES.findIndex((f) => f.toLowerCase() === name.trim().toLowerCase());
-  if (i < 0) return OTHER;
-  return { color: FACILITY_COLORS[i], ...FACILITY_SOFT[i] };
+  return { color: i < 0 ? OTHER_COLOR : FACILITY_COLORS[i] };
 }
 
-const MEMBER_LOOK: Record<string, { chip: string; dot: string; card: string; bar: string }> = {
-  raja: { chip: "bg-[#F2F6F3] text-[#2E6B52] border-[#CADBD0]", dot: "#3D7D61", card: "border-[#CADBD0]", bar: "#3D7D61" },
-  somik: { chip: "bg-[#EEF1F5] text-[#355276] border-[#D3DBE5]", dot: "#5A7397", card: "border-[#D3DBE5]", bar: "#5A7397" },
-  adnan: { chip: "bg-[#F8ECE9] text-[#9B3426] border-[#E9C9C1]", dot: "#B4483A", card: "border-[#E9C9C1]", bar: "#B4483A" },
-  "monir sir": { chip: "bg-[#FAF6EC] text-[#85570F] border-[#E6D7B5]", dot: "#B9852F", card: "border-[#E6D7B5]", bar: "#B9852F" },
-};
 export function memberLook(name: string) {
-  return MEMBER_LOOK[name.trim().toLowerCase()] ?? { chip: "bg-soft text-slate-700 border-[#D6D3CB]", dot: "#7A766C", card: "border-line", bar: "#7A766C" };
+  return { dot: MEMBER_COLORS[name.trim().toLowerCase()] ?? OTHER_COLOR };
 }
 
 /** Known names first (in their fixed order), then any others found in the data. */

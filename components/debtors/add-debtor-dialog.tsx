@@ -5,6 +5,7 @@ import { Modal, ErrorBox, btnGhost, btnPrimary } from "@/components/modal";
 import { addCardUse, addLoan } from "@/lib/actions";
 import { addDays, addMonths, dateLong, taka, todayIso } from "@/lib/format";
 import { emiPerMonth } from "@/lib/ledger";
+import { subMoney } from "@/lib/money";
 import { CARD_CATEGORIES, EMI_MONTHS, LOAN_METHODS, type Card, type PayPlan } from "@/lib/types";
 
 type Common = {
@@ -145,12 +146,12 @@ export function AddDebtorDialog(props: Props) {
 
         <label className={label}>
           {isLoan ? "How much? (৳) *" : "How much? (৳) *"}
-          <input type="number" min="1" inputMode="decimal" value={f.amt} onChange={set("amt")} placeholder="0" className={`${input} font-mono`} />
+          <input type="number" min="1" inputMode="decimal" value={f.amt} onChange={set("amt")} placeholder="0" className={`${input} tabular-nums`} />
         </label>
         {props.mode === "loan" && props.extended ? (
           <label className={label}>
             Initial repaid (৳)
-            <input type="number" min="0" inputMode="decimal" value={f.initial} onChange={set("initial")} placeholder="0" className={`${input} font-mono`} />
+            <input type="number" min="0" inputMode="decimal" value={f.initial} onChange={set("initial")} placeholder="0" className={`${input} tabular-nums`} />
           </label>
         ) : (
           <label className={label}>
@@ -245,11 +246,36 @@ export function AddDebtorDialog(props: Props) {
           </label>
         )}
 
-        {(props.mode === "card" || props.account) && (
+        {props.mode === "card" && (
           <label className="col-span-full flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md bg-subtle px-3 py-2 text-[14.5px]">
             <input type="checkbox" checked={flag} onChange={() => setFlag(!flag)} className="size-[18px] accent-brand-2" />
-            {props.mode === "loan" ? `Take this amount out of my ${props.account!.name} balance` : "Add this amount to the card balance"}
+            Add this amount to the card balance
           </label>
+        )}
+
+        {/* Funding source: a loan reduces the bank balance ONLY when it was paid from the bank account. */}
+        {props.mode === "loan" && props.account && (
+          <fieldset className="col-span-full m-0 flex flex-col gap-2 border-0 p-0">
+            <legend className="field-label mb-1.5">Where did the money come from?</legend>
+            {([
+              [true, `${props.account.name} account`, `Take ${amtNum > 0 ? taka(amtNum) : "the amount"} out of the ${props.account.name} balance`],
+              [false, "Cash on hand / elsewhere", `The ${props.account.name} balance doesn't change`],
+            ] as const).map(([v, title, sub]) => (
+              <label key={String(v)} className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 ${flag === v ? "border-brand-2 bg-good-tint" : "border-line hover:bg-subtle"}`}>
+                <input type="radio" name={`${listId}-src`} checked={flag === v} onChange={() => setFlag(v)} className="mt-0.5 size-[18px] accent-brand-2" />
+                <span><span className="block text-[14px] font-medium">{title}</span><span className="block text-[12.5px] text-slate-500">{sub}</span></span>
+              </label>
+            ))}
+            <p className="m-0 text-[12px] text-slate-500">Put it on your credit card instead? Record a <b>card transaction</b> — card money is never a bank loan.</p>
+          </fieldset>
+        )}
+
+        {props.mode === "loan" && amtNum > 0 && (
+          <dl aria-label="What saving changes" className="col-span-full m-0 grid gap-1 rounded-md border border-line bg-surface px-3.5 py-2.5 text-[13px]">
+            <div className="flex justify-between gap-3"><dt className="text-slate-500">{f.name.trim() || "They"} will owe you</dt><dd className="money m-0 text-owed">+{taka(Math.max(subMoney(amtNum, Number(f.initial) || 0), 0))}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-500">{props.account?.name ?? "Bank"} balance</dt><dd className="m-0">{props.account && flag ? <span className="money text-bad">−{taka(Math.max(subMoney(amtNum, Number(f.initial) || 0), 0))}</span> : "Unchanged"}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-500">Pay back by</dt><dd className="m-0">{f.due ? dateLong(f.due) : "No date (can't show as late)"}</dd></div>
+          </dl>
         )}
 
         {error && <ErrorBox className="col-span-full">{error}</ErrorBox>}

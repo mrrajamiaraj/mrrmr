@@ -114,7 +114,7 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
 
   let lastGroup = "";
   return (
-    <div data-float className="fixed inset-0 z-[80] flex items-start justify-center bg-[rgba(28,27,24,0.35)] px-4 pt-[12vh] backdrop-blur-[2px] animate-fade-in"
+    <div data-float className="fixed inset-0 z-[80] flex items-start justify-center bg-[rgba(10,13,19,0.45)] px-4 pt-[12vh] backdrop-blur-[2px] animate-fade-in"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-label="Jump to" onKeyDown={onKey}
         className="w-full max-w-[560px] overflow-hidden rounded-xl bg-surface shadow-[var(--shadow-pop)] animate-pop-in">

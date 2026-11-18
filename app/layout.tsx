@@ -1,26 +1,29 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono, Noto_Sans_Bengali } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Instrument_Serif, Noto_Sans_Bengali } from "next/font/google";
 import { themeScript } from "@/lib/theme-script";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-plex-sans" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex-mono" });
+// Editorial display face: page titles and the wordmark only (figures stay in Plex for tabular digits).
+const display = Instrument_Serif({ subsets: ["latin"], weight: "400", variable: "--font-instrument" });
 // Plex has no ৳; this supplies it (and any Bangla names) at a matching weight.
 const bangla = Noto_Sans_Bengali({ subsets: ["bengali"], weight: ["400", "500", "600"], variable: "--font-bangla", preload: false });
 
 export const metadata: Metadata = {
-  title: { default: "RMR Finance", template: "%s · RMR Finance" },
-  description: "Bank balance, debtors, loans and credit cards in one private workspace.",
-  applicationName: "RMR Finance",
-  appleWebApp: { capable: true, title: "RMR Finance", statusBarStyle: "default" },
+  title: { default: "MRRMR", template: "%s · MRRMR" },
+  description: "Private financial workspace: bank balance, debtors, loans, credit cards and research ledger.",
+  applicationName: "MRRMR",
+  appleWebApp: { capable: true, title: "MRRMR", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 
 // cover: lets the phone tab bar sit under the home indicator, padded by env(safe-area-inset-bottom).
+// Colours: the page token of Executive Minimal (light) and Midnight Finance (dark).
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F5F4F0" },
-    { media: "(prefers-color-scheme: dark)", color: "#111110" },
+    { media: "(prefers-color-scheme: light)", color: "#F4F4F1" },
+    { media: "(prefers-color-scheme: dark)", color: "#0A0D13" },
   ],
   viewportFit: "cover",
 };
@@ -28,7 +31,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     // The theme script sets data-theme before React hydrates, so <html> differs from the server render on purpose.
-    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable} ${bangla.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable} ${display.variable} ${bangla.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

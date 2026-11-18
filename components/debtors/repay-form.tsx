@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { recordRepayment } from "@/lib/actions";
 import { taka, todayIso } from "@/lib/format";
+import { subMoney } from "@/lib/money";
 import { cardLabel } from "@/lib/ledger";
 import { REPAY_VIA, type Card } from "@/lib/types";
 import { ErrorBox } from "@/components/modal";
@@ -47,36 +48,40 @@ export function RepayForm({
   const [via, setVia] = useState<string>("Bank transfer");
   const [date, setDate] = useState(todayIso());
   const [targetKey, setTargetKey] = useState(targets[0]?.key ?? "");
-  const [toAccount, setToAccount] = useState(true);
+  // Money only goes into the bank when you say so. Default: yes for a bank transfer, no for cash / bKash / Nagad
+  // (owner rule: a cash payment is never silently added to the bank). Your own choice sticks once you touch it.
+  const [toAccount, setToAccount] = useState<boolean | null>(null);
   const [toBill, setToBill] = useState(true);
   const [error, setError] = useState("");
+  const [dupe, setDupe] = useState(false);
   const [pending, start] = useTransition();
   const target = targets.find((t) => t.key === targetKey) ?? targets[0];
   if (!target) return null;
 
-  function save() {
-    const n = Math.round(Number(amt) * 100) / 100;
+  const forLoan = target.appliesTo === "loan";
+  const intoBank = forLoan && !!account && (toAccount ?? via === "Bank transfer");
+  const lowerCard = !forLoan && toBill;
+  const n = Math.round(Number(amt) * 100) / 100;
+  const valid = !!amt && n > 0 && n <= target.max;
+
+  function save(confirmDuplicate = false) {
     if (!amt || !(n > 0)) return setError("Enter an amount above 0.");
     if (n > target.max)
       return setError(
         `${first} only owes ${taka(target.max)}${mode === "card" ? " for this card" : target.appliesTo === "loan" ? " on loans" : " for that card"}.`
       );
-    // Bank and cards are kept separate: loan repayments can go into the bank,
-    // card repayments can only lower that card's balance.
-    const forLoan = target.appliesTo === "loan";
-    const addToAccount = forLoan && !!account && (mode === "bank" || (mode === "all" && toAccount));
-    const lowerCard = !forLoan && (mode === "card" || mode === "all") && toBill;
     start(async () => {
       const r = await recordRepayment({
         personId, amount: n, via, paidOn: date,
         appliesTo: target.appliesTo, cardId: target.cardId,
-        accountId: addToAccount ? account!.id : null, addToAccount, lowerCard,
+        accountId: intoBank ? account!.id : null, addToAccount: intoBank, lowerCard, confirmDuplicate,
       });
+      if (r.duplicate) { setDupe(true); return setError(r.error ?? "This looks like a repeat."); }
       if (r.error) return setError(r.error);
-      setAmt("");
+      setAmt(""); setDupe(false); setToAccount(null);
       onSaved(
-        `${first} paid back ${taka(n)}.` +
-          (addToAccount ? ` Added to your ${account!.name} balance.` : lowerCard ? " Put toward the card bill." : "")
+        `${first} paid back ${taka(n)} via ${via}.` +
+          (intoBank ? ` Added to your ${account!.name} balance.` : forLoan ? " Not added to the bank." : lowerCard ? " Put toward the card bill." : "")
       );
     });
   }
@@ -89,11 +94,11 @@ export function RepayForm({
       <div className="flex flex-wrap items-end gap-2.5">
         <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-[13px] font-medium text-slate-700">
           Amount (৳)
-          <input type="number" min="1" inputMode="decimal" value={amt} onChange={(e) => { setAmt(e.target.value); setError(""); }} placeholder="0" className={`${input} font-mono`} />
+          <input type="number" min="1" inputMode="decimal" value={amt} onChange={(e) => { setAmt(e.target.value); setError(""); }} placeholder="0" className={`${input} tabular-nums`} />
         </label>
         <label className="flex flex-[1_1_160px] flex-col gap-1.5 text-[13px] font-medium text-slate-700">
           Paid via
-          <select value={via} onChange={(e) => setVia(e.target.value)} className={input}>
+          <select value={via} onChange={(e) => { setVia(e.target.value); setError(""); setDupe(false); }} className={input}>
             {REPAY_VIA.map((v) => <option key={v}>{v}</option>)}
           </select>
         </label>
@@ -111,24 +116,40 @@ export function RepayForm({
             </select>
           </label>
         )}
-        <button type="button" onClick={save} disabled={pending} className="min-h-10 rounded-md bg-brand px-4 text-[14px] font-medium text-white hover:bg-brand-hover">
-          {pending ? "Saving…" : "Save repayment"}
+        <button type="button" onClick={() => save()} disabled={pending} aria-busy={pending || undefined}
+          className="min-h-10 rounded-md bg-brand px-4 text-[14px] font-medium text-white hover:bg-brand-hover">
+          {pending ? "Saving…" : valid ? `Confirm ${taka(n)}` : "Save repayment"}
         </button>
       </div>
-      {mode === "bank" && account && <div className="text-[13px] text-slate-600">The amount is added to your {account.name} balance.</div>}
-      {mode === "all" && account && target.appliesTo === "loan" && (
+      {forLoan && account && (
         <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-sm">
-          <input type="checkbox" checked={toAccount} onChange={() => setToAccount(!toAccount)} className="size-[18px] accent-brand-2" />
-          Add this money to my {account.name} balance
+          <input type="checkbox" checked={intoBank} onChange={() => setToAccount(!intoBank)} className="size-[18px] accent-brand-2" />
+          Add this money to my {account.name} balance{via !== "Bank transfer" && <span className="text-slate-500"> — off by default for {via}</span>}
         </label>
       )}
-      {(mode === "card" || (mode === "all" && target.appliesTo === "card")) && (
+      {!forLoan && (
         <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-sm">
           <input type="checkbox" checked={toBill} onChange={() => setToBill(!toBill)} className="size-[18px] accent-brand-2" />
           Put this money toward the card bill (lowers the card balance)
         </label>
       )}
+      {/* What saving will change — every total that moves, and the allocation rule that decides where it goes. */}
+      {valid && (
+        <dl aria-label="What this repayment changes" className="m-0 grid gap-1 rounded-lg border border-line bg-surface p-3 text-[13px]">
+          <div className="flex justify-between gap-3"><dt className="text-slate-500">{first} owes {forLoan ? "on loans" : "for this card"}</dt><dd className="m-0 money">{taka(target.max)} → {taka(subMoney(target.max, n))}</dd></div>
+          <div className="flex justify-between gap-3"><dt className="text-slate-500">{account?.name ?? "Bank"} balance</dt><dd className="m-0">{intoBank ? <span className="money text-brand-2">+{taka(n)}</span> : "Unchanged"}</dd></div>
+          {!forLoan && <div className="flex justify-between gap-3"><dt className="text-slate-500">Card balance (what you owe)</dt><dd className="m-0">{lowerCard ? <span className="money text-brand-2">−{taka(n)}</span> : "Unchanged"}</dd></div>}
+          <div className="text-[12px] text-slate-500">
+            Allocation rule: {forLoan ? "clears the loan with the earliest pay-back date first (no date last; same date → older loan first)." : "clears this card's installments earliest-due first."}
+          </div>
+        </dl>
+      )}
       {error && <ErrorBox className="text-[13.5px]">{error}</ErrorBox>}
+      {dupe && (
+        <button type="button" onClick={() => save(true)} disabled={pending} className="self-start text-[13.5px] font-medium text-bad underline underline-offset-4">
+          It's a separate payment — record it anyway
+        </button>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { taka } from "@/lib/format";
 import type { Card } from "@/lib/types";
 
 const FACES: Record<1 | 2, string> = {
-  1: "linear-gradient(135deg, #24533F 0%, #1F4D3A 45%, #12301F 100%)",
+  1: "linear-gradient(135deg, #16705A 0%, #0E5A48 45%, #072E25 100%)",
   2: "linear-gradient(135deg, #3A3833 0%, #24231F 50%, #121110 100%)",
 };
 
@@ -39,7 +39,7 @@ export function CardVisual({ card, available }: { card: Card; available: number 
     <div className="[perspective:900px]" onPointerMove={move} onPointerLeave={leave}>
       <div ref={ref} role="img" aria-label={`${card.bank} ${card.name}${card.last4 ? ` ending ${card.last4}` : ""}`}
         style={{ background: FACES[card.slot] }}
-        className="relative aspect-[1.586] w-full max-w-[380px] animate-pop-in select-none overflow-hidden rounded-2xl p-[clamp(16px,5%,24px)] text-white shadow-[0_24px_48px_-20px_rgba(18,48,31,0.6),inset_0_1px_0_rgba(255,255,255,0.12)] transition-transform duration-300 ease-out [transform:rotateX(var(--rx,0deg))_rotateY(var(--ry,0deg))] [transform-style:preserve-3d]">
+        className="relative aspect-[1.586] w-full max-w-[380px] animate-pop-in select-none overflow-hidden rounded-2xl p-[clamp(16px,5%,24px)] text-white shadow-[0_24px_48px_-20px_rgba(7,46,37,0.55),inset_0_1px_0_rgba(255,255,255,0.12)] transition-transform duration-300 ease-out [transform:rotateX(var(--rx,0deg))_rotateY(var(--ry,0deg))] [transform-style:preserve-3d]">
         {/* Guilloché-style rings and a moving sheen. */}
         <svg aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 size-[300px] opacity-[0.13]" viewBox="0 0 200 200" fill="none" stroke="white" strokeWidth="0.6">
           {Array.from({ length: 14 }, (_, i) => <circle key={i} cx="100" cy="100" r={20 + i * 6} />)}
