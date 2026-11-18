@@ -1,5 +1,7 @@
-import { addDays, addMonths, dateLong, dateShort, firstName, initials, pct, taka } from "@/lib/format";
-import type { Card, CardUse, FinanceData, PayPlan, Status } from "@/lib/types";
+// Relative imports (not "@/lib/…") so tests/ledger.test.mjs can load this file directly under Node.
+import { addDays, addMonths, dateLong, dateShort, firstName, initials, pct, taka } from "./format.ts";
+import { fromPaisa, installmentAmount, splitInstallments, subMoney, sumBy, toPaisa } from "./money.ts";
+import type { Card, CardUse, FinanceData, Loan, PayPlan, Repayment, Status } from "./types.ts";
 
 export type EventKind = "Took loan" | "Used my card" | "Paid back";
 
@@ -52,15 +54,16 @@ export type Profile = {
   events: HistoryEvent[];
 };
 
+// Theme tokens (not hex), so the colours switch with night mode and keep their contrast there.
 export const STATUS_PILL: Record<Status, string> = {
-  Pending: "text-[#9B3426]",
-  "Partially Paid": "text-[#85570F]",
+  Pending: "text-bad",
+  "Partially Paid": "text-owed",
   Repaid: "text-brand-2",
 };
 
 export const DUE_PILL: Record<DueKind, string> = {
-  late: "font-medium text-[#9B3426]",
-  soon: "text-[#85570F]",
+  late: "font-medium text-bad",
+  soon: "text-owed",
   later: "text-slate-600",
 };
 
@@ -102,41 +105,83 @@ export function installmentsOf(u: CardUse): Installment[] {
   if (!u.due_on) return [];
   if (!isEmi(u)) return [{ useId: u.id, iso: u.due_on, amount: u.amount, n: 1, of: 1 }];
   const of = u.emi_months!;
-  const per = Math.floor((u.amount / of) * 100) / 100;
-  return Array.from({ length: of }, (_, i) => ({
-    useId: u.id, iso: addMonths(u.due_on!, i), n: i + 1, of,
-    amount: i === of - 1 ? Math.round((u.amount - per * (of - 1)) * 100) / 100 : per,
+  return splitInstallments(u.amount, of).map((amount, i) => ({
+    useId: u.id, iso: addMonths(u.due_on!, i), n: i + 1, of, amount,
   }));
 }
 
-/** Per-month amount of an EMI use. */
+/** Per-month amount of an EMI use (rounded down to the paisa; the last month absorbs the remainder). */
 export function emiPerMonth(amount: number, months: number) {
-  return Math.floor((amount / months) * 100) / 100;
+  return installmentAmount(amount, months);
 }
 
 type Payment = { iso: string; amount: number };
-const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * Applies repayments, oldest first, to installments, earliest due first (like a card statement).
- * Returns each installment with what's still left on it and when it was paid.
+ * Returns each installment with what's still left on it and when it was paid. Works in integer paisa.
  */
-function settle(sched: Installment[], pays: Payment[]): PendingInstallment[] {
+export function settle(sched: Installment[], pays: Payment[]): PendingInstallment[] {
   const out: PendingInstallment[] = [...sched]
     .sort((a, b) => a.iso.localeCompare(b.iso) || a.n - b.n)
     .map((s) => ({ ...s, left: s.amount, paidOn: null }));
+  const left = out.map((s) => toPaisa(s.amount));
   let i = 0;
   for (const p of [...pays].sort((a, b) => a.iso.localeCompare(b.iso))) {
-    let pot = p.amount;
-    while (pot > 0.005 && i < out.length) {
-      const take = Math.min(pot, out[i].left);
-      out[i].left = round2(out[i].left - take);
+    let pot = toPaisa(p.amount);
+    while (pot > 0 && i < out.length) {
+      const take = Math.min(pot, left[i]);
+      left[i] -= take;
+      pot -= take;
       out[i].paidOn = p.iso || null;
-      pot = round2(pot - take);
-      if (out[i].left <= 0.005) { out[i].left = 0; i++; }
+      if (left[i] <= 0) { left[i] = 0; i++; }
     }
   }
+  out.forEach((s, k) => { s.left = fromPaisa(left[k]); });
   return out;
+}
+
+// ---- bank loans: which loan a repayment pays off -------------------------------------------------------
+
+/** Sorts after every real date: loans with no pay-back date are paid off last. */
+const NO_DUE = "9999-12-31";
+
+/**
+ * A person's loans in the order repayments pay them off: earliest pay-back date first, loans with no date last,
+ * then the oldest loan first. The same rule as card installments (earliest due first).
+ */
+function loanSchedule(loans: Loan[]): Installment[] {
+  return [...loans]
+    .sort((a, b) => (a.due_on ?? NO_DUE).localeCompare(b.due_on ?? NO_DUE) || a.taken_on.localeCompare(b.taken_on) || a.created_at.localeCompare(b.created_at))
+    .map((l) => ({ useId: l.id, iso: l.due_on ?? NO_DUE, amount: l.amount, n: 1, of: 1 }));
+}
+
+/**
+ * Applies a person's loan repayments to their loans (see loanSchedule) and returns each loan with what is still
+ * left on it. Totals are unchanged — this only decides WHICH loan is paid, so the "late" date is the right one.
+ */
+export function settleLoans(loans: Loan[], repayments: Pick<Repayment, "paid_on" | "amount">[]): PendingInstallment[] {
+  return settle(loanSchedule(loans), repayments.map((r) => ({ iso: r.paid_on, amount: r.amount })));
+}
+
+/** Pay-back date of the first loan not fully repaid, or null if all are paid or the next unpaid one has no date. */
+export function nextLoanDue(loans: Loan[], repayments: Pick<Repayment, "paid_on" | "amount">[]): string | null {
+  const next = settleLoans(loans, repayments).find((s) => s.left > 0);
+  return next && next.iso !== NO_DUE ? next.iso : null;
+}
+
+/** Due date of the first card installment not fully paid, for one person's uses of one card. */
+function nextCardDue(uses: CardUse[], paid: number): string | null {
+  return settle(uses.flatMap(installmentsOf), [{ iso: "", amount: paid }]).find((s) => s.left > 0)?.iso ?? null;
+}
+
+/** Running "owes after" per event, oldest first, exact to the paisa and never below 0. */
+function runningOwes<E extends { sign: 1 | -1; amount: number }>(events: E[]): number[] {
+  let run = 0;
+  return events.map((e) => {
+    run += e.sign * toPaisa(e.amount);
+    return fromPaisa(Math.max(run, 0));
+  });
 }
 
 export type PlanStatus = {
@@ -178,7 +223,7 @@ export function cardPlanStatus(data: FinanceData, cardId: string): Map<string, P
         of: own.length,
         perMonth: isEmi(u) ? emiPerMonth(u.amount, u.emi_months!) : u.amount,
         paidCount: own.filter((s) => s.left <= 0).length,
-        left: round2(own.reduce((t, s) => t + s.left, 0)),
+        left: sumBy(own, (s) => s.left),
         next: own.find((s) => s.left > 0) ?? null,
         last: own.length ? own[own.length - 1].iso : null,
         installments: own,
@@ -192,7 +237,7 @@ export function cardPlanStatus(data: FinanceData, cardId: string): Map<string, P
 export function emiSummary(plans: PlanStatus[]): string | null {
   const emis = plans.filter((s) => s.plan === "emi");
   if (!emis.length) return null;
-  const left = emis.reduce((t, s) => t + s.left, 0);
+  const left = sumBy(emis, (s) => s.left);
   if (left <= 0) return emis.length === 1 ? `EMI ${emis[0].of}/${emis[0].of} paid` : `${emis.length} EMIs paid off`;
   return emis.length === 1
     ? `EMI ${emis[0].paidCount}/${emis[0].of} paid · ${taka(left)} left`
@@ -218,18 +263,21 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
     const R = data.repayments.filter((r) => r.person_id === person.id);
     const s = summaryById.get(person.id);
 
-    const loanTotal = L.reduce((t, x) => t + x.amount, 0);
-    const cardTotal = C.reduce((t, x) => t + x.amount, 0);
-    const paidLoan = R.filter((r) => r.applies_to === "loan").reduce((t, x) => t + x.amount, 0);
-    const paidCard = R.filter((r) => r.applies_to === "card").reduce((t, x) => t + x.amount, 0);
-    const paid = paidLoan + paidCard;
-    const taken = loanTotal + cardTotal;
-    const owes = s ? Math.max(s.still_owes, 0) : Math.max(taken - paid, 0);
+    const loanTotal = sumBy(L, (x) => x.amount);
+    const cardTotal = sumBy(C, (x) => x.amount);
+    const paidLoan = sumBy(R.filter((r) => r.applies_to === "loan"), (x) => x.amount);
+    const paidCard = sumBy(R.filter((r) => r.applies_to === "card"), (x) => x.amount);
+    const paid = sumBy([paidLoan, paidCard], (x) => x);
+    const taken = sumBy([loanTotal, cardTotal], (x) => x);
+    // The database view is authoritative for what is still owed; the local sum is only a fallback.
+    const owes = s ? Math.max(s.still_owes, 0) : Math.max(subMoney(taken, paid), 0);
 
+    // Per card, in paisa: card uses minus card repayments.
+    const outP: Record<string, number> = {};
+    for (const c of C) outP[c.card_id] = (outP[c.card_id] ?? 0) + toPaisa(c.amount);
+    for (const r of R) if (r.applies_to === "card" && r.card_id) outP[r.card_id] = (outP[r.card_id] ?? 0) - toPaisa(r.amount);
     const cardOutByCard: Record<string, number> = {};
-    for (const c of C) cardOutByCard[c.card_id] = (cardOutByCard[c.card_id] ?? 0) + c.amount;
-    for (const r of R) if (r.applies_to === "card" && r.card_id) cardOutByCard[r.card_id] = (cardOutByCard[r.card_id] ?? 0) - r.amount;
-    for (const k of Object.keys(cardOutByCard)) if (cardOutByCard[k] <= 0) delete cardOutByCard[k];
+    for (const [k, v] of Object.entries(outP)) if (v > 0) cardOutByCard[k] = fromPaisa(v);
 
     const raw = [
       ...L.map((x) => ({
@@ -247,24 +295,31 @@ export function buildProfiles(data: FinanceData, today: string): Profile[] {
       })),
     ].sort((a, b) => a.iso.localeCompare(b.iso) || a.o - b.o || a.created.localeCompare(b.created));
 
-    let run = 0;
+    const after = runningOwes(raw);
     const events: HistoryEvent[] = raw
-      .map((e) => {
-        run += e.sign * e.amount;
-        return { id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: Math.max(run, 0), paidFor: "paidFor" in e ? e.paidFor : undefined };
-      })
+      .map((e, i) => ({
+        id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: after[i],
+        paidFor: "paidFor" in e ? e.paidFor : undefined,
+      }))
       .reverse();
 
     const status: Status = s && s.status !== "Overdue" ? s.status : owes <= 0 ? "Repaid" : paid > 0 ? "Partially Paid" : "Pending";
-    const due = owes > 0 ? s?.next_due ?? null : null;
+    // Next date that is really due: the first unpaid bank loan, and the first unpaid installment on each card.
+    // (The view's next_due only looks at future dates and ignores what has been repaid, so it can't say "late".)
+    const dues = [
+      nextLoanDue(L, R.filter((r) => r.applies_to === "loan")),
+      ...[...new Set(C.map((c) => c.card_id))].map((cardId) =>
+        nextCardDue(C.filter((c) => c.card_id === cardId), sumBy(R.filter((r) => r.applies_to === "card" && r.card_id === cardId), (r) => r.amount))),
+    ].filter((d): d is string => !!d).sort();
+    const due = owes > 0 ? dues[0] ?? null : null;
 
     return {
       id: person.id, name: person.name, first: firstName(person.name), initials: initials(person.name),
       relation: person.relation, phone: person.phone, notes: person.notes,
       loanTotal, loanCount: L.length, cardTotal, cardCount: C.length, paidLoan, paidCard, paid, payCount: R.length,
       taken, owes,
-      loanOut: Math.max(loanTotal - paidLoan, 0),
-      cardOut: Math.max(cardTotal - paidCard, 0),
+      loanOut: Math.max(subMoney(loanTotal, paidLoan), 0),
+      cardOut: Math.max(subMoney(cardTotal, paidCard), 0),
       cardOutByCard,
       pct: pct(paid, taken),
       status, due, ...dueInfo(due, owes, today),
@@ -323,15 +378,16 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
       const p = base.get(id)!;
       const U = takes.filter((u) => u.person === id);
       const R = repays.filter((r) => r.person_id === id);
-      const used = U.reduce((t, x) => t + x.amount, 0);
-      const paid = R.reduce((t, x) => t + x.amount, 0);
-      const owes = Math.max(used - paid, 0);
+      const used = sumBy(U, (x) => x.amount);
+      const paid = sumBy(R, (x) => x.amount);
+      const owes = Math.max(subMoney(used, paid), 0);
 
       // Cards: payments clear installments earliest first, so the next due is the first one not fully paid.
+      // Loans: the same rule, one "installment" per loan (see loanSchedule).
       const next = isCard && owes > 0 ? settle(U.flatMap((u) => u.sched), [{ iso: "", amount: paid }]).find((s) => s.left > 0) ?? null : null;
-      const dues = U.map((u) => u.due).filter((d): d is string => !!d).sort();
-      const late = dues.filter((d) => d < today);
-      const due = owes <= 0 ? null : isCard ? next?.iso ?? null : (late.length ? late[late.length - 1] : dues[0] ?? null);
+      const due = owes <= 0 ? null
+        : isCard ? next?.iso ?? null
+        : nextLoanDue(data.loans.filter((l) => l.person_id === id), R);
       const status: Status = owes <= 0 ? "Repaid" : paid > 0 ? "Partially Paid" : "Pending";
 
       const raw = [
@@ -345,15 +401,12 @@ function buildScopedProfiles(data: FinanceData, scope: Scope, today: string): Ca
         })),
       ].sort((a, b) => a.iso.localeCompare(b.iso) || a.o - b.o || a.created.localeCompare(b.created));
 
-      let run = 0;
+      const after = runningOwes(raw);
       const events: HistoryEvent[] = raw
-        .map((e) => {
-          run += e.sign * e.amount;
-          return {
-            id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: Math.max(run, 0),
-            paidFor: e.sign < 0 ? (isCard ? ("card" as const) : ("loan" as const)) : undefined,
-          };
-        })
+        .map((e, i) => ({
+          id: e.id, iso: e.iso, kind: e.kind, detail: e.detail, amount: e.amount, sign: e.sign, owesAfter: after[i],
+          paidFor: e.sign < 0 ? (isCard ? ("card" as const) : ("loan" as const)) : undefined,
+        }))
         .reverse();
 
       return {

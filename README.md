@@ -15,7 +15,7 @@ Supabase (`@supabase/ssr`). Amounts are Bangladeshi Taka with Indian grouping (�
 | Research Finance Ledger | `/research` | screenshots of the Google Sheets dashboard |
 | Admin password dialog | header, every page | `design/AdminButton.dc.html` |
 | CSV backup | `/export` (“Export CSV” in the nav) | — |
-| View mode (read-only, password `mrrmr`) | `/view` | same pages, no edit buttons |
+| View mode (read-only, password `mrrmr`) | `/view` | Research Finance only, no edit buttons |
 
 ## One-time Supabase setup
 
@@ -45,13 +45,15 @@ kept for reference — don't run it again).
 ## View mode
 
 Anyone who opens `/view` (or “Just viewing?” on the sign-in page) and types the view password (`mrrmr`, or
-`VIEW_PASSCODE` if set) can see every page but change nothing. Behind the scenes they are signed in as one shared
+`VIEW_PASSCODE` if set) can see the **Research Finance** page only, and change nothing. Every other page and the CSV
+export redirect to Research, and since `0007_viewer_research_only.sql` the database itself gives the viewer no read
+access to the bank, card, people, loan or repayment tables. Behind the scenes they are signed in as one shared
 Supabase user, the *viewer*. Add/edit/delete buttons are hidden for that user, the server actions refuse it, and
 the database itself blocks every write from it, so view mode stays read-only even if someone calls the API directly.
 
 One-time setup:
 
-1. Run `supabase/migrations/0005_view_mode.sql` in the SQL Editor.
+1. Run `supabase/migrations/0005_view_mode.sql`, then `0007_viewer_research_only.sql`, in the SQL Editor.
 2. Authentication → Users → Add user: an email such as `viewer@yourdomain.com` and a long random password, tick
    “Auto Confirm User”. Visitors never see or type this password.
 3. Link the viewer to your account by running the `insert into public.viewers …` statement at the bottom of
@@ -139,24 +141,33 @@ You can run it by hand from the Actions tab (“Run workflow”) to check it wor
   Repayments can optionally lower the card balance.
 - **Debtors & Loans:** totals, status (Pending / Partially Paid / Repaid — the view's 'Overdue' is shown as Pending or Partially Paid) and next due date come from
   the `debtor_summary` view. “Borrowed” there means loans + card use by that person.
-- **Overview → monthly summary:** there is no income/expense table, so the monthly table shows what the data
-  does have: money lent, others' card use, your own card spending, money recovered, and the net per month.
+- **Card EMI:** a card use is paid back in full by one date, or in 3–36 monthly installments (migration 0008).
+  Each installment is the amount ÷ months rounded down to the paisa; the last one takes the remainder. A person's
+  card repayments clear that card's installments oldest-payment-first, earliest-due-first.
+- **Debit card:** `debit_used` on the account is a running total you raise one entry at a time (migration 0006).
+- **Monthly view:** there is no Overview page (`/` opens Bank Account). Each page has a per-month “money out vs paid
+  back” chart, and Research has its own Monthly tab.
+- **Exact money:** all totals, EMI splits and allocations are computed in integer paisa (`lib/money.ts`), never by
+  adding floating-point taka.
 
 ## Project layout
 
 ```
 app/
-  (dashboard)/          signed-in pages: page.tsx (Overview), account/, debtors/, cards/[slot]/
+  (dashboard)/          signed-in pages: account/, debtors/, cards/[slot]/, research/ (page.tsx redirects to /account)
   login/                sign-in + forgot password
   auth/callback, reset  password-reset link handling
   export/route.ts       CSV backup
 components/             shell (header + nav), Admin dialog, modals, debtor profile/slider/forms
 lib/
   data.ts               loads everything for a page from Supabase
-  ledger.ts             per-person totals, history and “owes after” running balances
+  ledger.ts             per-person totals, history, EMI schedules and “owes after” running balances
+  money.ts              exact paisa arithmetic (sums, rounding, EMI splits)
   actions.ts            server actions (all writes)
   format.ts             ৳ formatting and dates (Asia/Dhaka)
 proxy.ts                sends signed-out visitors to /login (Next.js 16's name for middleware)
-supabase/migrations/    0001 schema (reference), 0002 functions (run once)
+supabase/migrations/    0001 schema (reference) … 0008 card EMI — all applied in production
+tests/                  security, money and ledger tests (npm test)
+docs/AUDIT.md           architecture, mutation map, risk register and roadmap
 design/                 the approved HTML designs
 ```

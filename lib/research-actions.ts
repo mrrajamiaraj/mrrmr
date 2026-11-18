@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { writer } from "@/lib/viewer";
 import { cleanText } from "@/lib/security";
+import { roundMoney } from "@/lib/money";
 
 export type Result = { error?: string };
 
@@ -18,7 +19,7 @@ function done(error: { code?: string; message: string } | null): Result {
   return {};
 }
 
-const amountOk = (n: number) => typeof n === "number" && Number.isFinite(n) && n > 0 && n < 1e12;
+const amountOk = (n: number) => typeof n === "number" && Number.isFinite(n) && roundMoney(n) > 0 && n < 1e12;
 // Trimmed and capped server-side: these actions can be called without the form.
 const clean = (s: string) => cleanText(s, 300);
 
@@ -35,7 +36,7 @@ export async function saveExpense(
     member: clean(input.member),
     description: clean(input.description) || `${clean(input.facility)} [${clean(input.member)}]`,
     tag: clean(input.tag) || null,
-    amount: Math.round(input.amount * 100) / 100,
+    amount: roundMoney(input.amount),
   };
   const supabase = await writer();
   const { error } = id
@@ -60,7 +61,7 @@ export async function saveContribution(
     paid_on: input.paid_on || undefined,
     member: clean(input.member),
     note: clean(input.note) || null,
-    amount: Math.round(input.amount * 100) / 100,
+    amount: roundMoney(input.amount),
   };
   const supabase = await writer();
   const { error } = id

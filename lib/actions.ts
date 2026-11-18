@@ -6,6 +6,7 @@ import { writer } from "@/lib/viewer";
 import { passwordProblems } from "@/lib/password";
 import { cleanText, siteOrigin } from "@/lib/security";
 import { EMI_MONTHS, type PayPlan } from "@/lib/types";
+import { compareMoney, roundMoney, subMoney, sumBy } from "@/lib/money";
 
 export type ActionResult = { error?: string; personId?: string | null };
 
@@ -33,9 +34,9 @@ function done(error: DbError, extra: ActionResult = {}): ActionResult {
   return extra;
 }
 
+/** Exact two-decimal rounding of client input (half away from zero); NaN for anything that isn't an amount. */
 function money(n: unknown) {
-  const v = Math.round(Number(n) * 100) / 100;
-  return Number.isFinite(v) ? v : NaN;
+  return roundMoney(n);
 }
 
 // Free text is trimmed and capped server-side; the forms are not the only way to call these actions.
@@ -217,8 +218,14 @@ export async function recordRepayment(input: {
   if (input.appliesTo === "card" && !input.cardId) return { error: "Pick which card this repayment is for." };
 
   const supabase = await writer();
-  const { data: s } = await supabase.from("debtor_summary").select("still_owes").eq("person_id", input.personId).maybeSingle();
-  if (s && amount > Number(s.still_owes)) return { error: `They only owe ৳${Number(s.still_owes).toLocaleString("en-IN")}.` };
+  // A repayment can't be more than the person owes to THAT source: bank loans, or the one card it is for.
+  // (Not their total across everything — extra on one card must not hide what is still owed elsewhere.)
+  const owed = await owedToSource(supabase, input.personId, input.appliesTo, input.cardId);
+  if (owed === null) return { error: "Could not check what they owe right now. Try again." };
+  if (compareMoney(amount, owed) > 0) {
+    const where = input.appliesTo === "loan" ? "on loans" : "for that card";
+    return { error: owed > 0 ? `They only owe ৳${owed.toLocaleString("en-IN", { maximumFractionDigits: 2 })} ${where}.` : `They owe nothing ${where}.` };
+  }
 
   const { error } = await supabase.rpc("record_repayment", {
     p_person_id: input.personId,
@@ -232,6 +239,26 @@ export async function recordRepayment(input: {
     p_lower_card: input.lowerCard,
   });
   return done(error, { personId: input.personId });
+}
+
+/**
+ * What a person still owes to one source, exact to the paisa and never below 0: bank loans minus loan repayments,
+ * or their uses of one card minus their repayments for that card. Null if the database could not be read.
+ */
+async function owedToSource(
+  supabase: Awaited<ReturnType<typeof writer>>,
+  personId: string,
+  appliesTo: "loan" | "card",
+  cardId: string | null
+): Promise<number | null> {
+  const taken = appliesTo === "loan"
+    ? supabase.from("loans").select("amount").eq("person_id", personId)
+    : supabase.from("card_uses").select("amount").eq("person_id", personId).eq("card_id", cardId!);
+  let paidQ = supabase.from("repayments").select("amount").eq("person_id", personId).eq("applies_to", appliesTo);
+  if (appliesTo === "card") paidQ = paidQ.eq("card_id", cardId!);
+  const [t, p] = await Promise.all([taken, paidQ]);
+  if (t.error || p.error) return null;
+  return Math.max(subMoney(sumBy(t.data ?? [], (r) => r.amount), sumBy(p.data ?? [], (r) => r.amount)), 0);
 }
 
 export async function updatePerson(
