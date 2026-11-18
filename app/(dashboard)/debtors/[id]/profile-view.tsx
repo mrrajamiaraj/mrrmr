@@ -58,8 +58,8 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
           </div>
         </div>
         <section aria-label="Totals" className="surface-card grid grid-cols-2 overflow-hidden md:grid-cols-4 [&>*]:border-line [&>*+*]:border-l max-md:[&>*:nth-child(3)]:border-l-0 max-md:[&>*:nth-child(n+3)]:border-t">
-          <Fig label="Borrowed" value={p.taken} note={`${p.loanCount} loans · ${p.cardCount} card uses`} />
-          <Fig label="Repaid" value={p.paid} tone="good" note={`${p.payCount} payments · ${p.pct}%`} />
+          <Fig label="Borrowed" value={p.taken} note={`${p.loanCount} loan${p.loanCount === 1 ? "" : "s"} · ${p.cardCount} card use${p.cardCount === 1 ? "" : "s"}`} />
+          <Fig label="Repaid" value={p.paid} tone="good" note={`${p.payCount} payment${p.payCount === 1 ? "" : "s"} · ${p.pct}%`} />
           <Fig label="Outstanding" value={p.owes} tone="owed" note={p.owes > 0 ? p.dueText : "All paid back"} />
           <Fig label="Next due" value={null} text={p.due ? dateLong(p.due) : "—"} note={p.due ? (p.dueKind === "late" ? "Overdue" : p.dueKind === "soon" ? "Within 7 days" : "Later") : "Nothing scheduled"} late={p.dueKind === "late" && p.owes > 0} />
         </section>
@@ -161,7 +161,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
           onClose={() => setAdding(null)} onAdded={(_, t) => { setAdding(null); setFlash(t); }} />
       )}
       {adding === "card" && (
-        <CardPurchaseDialog cards={data.cards} knownNames={data.people.map((x) => x.name)}
+        <CardPurchaseDialog cards={data.cards} knownNames={data.people.map((x) => x.name)} initialPayer={p.name}
           onClose={() => setAdding(null)} onSaved={(t) => { setAdding(null); setFlash(t); }} />
       )}
     </Shell>

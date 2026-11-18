@@ -56,6 +56,25 @@ Partial by design (owner decision): repayments **credited** to the account (stor
 and loans made from it (**whether deducted isn't recorded** for past loans). Manual balance edits and individual
 debit entries aren't stored, so there is no reconciliation tool. That needs the balance journal proposed in AUDIT P3.
 
+## Repayments (owner rules)
+* **Bank effect is explicit.** A loan repayment is added to the bank only when “Add this money to City Bank” is ticked.
+  It defaults to on for Bank transfer and **off for Cash, bKash and Nagad**. Card repayments never touch the bank.
+* **Limit:** never more than is owed to that source (bank loans, or that one card). **Allocation:** loans earliest
+  pay-back date first; card installments earliest-due first.
+* **Duplicate guard:** an identical repayment (same person, amount, date and source) recorded in the last 2 minutes
+  needs an explicit "it's a separate payment" confirmation.
+
+## Time machine, Outlook, Reports, Data checks (lib/history, forecast, reports, anomalies)
+* **Time machine:** receivables and the research ledger as at the end of a past date, rebuilt from dated events.
+  Bank and card balances are **not shown** for past dates: they have no history (manual edits, running totals).
+* **Outlook:** confirmed obligations = card balances with a pay-by date in the horizon. Expected collections = unpaid
+  items due in the horizon (uncertain; overdue items are listed separately and not counted). Scenarios: none, all on
+  time, with chosen people delayed. Loan collections → bank; card collections → that card's balance.
+* **Reports:** each event in exactly one column of one period. "Into the bank" is a subset of loan repayments, and
+  "Owed at end" is a balance; neither is added to the flow columns.
+* **Data checks:** duplicate-looking entries, per-source overpayments, others owing more than a card balance,
+  identical EMI plans, missing due dates, date-order problems, similar names. They warn only and never change data.
+
 ## Snapshot, chart, activity
 * **Debit card tally:** `accounts.debit_used`, a running total you add to. It does not change the bank balance.
 * **Obligations:** each card's balance with its pay-by date. Statement minimums aren't tracked, so the full balance

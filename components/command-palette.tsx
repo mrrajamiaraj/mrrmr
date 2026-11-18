@@ -9,8 +9,9 @@ import { setTheme, useTheme } from "@/components/theme";
 import { exitViewMode } from "@/app/view/actions";
 import { signOut } from "@/app/login/actions";
 import { taka } from "@/lib/format";
+import { searchIndex, type SearchItem } from "@/lib/search-actions";
 
-type Item = { id: string; group: string; label: string; hint?: string; icon: React.ReactNode; run: () => void };
+type Item = { id: string; group: string; label: string; hint?: string; icon: React.ReactNode; run: () => void; record?: boolean };
 
 type PalettePerson = { id: string; name: string; initials: string; owes: number };
 type PaletteCtx = { people: PalettePerson[]; setPeople: (p: PalettePerson[]) => void; openRef: React.RefObject<(id: string) => void> };
@@ -48,6 +49,9 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
   const listId = useId();
   const listRef = useRef<HTMLUListElement>(null);
   const tabs = useTabs();
+  // Records (loans, card transactions, EMI plans, research) come from the server, already authorization-filtered.
+  const [records, setRecords] = useState<SearchItem[]>([]);
+  useEffect(() => { let live = true; searchIndex().then((r) => live && setRecords(r)).catch(() => {}); return () => { live = false; }; }, []);
 
   const items = useMemo<Item[]>(() => [
     ...tabs.map((t) => {
@@ -61,7 +65,14 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
       id: `person-${p.id}`, group: "People", label: p.name, hint: p.owes > 0 ? `owes ${taka(p.owes)}` : "all paid",
       icon: <Avatar text={p.initials} size={26} />, run: () => openRef.current(p.id),
     })),
-    ...(viewer ? [] : [{
+    ...records.map((r) => ({
+      id: r.id, group: r.group, label: r.label, hint: r.hint, record: true,
+      icon: <SearchIcon size={15} />, run: () => router.push(r.href),
+    })),
+    ...(viewer ? [{
+      id: "export-research", group: "Actions", label: "Export the research ledger as CSV", icon: <DownloadIcon size={16} />,
+      run: () => { window.location.href = "/research/export"; },
+    }] : [{
       id: "export", group: "Actions", label: "Export everything as CSV", icon: <DownloadIcon size={16} />,
       run: () => { window.location.href = "/export"; },
     }]),
@@ -82,15 +93,17 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
       id: "logout", group: "Actions", label: viewer ? "Leave view mode" : "Log out", icon: <LogoutIcon size={16} />,
       run: () => start(() => (viewer ? exitViewMode() : signOut())),
     },
-  ], [tabs, path, router, viewer, people, openRef, onShortcuts, mode]);
+  ], [tabs, path, router, viewer, people, openRef, onShortcuts, mode, records]);
 
   const ql = q.trim().toLowerCase();
-  // Every typed word must appear somewhere in the label, in any order: "card city" finds "City Bank Credit Card".
-  // With nothing typed, the People group shows only the first few so pages and actions stay in view.
+  // Every typed word must appear somewhere in the label (or, for records, the hint), in any order: "card city" finds
+  // "City Bank Credit Card". With nothing typed, records are hidden and People shows only the first few.
   let peopleLeft = 4;
+  const perGroup = new Map<string, number>();
   const shown = ql
-    ? items.filter((i) => ql.split(/\s+/).every((w) => `${i.label} ${i.group}`.toLowerCase().includes(w)))
-    : items.filter((i) => i.group !== "People" || peopleLeft-- > 0);
+    ? items.filter((i) => ql.split(/\s+/).every((w) => `${i.label} ${i.group} ${i.record ? i.hint : ""}`.toLowerCase().includes(w)))
+        .filter((i) => !i.record || (perGroup.set(i.group, (perGroup.get(i.group) ?? 0) + 1).get(i.group)! <= 6))
+    : items.filter((i) => !i.record && (i.group !== "People" || peopleLeft-- > 0));
   const active = Math.min(sel, Math.max(shown.length - 1, 0));
 
   useEffect(() => {

@@ -18,8 +18,8 @@ import { CARD_CATEGORIES, EMI_MONTHS, type Card, type PayPlan } from "@/lib/type
 type Row = { key: number; name: string; amount: string; plan: PayPlan; months: number; due: string; charges: string };
 const STEPS = ["Card", "Purchase", "Who pays", "Plan", "Review"] as const;
 
-export function CardPurchaseDialog({ cards, initialCardId, knownNames, onClose, onSaved }: {
-  cards: Card[]; initialCardId?: string; knownNames: string[];
+export function CardPurchaseDialog({ cards, initialCardId, knownNames, onClose, onSaved, initialPayer = "" }: {
+  cards: Card[]; initialCardId?: string; knownNames: string[]; initialPayer?: string;
   onClose: () => void; onSaved: (message: string, personId: string | null) => void;
 }) {
   const today = todayIso();
@@ -30,7 +30,7 @@ export function CardPurchaseDialog({ cards, initialCardId, knownNames, onClose, 
   const defaultDue = (c: Card) => (c.pay_by && c.pay_by >= today ? c.pay_by : addDays(today, 14));
   const [f, setF] = useState({ amount: "", date: today, reason: "", category: "Shopping", addToBalance: true });
   const nextKey = useState(() => ({ n: 2 }))[0];
-  const [rows, setRows] = useState<Row[]>([{ key: 1, name: "", amount: "", plan: "full", months: 6, due: defaultDue(card), charges: "" }]);
+  const [rows, setRows] = useState<Row[]>([{ key: 1, name: initialPayer, amount: "", plan: "full", months: 6, due: defaultDue(card), charges: "" }]);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
 

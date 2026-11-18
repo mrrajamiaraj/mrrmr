@@ -13,19 +13,22 @@ export function findAnomalies(data: FinanceData, d: Dashboard, today: string): A
   const fmt = (n: number) => "৳" + Math.round(n).toLocaleString("en-IN");
 
   // 1. Duplicate-looking entries: same person, kind, amount and date more than once.
-  const groups = new Map<string, { kind: string; who: string; iso: string; amount: number; n: number }>();
-  const add = (kind: string, who: string, iso: string, amount: number) => {
+  const groups = new Map<string, { kind: string; who: string; iso: string; amount: number; n: number; notes: string[] }>();
+  const add = (kind: string, who: string, iso: string, amount: number, note: string) => {
     const k = `${kind}|${who}|${iso}|${amount}`;
-    const g = groups.get(k) ?? { kind, who, iso, amount, n: 0 };
-    g.n++; groups.set(k, g);
+    const g = groups.get(k) ?? { kind, who, iso, amount, n: 0, notes: [] };
+    g.n++; g.notes.push(note); groups.set(k, g);
   };
-  for (const l of data.loans) add("loan", l.person_id, l.taken_on, l.amount);
-  for (const u of data.cardUses) if (!u.purchase_group) add(`card use on ${u.card_id}`, u.person_id ?? "me", u.used_on, u.amount);
-  for (const r of data.repayments) add(`repayment (${r.applies_to})`, r.person_id, r.paid_on, r.amount);
+  for (const l of data.loans) add("loan", l.person_id, l.taken_on, l.amount, l.reason);
+  for (const u of data.cardUses) if (!u.purchase_group) add(`card use on ${u.card_id}`, u.person_id ?? "me", u.used_on, u.amount, u.reason_or_place);
+  for (const r of data.repayments) add(`repayment (${r.applies_to})`, r.person_id, r.paid_on, r.amount, `via ${r.via}`);
   for (const g of groups.values()) if (g.n > 1) {
     const kind = g.kind.startsWith("card use") ? "card use" : g.kind;
-    out.push({ id: `dup:${g.kind}:${g.who}:${g.iso}:${g.amount}`, severity: "medium", kind: "Duplicate-looking",
-      title: `${g.n} identical ${kind} entries`, detail: `${g.who === "me" ? "You" : name.get(g.who) ?? "Unknown"} · ${fmt(g.amount)} on ${g.iso}. If it was entered twice, delete one.`, href: g.who !== "me" ? `/debtors/${g.who}` : undefined });
+    const distinct = new Set(g.notes.map((x) => x.trim().toLowerCase())).size === g.notes.length;
+    out.push({ id: `dup:${g.kind}:${g.who}:${g.iso}:${g.amount}`, severity: distinct ? "low" : "medium", kind: "Duplicate-looking",
+      title: `${g.n} identical ${kind} entries`,
+      detail: `${g.who === "me" ? "You" : name.get(g.who) ?? "Unknown"} · ${fmt(g.amount)} on ${g.iso} (${g.notes.map((x) => `“${x}”`).join(", ")}). ${distinct ? "The descriptions differ, so they may be genuine." : "If it was entered twice, delete one."}`,
+      href: g.who !== "me" ? `/debtors/${g.who}` : undefined });
   }
 
   // 2. Payments exceeding what was owed, per source (loans; each card).

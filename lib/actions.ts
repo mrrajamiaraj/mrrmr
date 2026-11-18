@@ -402,6 +402,24 @@ export async function saveDashboardLayout(layout: unknown): Promise<ActionResult
   return {};
 }
 
+/**
+ * Reconciles the bank account or a card to a statement figure through reconcile_balance (migration 0011): the
+ * recorded figure, the statement figure and the difference are stored as a permanent adjustment, and the balance is
+ * set — in one transaction. Never a silent overwrite.
+ */
+export async function reconcileBalance(input: { target: "account" | "card"; id: string; statement: number; statementDate: string; note: string }): Promise<ActionResult> {
+  if (input.target !== "account" && input.target !== "card") return { error: "Pick the bank account or a card." };
+  const s = money(input.statement);
+  if (!(s >= 0)) return { error: "Enter the statement figure (0 or more)." };
+  const supabase = await writer();
+  const { error } = await supabase.rpc("reconcile_balance", {
+    p_target: input.target, p_id: input.id, p_statement: s, p_statement_date: orNull(input.statementDate), p_note: orNull(input.note),
+  });
+  if (error && (error.code === "PGRST202" || /could not find the function/i.test(error.message)))
+    return { error: "Recording adjustments needs a database update. Run supabase/migrations/0011_audit_and_reconcile.sql in the Supabase SQL Editor, then try again." };
+  return done(error);
+}
+
 /** Saves personal preferences (landing page, density, paisa, chart range) to user metadata. Never touches records. */
 export async function savePrefs(prefs: unknown): Promise<ActionResult> {
   const clean = normalizePrefs(prefs);

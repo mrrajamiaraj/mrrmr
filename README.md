@@ -14,7 +14,13 @@ Supabase (`@supabase/ssr`). Amounts are Bangladeshi Taka with Indian grouping (�
 | Community Bank Credit Card | `/cards/2` | `design/Card2.dc.html` |
 | Research Finance Ledger | `/research` | screenshots of the Google Sheets dashboard |
 | Admin password dialog | header, every page | `design/AdminButton.dc.html` |
-| CSV backup | `/export` (“Export CSV” in the nav) | — |
+| Debtor profile (full timeline, statement) | `/debtors/[id]` | — |
+| Repayment Center (dues, collections, data checks) | `/repayments` | — |
+| Reports, Outlook, Time machine | `/reports` | `docs/METRICS.md` |
+| Reconcile & Audit (needs 0011 for adjustments/trail) | `/reconcile` | — |
+| Settings (landing page, density, paisa, chart range) | `/settings` | — |
+| CSV backup / reports | `/export` (full) · `?type=debtor&id=` · `?type=card&slot=` · `?type=emi` | — |
+| Research CSV (viewer allowed) | `/research/export[?from&to]` | — |
 | View mode (read-only, password `mrrmr`) | `/view` | Research Finance only, no edit buttons |
 
 ## One-time Supabase setup
@@ -173,6 +179,7 @@ proxy.ts                sends signed-out visitors to /login (Next.js 16's name f
 supabase/migrations/    0001 schema (reference) … 0008 card EMI — all applied in production;
                         0009 repayment limit in the database — written, NOT yet applied (review, then run once)
                         0010 split purchases + EMI charges (includes 0009) — written, NOT yet applied
+                        0011 audit trail + reconciliation adjustments — written, NOT yet applied
 tests/                  security, money and ledger tests (npm test)
 docs/AUDIT.md           architecture, mutation map, risk register and roadmap
 design/                 the approved HTML designs
