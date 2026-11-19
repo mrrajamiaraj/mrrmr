@@ -43,8 +43,7 @@ export async function proxy(request: NextRequest) {
   }
   const viewer = signedIn && isViewerEmail(data?.claims?.email as string | undefined);
   // Already signed in: /login goes home. /view goes to Research for a viewer, but for the ADMIN it stays on /view —
-  // which says "you're signed in as the admin" — instead of silently opening the admin dashboard (that made it look
-  // as if the view link showed everything).
+  // which says "you're signed in as the admin" — instead of silently opening the admin dashboard.
   if (signedIn && (path === "/login" || (path === "/view" && viewer))) {
     const url = request.nextUrl.clone();
     url.pathname = viewer ? "/research" : "/";

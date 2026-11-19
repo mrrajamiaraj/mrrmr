@@ -30,14 +30,13 @@ dates are Asia/Dhaka. Read-only **view mode** shows the Research ledger only.
 | `/research`, `/research/export` | Research ledger (separate from personal finance) and its CSV — the only pages view mode may open |
 | `/settings` | Landing page, density, paisa display, default chart range |
 | `/export` | Full backup CSV; `?type=debtor&id=` · `?type=card&slot=` · `?type=emi` |
-| `/login`, `/view`, `/auth/*` | Admin sign-in, view-mode passcode, password reset |
+| `/login`, `/view`, `/auth/*` | Admin sign-in, view mode (one button, no key), password reset |
 
 ## Environment variables (server-only; set in `.env.local` and Vercel)
 | Name | Required | Notes |
 | --- | --- | --- |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | yes | Project Settings → API |
 | `SITE_URL` | production | `https://<domain>` — used in password-reset emails |
-| `VIEW_PASSCODE` | for view mode | ≥ 12 characters. Without it (or with a weak one) view mode is **off** |
 | `VIEWER_EMAIL`, `VIEWER_PASSWORD` | for view mode | the shared viewer account; password ≥ 16 random characters, never typed by people |
 
 Never add the `service_role` key to this app.
@@ -67,8 +66,9 @@ npm run audit                   # dependency check
 ## Authentication & view mode
 * Admin: email + password (generic errors, per-IP rate limits, reset only from a fresh recovery session, sign-out
   revokes all sessions). Sign-ups disabled.
-* View mode: a passcode (server-checked, constant-time, rate-limited) signs the visitor in as the shared **viewer**
-  account. The database lets that account **read the two research tables only** and blocks every write
+* View mode: **no key** (owner decision 2026-11-19). One button on `/view` (rate-limited) signs the visitor in as the
+  shared **viewer** account; anyone with the link can open it. An admin signed in on the same browser is signed out
+  first. The database lets that account **read the two research tables only** and blocks every write
   (0005 + 0007); `proxy.ts` redirects it away from every other route; server actions refuse it. Verified with
   `supabase/tests/rls_viewer.sql`. Exiting signs out that one viewer only.
 

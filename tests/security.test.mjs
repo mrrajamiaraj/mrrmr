@@ -126,12 +126,11 @@ import { viewModeConfig } from "../lib/view-config.ts";
 import { isIsoDate, optionalDate, amountInRange, isUuid, MAX_AMOUNT } from "../lib/validate.ts";
 import { readFileSync } from "node:fs";
 
-test("view mode fails closed: no defaults, weak passcode or missing password → disabled", () => {
-  assert.equal(viewModeConfig({}), null, "nothing configured");
-  assert.equal(viewModeConfig({ VIEW_PASSCODE: "mrrmr", VIEWER_PASSWORD: "x".repeat(32) }), null, "the old 5-letter key is rejected");
-  assert.equal(viewModeConfig({ VIEW_PASSCODE: "long enough key", VIEWER_PASSWORD: "short" }), null);
-  assert.deepEqual(viewModeConfig({ VIEW_PASSCODE: "correct horse battery", VIEWER_PASSWORD: "p".repeat(24) }),
-    { passcode: "correct horse battery", email: "viewer@mrrmr.app", password: "p".repeat(24) });
+test("view mode (no key) fails closed: off unless a strong viewer-account password is configured", () => {
+  assert.equal(viewModeConfig({}), null, "nothing configured → off");
+  assert.equal(viewModeConfig({ VIEWER_PASSWORD: "short" }), null, "weak viewer password → off");
+  assert.deepEqual(viewModeConfig({ VIEWER_PASSWORD: "p".repeat(24) }), { email: "viewer@mrrmr.app", password: "p".repeat(24) });
+  assert.equal(viewModeConfig({ VIEWER_PASSWORD: "p".repeat(24), VIEWER_EMAIL: "v@x.test" }).email, "v@x.test");
 });
 
 test("no viewer secret is written in the source any more", () => {
