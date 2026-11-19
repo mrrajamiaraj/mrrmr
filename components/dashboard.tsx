@@ -95,73 +95,6 @@ export function Hero({ d, hour, actions, trend }: { d: Dashboard; hour: number; 
   );
 }
 
-// ---- Needs attention: overdue and upcoming installments, with the action next to each ---------------------------
-
-/** Same person, date and source → one row (two purchases due the same day read as one payment). */
-function groupDue(items: OpenItem[]) {
-  const map = new Map<string, OpenItem & { count: number }>();
-  for (const o of items) {
-    const k = `${o.personId}|${o.iso}|${o.source}|${o.cardId}`;
-    const g = map.get(k);
-    if (g) { g.left = sumBy([g.left, o.left], (x) => x); g.count++; g.emi = g.emi || o.emi; }
-    else map.set(k, { ...o, count: 1 });
-  }
-  return [...map.values()];
-}
-
-export function Attention({ d, cardName, onRepay, canAct }: {
-  d: Dashboard; cardName: (id: string | null) => string; onRepay: (personId: string) => void; canAct: boolean;
-}) {
-  const horizon = addDays(d.today, 14);
-  const items = groupDue(d.open.filter((o) => o.iso && (o.status === "overdue" || o.iso <= horizon)));
-  const [all, setAll] = useState(false);
-  const shown = all ? items : items.slice(0, 7);
-  const bills = d.cards.filter((c) => c.payByPassed);
-  const total = sumBy(items, (o) => o.left);
-
-  return (
-    <SectionCard labelledBy="att-h">
-      <SectionHead id="att-h" title="Needs attention"
-        sub={items.length ? `${items.length} ${items.length === 1 ? "payment" : "payments"} overdue or due in the next 14 days · ${taka(total)}` : "Overdue repayments and installments due in the next 14 days."}
-        action={<Link href="/repayments" className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-brand-2 hover:bg-good-tint">All repayments<ChevronRight size={15} /></Link>} />
-      {bills.map((c) => (
-        <Link key={c.card.id} href={`/cards/${c.card.slot}`} className="flex items-center gap-3 border-t border-line bg-bad-tint/50 px-4 py-2.5 text-[13px] hover:bg-bad-tint sm:px-5">
-          <CardIcon size={16} className="flex-none text-bad" />
-          <span className="min-w-0 flex-auto"><b className="font-medium text-bad-deep">{c.label}: pay-by date passed</b>
-            <span className="block text-[12.5px] text-slate-600">Set to {dateLong(c.payBy)}. Update it from your new statement.</span></span>
-          <Money value={c.balance} tone="bad" />
-        </Link>
-      ))}
-      {shown.length ? (
-        <ul className="m-0 list-none border-t border-line p-0">
-          {shown.map((o) => {
-            const late = o.status === "overdue";
-            return (
-              <li key={o.key} className="flex items-center gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
-                <DateChip iso={o.iso} today={d.today} size="sm" />
-                <Link href={`/debtors/${o.personId}`} className="flex min-w-0 flex-auto items-center gap-2.5 rounded-lg hover:text-brand-ink">
-                  <Avatar text={initials(o.name)} size={30} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-[14px] font-medium">{o.name}</span>
-                    <span className="block truncate text-[12px] text-slate-500">{o.source === "loan" ? "Bank loan" : cardName(o.cardId)}{o.emi ? " · EMI installment" : ""}{o.count > 1 ? ` · ${o.count} items` : ""}</span>
-                  </span>
-                </Link>
-                <Money value={o.left} tone={late ? "bad" : "owed"} className="flex-none text-[14px]" />
-                {canAct && <Button size="sm" variant="secondary" onClick={() => onRepay(o.personId)} className="flex-none max-sm:px-2.5" aria-label={`Record a repayment from ${o.name}`}><TrendIcon size={14} /><span className="max-sm:hidden">Record</span></Button>}
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <div className="border-t border-line p-4"><EmptyState compact title="Nothing due in the next 14 days">{d.undated.count ? `${taka(d.undated.amount)} is owed with no due date set.` : "No overdue repayments either."}</EmptyState></div>
-      )}
-      {items.length > 7 && (
-        <div className="border-t border-line p-2 text-center"><Button variant="ghost" size="sm" onClick={() => setAll(!all)}>{all ? "Show fewer" : `Show all ${items.length}`}</Button></div>
-      )}
-    </SectionCard>
-  );
-}
-
 // ---- Credit cards -----------------------------------------------------------------------------------------------
 
 export function CardsStrip({ d }: { d: Dashboard }) {
@@ -180,7 +113,7 @@ export function CardsStrip({ d }: { d: Dashboard }) {
                 <span className="flex flex-col"><span className="eyebrow">Available</span>{c.available != null ? <Money value={c.available} tone="good" className="text-[20px] leading-tight" /> : <span className="text-[20px] text-slate-400">—</span>}</span>
               </span>
               <span className="text-[12.5px] text-slate-500">
-                Others owe you <Money value={c.othersOwe} tone="owed" />
+                Others owe you <Money value={c.othersOwe} tone="owed" /> · Me <Money value={Math.max(c.myShare, 0)} />
                 {c.payBy && <span className={`block ${c.payByPassed ? "font-medium text-bad" : ""}`}>Pay by {dateLong(c.payBy)}{c.payByPassed ? " · passed" : ""}</span>}
               </span>
             </div>
@@ -188,50 +121,6 @@ export function CardsStrip({ d }: { d: Dashboard }) {
         ))}
       </div>
     </section>
-  );
-}
-
-// ---- Recent activity ----------------------------------------------------------------------------------------------
-
-const ACT: Record<Activity["kind"], { label: string; sign: 1 | -1 | 0 }> = {
-  loan: { label: "Loan", sign: -1 },
-  card_other: { label: "Card purchase", sign: -1 },
-  card_own: { label: "Your card spending", sign: 0 },
-  repayment: { label: "Repayment", sign: 1 },
-};
-
-export function RecentActivity({ d }: { d: Dashboard }) {
-  const rows = d.activity.slice(0, 8);
-  return (
-    <SectionCard labelledBy="act-h">
-      <SectionHead id="act-h" title="Recent activity" sub="The latest loans, card purchases and repayments."
-        action={<Link href="/reports" className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-brand-2 hover:bg-good-tint">Monthly summary<ChevronRight size={15} /></Link>} />
-      {rows.length ? (
-        <ol className="m-0 list-none border-t border-line p-0">
-          {rows.map((a) => {
-            const m = ACT[a.kind];
-            const inner = (
-              <>
-                <span className="min-w-0 flex-auto">
-                  <span className="flex flex-wrap items-center gap-x-2 text-[14px] font-medium">{a.name}<span className="text-[12px] font-normal text-slate-500">{m.label}</span></span>
-                  <span className="block truncate text-[12.5px] text-slate-500">{dateShort(a.iso)} · {a.source} · {a.detail}</span>
-                </span>
-                <span className="flex flex-none flex-col items-end gap-0.5">
-                  <Money value={m.sign * a.amount} signed={m.sign !== 0} tone={m.sign > 0 ? "good" : m.sign < 0 ? "owed" : "ink"} className="text-[14px]" />
-                  <span className="text-[11.5px] text-slate-500">{a.status}</span>
-                </span>
-              </>
-            );
-            return (
-              <li key={a.id} className="border-b border-soft last:border-0">
-                {a.personId ? <Link href={`/debtors/${a.personId}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-subtle sm:px-5">{inner}</Link>
-                  : <div className="flex items-center gap-3 px-4 py-2.5 sm:px-5">{inner}</div>}
-              </li>
-            );
-          })}
-        </ol>
-      ) : <div className="border-t border-line p-5"><EmptyState compact title="Nothing recorded yet">Loans, card purchases and repayments appear here as you add them.</EmptyState></div>}
-    </SectionCard>
   );
 }
 

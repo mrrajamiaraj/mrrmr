@@ -11,7 +11,7 @@ import { Flash } from "@/components/debtors/bits";
 import { SetupAccount } from "@/components/setup-forms";
 import { DebitUsed } from "@/components/debit-used";
 import { usePalettePeople } from "@/components/command-palette";
-import { Attention, CardsStrip, Hero, RecentActivity, RepayPicker } from "@/components/dashboard";
+import { CardsStrip, Hero, RepayPicker } from "@/components/dashboard";
 import { Button, buttonClass, Menu, type MenuItem } from "@/components/ui";
 import { CardIcon, PlusIcon, TrendIcon } from "@/components/icons";
 import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
@@ -57,7 +57,6 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
   const acct = { id: account.id, name: account.name };
   const rp = repaying ? profiles.find((p) => p.id === repaying) : undefined;
   const cardItems: MenuItem[] = data.cards.map((c) => ({ label: cardLabel(c), icon: <CardIcon size={17} />, onSelect: () => setAdding({ mode: "card", cardId: c.id }) }));
-  const cardName = (id: string | null) => cardLabel(data.cards.find((c) => c.id === id));
 
   return (
     <Shell subtitle="" hero={
@@ -71,11 +70,6 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
       </>} />
     }>
       <Flash text={flash} />
-
-      <div className="reveal grid items-start gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <Attention d={d} cardName={cardName} onRepay={setRepaying} canAct={!viewer} />
-        <RecentActivity d={d} />
-      </div>
 
       <div className="reveal"><CardsStrip d={d} /></div>
 

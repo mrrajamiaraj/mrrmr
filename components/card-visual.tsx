@@ -56,8 +56,8 @@ export function CardVisual({ card, size = "lg" }: { card: Card; size?: "sm" | "l
         {!sm && <span aria-hidden="true" className="card-holo" />}
         <div aria-hidden="true" className={`absolute inset-0 flex flex-col justify-between ${sm ? "p-3" : "p-[clamp(16px,5.5%,26px)]"}`}>
           <div className="flex items-start justify-between gap-3">
-            <span className={`font-semibold tracking-[-0.01em] drop-shadow-sm ${sm ? "text-[12px]" : "text-[clamp(14px,3.8vw,18px)]"}`}>{card.bank}</span>
-            {card.network && <span className={`text-right font-medium text-white/85 ${sm ? "text-[10px]" : "text-[clamp(11px,3vw,13px)]"}`}>{card.network}</span>}
+            <span className={`min-w-0 truncate whitespace-nowrap font-semibold tracking-[-0.01em] drop-shadow-sm ${sm ? "text-[11px]" : "text-[clamp(14px,3.8vw,18px)]"}`}>{card.bank}</span>
+            {card.network && <span className={`flex-none whitespace-nowrap text-right font-medium text-white/85 ${sm ? "text-[9.5px]" : "text-[clamp(11px,3vw,13px)]"}`}>{card.network}</span>}
           </div>
           <div>
             <div className={`font-mono tracking-[0.18em] text-white/95 drop-shadow-sm ${sm ? "text-[11px]" : "text-[clamp(13px,4vw,18px)]"}`}>

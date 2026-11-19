@@ -79,7 +79,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const unmatched = Math.max(subMoney(Math.max(c.myShare, 0), myTotal), 0);
   const upcoming = dash.open.filter((o) => o.cardId === card.id && o.iso).slice(0, 8);
   const upMax = Math.max(1, ...upcoming.map((o) => o.left));
-  const whoMax = Math.max(1, ...people.filter((p) => p.owes > 0).map((p) => p.owes));
+  const whoMax = Math.max(1, Math.max(c.myShare, 0), ...people.filter((p) => p.owes > 0).map((p) => p.owes));
   const share = c.balance > 0 ? Math.min(Math.max((c.othersOwe / c.balance) * 100, 0), 100) : 0;
   const rp = repaying ? everyone.find((p) => p.id === repaying) : undefined;
   const account = data.accounts[0] ? { id: data.accounts[0].id, name: data.accounts[0].name } : null;
@@ -232,8 +232,28 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
         </SectionCard>
 
         <SectionCard labelledBy="who-h">
-          <SectionHead id="who-h" title="Who owes on this card" sub="Their purchases on this card, less what they've repaid for it." />
+          <SectionHead id="who-h" title="Who owes on this card" sub={`You and everyone else — together the ${taka(c.balance)} card balance.`} />
           <ul className="m-0 list-none border-t border-line p-0">
+            {/* Me: your own share of the balance (balance − what others owe), so the list adds up to "You owe". */}
+            {(
+              <li className="flex animate-fade-up items-center gap-3 border-b border-soft bg-subtle/70 px-4 py-3 sm:px-5">
+                <span className="grid size-11 flex-none place-items-center rounded-full bg-ink text-[12px] font-semibold text-on-ink">Me</span>
+                <span className="min-w-0 flex-auto">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="truncate text-[14px] font-medium">Me</span>
+                    <span className="flex-none text-[11.5px] text-slate-500">your share</span>
+                  </span>
+                  <span aria-hidden="true" className="mt-1.5 block h-2 overflow-hidden rounded-full bg-soft">
+                    <span className="bar-fill block h-full rounded-full bg-slate-500" style={{ width: `${(Math.max(c.myShare, 0) / whoMax) * 100}%` }} />
+                  </span>
+                  <span className="mt-1 block truncate text-[12px] text-slate-500">
+                    {c.myShare <= 0 ? "Nothing of the balance is yours right now" : unmatched > 0 ? `${taka(myTotal)} recorded as your spending · ${taka(unmatched)} not matched to a purchase` : "Your own spending on this card"}
+                  </span>
+                </span>
+                <Money value={Math.max(c.myShare, 0)} className="w-[84px] flex-none text-right text-[15px]" />
+                {!viewer && <span className="hidden w-[78px] sm:block" />}
+              </li>
+            )}
             {owing.map((p, k) => {
               const emi = emiSummary([...plans.values()].filter((s) => s.personId === p.id));
               const late = p.dueKind === "late";
