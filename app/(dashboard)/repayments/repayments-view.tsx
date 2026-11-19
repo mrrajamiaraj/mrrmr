@@ -11,6 +11,7 @@ import { repayTargets } from "@/components/debtors/repay-form";
 import { Badge, Button, EmptyState, Money, type BadgeTone } from "@/components/ui";
 import { AlertIcon, DueIcon, InfoIcon } from "@/components/icons";
 import { usePalettePeople } from "@/components/command-palette";
+import { DateChip } from "@/components/viz";
 import { computeDashboard, type OpenItem } from "@/lib/dashboard";
 import { findAnomalies } from "@/lib/anomalies";
 import { buildProfiles, byOwesThenName, cardLabel } from "@/lib/ledger";
@@ -52,8 +53,8 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
       <Flash text={flash} />
 
       <div className="grid items-start gap-5 lg:grid-cols-2">
-        <DueList title="Overdue" id="ov-h" items={overdue} empty="Nothing is overdue." onOpen={go} cards={data.cards} tone="bad" />
-        <DueList title="Due in the next 30 days" id="up-h" items={upcoming} empty="Nothing is due in the next 30 days." onOpen={go} cards={data.cards} tone="owed" />
+        <DueList title="Overdue" id="ov-h" items={overdue} empty="Nothing is overdue." onOpen={go} cards={data.cards} tone="bad" today={today} />
+        <DueList title="Due in the next 30 days" id="up-h" items={upcoming} empty="Nothing is due in the next 30 days." onOpen={go} cards={data.cards} tone="owed" today={today} />
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -122,8 +123,8 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
   );
 }
 
-function DueList({ title, id, items, empty, onOpen, cards, tone }: {
-  title: string; id: string; items: OpenItem[]; empty: string; onOpen: (id: string) => void; cards: FinanceData["cards"]; tone: "bad" | "owed";
+function DueList({ title, id, items, empty, onOpen, cards, tone, today }: {
+  title: string; id: string; items: OpenItem[]; empty: string; onOpen: (id: string) => void; cards: FinanceData["cards"]; tone: "bad" | "owed"; today: string;
 }) {
   return (
     <SectionCard labelledBy={id}>
@@ -133,7 +134,7 @@ function DueList({ title, id, items, empty, onOpen, cards, tone }: {
           {items.map((o) => (
             <li key={o.key}>
               <button type="button" onClick={() => onOpen(o.personId)} className="flex w-full items-center gap-3 border-b border-soft px-4 py-2.5 text-left hover:bg-subtle sm:px-5">
-                <span className={`w-[70px] flex-none text-[12.5px] font-medium ${tone === "bad" ? "text-bad" : ""}`}>{tone === "bad" && <DueIcon size={12} className="mr-1 inline" />}{dateShort(o.iso)}</span>
+                <DateChip iso={o.iso} today={today} size="sm" />
                 <Avatar text={initials(o.name)} size={26} />
                 <span className="min-w-0 flex-auto"><span className="block truncate text-[13.5px] font-medium">{o.name}</span>
                   <span className="text-[12px] text-slate-500">{o.source === "loan" ? "Bank loan" : cardLabel(cards.find((c) => c.id === o.cardId))}{o.emi ? " · EMI" : ""}</span></span>

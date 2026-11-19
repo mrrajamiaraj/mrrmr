@@ -4,16 +4,17 @@ import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Shell, HeaderButton, useViewer } from "@/components/shell";
-import { PersonIcon, SearchIcon, ChevronRight, DueIcon, TrendIcon } from "@/components/icons";
+import { PersonIcon, SearchIcon, ChevronRight, DueIcon, TrendIcon, WalletIcon } from "@/components/icons";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { RepayDialog } from "@/components/debtors/person-dialogs";
 import { repayTargets } from "@/components/debtors/repay-form";
 import { Avatar, Flash } from "@/components/debtors/bits";
-import { Button, EmptyState, IconButton, Money } from "@/components/ui";
+import { Button, EmptyState, Money } from "@/components/ui";
 import { usePalettePeople } from "@/components/command-palette";
 import { stagger } from "@/components/motion";
+import { DateChip, Ring, ShareStrip, SplitBar } from "@/components/viz";
 import { buildProfiles, type Profile } from "@/lib/ledger";
-import { dateLong, dateShort } from "@/lib/format";
+import { taka } from "@/lib/format";
 import { sumBy } from "@/lib/money";
 import type { FinanceData } from "@/lib/types";
 
@@ -27,7 +28,6 @@ function standing(p: Profile): { label: string; tone: "bad" | "owed" | "good" | 
   if (p.dueKind === "soon") return { label: "Due soon", tone: "owed" };
   return { label: p.paid > 0 ? "Part repaid" : "Owes", tone: "owed" };
 }
-const TONE = { bad: "text-bad", owed: "text-owed", good: "text-brand-2", muted: "text-slate-500" } as const;
 const match = (p: Profile, f: Filter) =>
   f === "all" || (f === "repaid" ? p.owes <= 0 : p.owes > 0 && (f === "owing" || (f === "overdue" ? p.dueKind === "late" : p.dueKind === "soon")));
 
@@ -69,12 +69,28 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
       {/* Each figure is also a filter. */}
       <section aria-label="Totals" className="grid gap-3 sm:grid-cols-3">
         <Tile on={filter === "owing"} onClick={() => setFilter(filter === "owing" ? "all" : "owing")} label="Outstanding" value={sumBy(owing, (p) => p.owes)} tone="owed"
-          note={`${owing.length} ${owing.length === 1 ? "person owes" : "people owe"} you`} />
+          note={`${owing.length} ${owing.length === 1 ? "person owes" : "people owe"} you`} icon={<WalletIcon size={18} />}
+          visual={<>
+            <SplitBar parts={[{ value: sumBy(owing, (p) => p.loanOut), className: "bg-owed-bar" }, { value: sumBy(owing, (p) => p.cardOut), className: "bg-[#2F5583]" }]} />
+            <span className="flex justify-between text-[11.5px] text-slate-500"><span>Loans {taka(sumBy(owing, (p) => p.loanOut))}</span><span>Cards {taka(sumBy(owing, (p) => p.cardOut))}</span></span>
+          </>} />
         <Tile on={filter === "overdue"} onClick={() => setFilter(filter === "overdue" ? "all" : "overdue")} label="Overdue" value={sumBy(overdue, (p) => p.owes)} tone={overdue.length ? "bad" : "muted"}
-          note={overdue.length ? `${overdue.length} past their due date` : "Nobody is late"} />
+          note={overdue.length ? `${overdue.length} past their due date` : "Nobody is late"} icon={<DueIcon size={18} />}
+          visual={<Faces people={overdue} empty="All on time" />} />
         <Tile on={filter === "soon"} onClick={() => setFilter(filter === "soon" ? "all" : "soon")} label="Due in 7 days" value={sumBy(soon, (p) => p.owes)} tone={soon.length ? "owed" : "muted"}
-          note={soon.length ? `${soon.length} ${soon.length === 1 ? "person" : "people"}` : "Nothing due this week"} />
+          note={soon.length ? `${soon.length} ${soon.length === 1 ? "person" : "people"}` : "Nothing due this week"} icon={<TrendIcon size={18} />}
+          visual={<WeekStrip today={today} dues={soon.map((p) => p.due!).filter(Boolean)} />} />
       </section>
+
+      {owing.length > 1 && (
+        <section aria-labelledby="share-h" className="surface-card reveal flex flex-col gap-3 p-4 sm:p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="share-h" className="m-0 text-heading font-semibold">Who owes what</h2>
+            <span className="text-[12.5px] text-slate-500">Share of {taka(sumBy(owing, (p) => p.owes))}</span>
+          </div>
+          <ShareStrip items={owing.map((p) => ({ id: p.id, name: p.name, value: p.owes }))} hrefOf={(id) => `/debtors/${id}`} />
+        </section>
+      )}
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -105,37 +121,53 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
       <Flash text={flash} />
 
       <section aria-label="People" className="surface-card overflow-hidden">
-        <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,0.8fr))_minmax(0,0.9fr)_88px] gap-4 border-b border-line bg-subtle px-5 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 md:grid">
-          <span>Person</span><span className="text-right">Borrowed</span><span className="text-right">Repaid</span><span className="text-right">Outstanding</span><span>Next due</span><span />
+        <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,0.75fr)_120px] gap-5 border-b border-line bg-subtle px-5 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 md:grid">
+          <span>Person</span><span>Paid back so far</span><span className="text-right">Next due</span><span />
         </div>
         <ul className="m-0 list-none p-0">
           {people.map((p, i) => {
             const s = standing(p);
+            const owed = p.owes > 0;
             return (
               <li key={p.id} style={stagger(i, 30, 360)} className="relative animate-fade-up border-b border-soft last:border-0 hover:bg-subtle">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 md:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,0.8fr))_minmax(0,0.9fr)_88px] md:gap-4 md:px-5">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-3.5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,0.75fr)_120px] md:gap-5 md:px-5">
+                  {/* Who, with a ring that fills as they repay */}
                   <div className="flex min-w-0 items-center gap-3">
-                    <Avatar text={p.initials} size={38} />
+                    <Ring pct={p.taken ? p.pct : 0} size={48} stroke={3.5} color={s.tone === "bad" ? "var(--color-bad)" : "var(--color-brand-2)"}>
+                      <Avatar text={p.initials} size={38} />
+                    </Ring>
                     <div className="min-w-0">
                       <Link href={`/debtors/${p.id}`} className="block truncate rounded text-[15px] font-medium after:absolute after:inset-0 hover:text-brand-ink">{p.name}</Link>
-                      <div className={`text-[12.5px] ${TONE[s.tone]}`}>{s.tone === "bad" && <DueIcon size={12} className="mr-1 inline" />}{s.label}
-                        <span className="text-slate-500">{p.reasons.length ? ` · ${[...new Set(p.reasons)].slice(0, 2).join(", ")}` : ""}</span></div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-px text-[11.5px] font-medium ${CHIP[s.tone]}`}>
+                          <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />{s.label}
+                        </span>
+                        <span className="truncate text-[12px] text-slate-500">{[...new Set(p.reasons)].slice(0, 2).join(", ")}</span>
+                      </div>
                     </div>
                   </div>
-                  <span className="hidden text-right md:block"><Money value={p.taken} tone="muted" /></span>
-                  <span className="hidden text-right md:block"><Money value={p.paid} tone={p.paid ? "good" : "muted"} /></span>
-                  <span className="text-right md:order-none">
-                    <Money value={p.owes} tone={p.owes ? (s.tone === "bad" ? "bad" : "owed") : "muted"} className="text-[15.5px]" />
-                    {p.taken > 0 && <span aria-hidden="true" className="ml-auto mt-1 block h-1 w-20 overflow-hidden rounded-full bg-soft md:w-full"><span className="bar-fill block h-full rounded-full bg-gradient-to-r from-brand-2 to-[#3DAA80]" style={{ width: `${Math.min(p.pct, 100)}%`, animationDelay: `${Math.min(i * 30, 360) + 200}ms` }} /></span>}
-                  </span>
-                  <span className={`col-span-2 text-[13px] md:col-span-1 ${p.owes > 0 && p.dueKind === "late" ? "font-medium text-bad" : "text-slate-600"}`}>
-                    <span className="text-slate-500 md:hidden">Next due </span>
-                    {p.owes > 0 ? (p.due ? <><span className="md:hidden">{dateShort(p.due)}</span><span className="max-md:hidden">{dateLong(p.due)}</span></> : "No date set") : "—"}
-                    <span className="text-slate-500 md:hidden"> · borrowed <Money value={p.taken} tone="muted" /> · repaid <Money value={p.paid} tone="muted" /></span>
-                  </span>
-                  <span className="relative z-10 col-span-2 flex items-center justify-end gap-1 max-md:-mt-1 md:col-span-1">
-                    {!viewer && p.owes > 0 && (
-                      <Button variant="ghost" size="sm" onClick={() => setRepaying(p)} className="max-md:min-h-10"><TrendIcon size={14} />Repay</Button>
+
+                  {/* Mobile: outstanding on the right of the name */}
+                  <span className="text-right md:hidden"><Money value={p.owes} tone={owed ? (s.tone === "bad" ? "bad" : "owed") : "good"} className="text-[16px]" /></span>
+
+                  {/* Repaid vs still owed, as one bar with the figures under it */}
+                  <div className="col-span-2 flex min-w-0 flex-col gap-1.5 md:col-span-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <Money value={p.owes} tone={owed ? (s.tone === "bad" ? "bad" : "owed") : "good"} className="text-[16px] max-md:hidden" />
+                      <span className="text-[12px] text-slate-500">{owed ? `still owed of ${taka(p.taken)}` : p.taken ? "all paid back" : "nothing borrowed"}</span>
+                      <span className="money text-[12px] text-brand-2">{p.taken ? `${p.pct}%` : ""}</span>
+                    </div>
+                    {p.taken > 0 && <SplitBar className="h-2.5" parts={[{ value: p.paid, className: "bg-gradient-to-r from-brand-2 to-[#3DAA80]" }, { value: p.owes, className: s.tone === "bad" ? "bg-bad/70" : "bg-owed-bar/80" }]} />}
+                    <span className="text-[11.5px] text-slate-500">Repaid <Money value={p.paid} tone="good" /> · borrowed <Money value={p.taken} tone="muted" /></span>
+                  </div>
+
+                  <div className="flex items-center md:justify-end">
+                    {owed ? <DateChip iso={p.due} today={today} /> : <span className="text-[12.5px] text-slate-400">—</span>}
+                  </div>
+
+                  <span className="relative z-10 flex items-center justify-end gap-1">
+                    {!viewer && owed && (
+                      <Button variant="secondary" size="sm" onClick={() => setRepaying(p)} className="max-md:min-h-10"><TrendIcon size={14} />Repay</Button>
                     )}
                     <ChevronRight size={16} className="flex-none text-slate-400 max-md:hidden" />
                   </span>
@@ -167,13 +199,52 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
   );
 }
 
-function Tile({ on, onClick, label, value, tone, note }: { on: boolean; onClick: () => void; label: string; value: number; tone: "owed" | "bad" | "muted"; note: string }) {
+const CHIP = { bad: "bg-bad-tint text-bad", owed: "bg-owed-tint text-owed", good: "bg-good-tint text-brand-2", muted: "bg-soft text-slate-500" } as const;
+const ICON_TONE = { owed: "bg-owed-tint text-owed", bad: "bg-bad-tint text-bad", muted: "bg-soft text-slate-500" } as const;
+
+function Tile({ on, onClick, label, value, tone, note, icon, visual }: {
+  on: boolean; onClick: () => void; label: string; value: number; tone: "owed" | "bad" | "muted"; note: string; icon: React.ReactNode; visual: React.ReactNode;
+}) {
   return (
     <button type="button" aria-pressed={on} onClick={onClick}
-      className={`surface-card lift flex flex-col gap-1 p-4 text-left ${on ? "!border-ink ring-1 ring-ink" : ""}`}>
-      <span className="eyebrow flex items-center justify-between">{label}<span className="text-[11px] font-medium normal-case tracking-normal text-slate-400">{on ? "Filtering · tap to clear" : "Tap to filter"}</span></span>
-      <Money value={value} tone={tone} className="text-figure" />
+      className={`surface-card lift spot flex flex-col gap-2 p-4 text-left ${on ? "!border-ink ring-1 ring-ink" : ""}`}>
+      <span className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2"><span aria-hidden="true" className={`grid size-8 place-items-center rounded-lg ${ICON_TONE[tone]}`}>{icon}</span><span className="eyebrow">{label}</span></span>
+        <span className="text-[11px] font-medium text-slate-400">{on ? "Filtering · tap to clear" : "Tap to filter"}</span>
+      </span>
+      <span className="money text-figure"><Money value={value} tone={tone} /></span>
+      <span className="flex min-h-[34px] flex-col justify-end gap-1.5">{visual}</span>
       <span className="text-[12.5px] text-slate-500">{note}</span>
     </button>
+  );
+}
+
+/** Overlapping faces of the people in a group (first five), or a quiet note when there are none. */
+function Faces({ people, empty }: { people: Profile[]; empty: string }) {
+  if (!people.length) return <span className="text-[12px] font-medium text-brand-2">✓ {empty}</span>;
+  return (
+    <span className="flex items-center">
+      <span className="flex -space-x-2">{people.slice(0, 5).map((p) => <Avatar key={p.id} text={p.initials} size={28} />)}</span>
+      {people.length > 5 && <span className="ml-2 text-[12px] text-slate-500">+{people.length - 5}</span>}
+    </span>
+  );
+}
+
+/** The next seven days as seven cells; a day with something due is filled. Day names are text. */
+function WeekStrip({ today, dues }: { today: string; dues: string[] }) {
+  const days = Array.from({ length: 7 }, (_, k) => {
+    const d = new Date(`${today}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + k + 1);
+    const iso = d.toISOString().slice(0, 10);
+    return { iso, n: dues.filter((x) => x === iso).length, label: d.toLocaleDateString("en-GB", { weekday: "narrow", timeZone: "UTC" }) };
+  });
+  return (
+    <span aria-hidden="true" className="grid grid-cols-7 gap-1">
+      {days.map((d) => (
+        <span key={d.iso} className="flex flex-col items-center gap-0.5">
+          <span className={`h-5 w-full rounded-md ${d.n ? "bg-owed-bar" : "bg-soft"}`} />
+          <span className="text-[10px] text-slate-400">{d.label}</span>
+        </span>
+      ))}
+    </span>
   );
 }

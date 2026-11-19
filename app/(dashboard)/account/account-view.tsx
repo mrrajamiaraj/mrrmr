@@ -37,7 +37,12 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
   const [flash, setFlash] = useState("");
 
   const d = useMemo(() => computeDashboard(data, today), [data, today]);
-  const trend = useMemo(() => monthlySeries(data, today, 12), [data, today]);
+  // Start the chart at the first month that has records (at least 4 months shown), so it isn't a long flat line.
+  const trend = useMemo(() => {
+    const s = monthlySeries(data, today, 12);
+    const first = s.findIndex((p) => p.owedEnd > 0 || p.lent > 0 || p.repaid > 0);
+    return first < 0 ? s.slice(-4) : s.slice(Math.min(Math.max(first - 1, 0), s.length - 4));
+  }, [data, today]);
   const profiles = useMemo(() => buildProfiles(data, today).sort(byOwesThenName), [data, today]);
   usePalettePeople(profiles, (id) => id && router.push(`/debtors/${id}`));
 

@@ -9,7 +9,8 @@ import { BalanceEditor } from "@/components/balance-editor";
 import { Avatar, Flash, SectionCard, SectionHead } from "@/components/debtors/bits";
 import { EditCardDialog, SetupCard } from "@/components/setup-forms";
 import { CardVisual } from "@/components/card-visual";
-import { Gauge } from "@/components/viz";
+import { DateChip, Gauge, Ring } from "@/components/viz";
+import { stagger } from "@/components/motion";
 import { SortTh, useSort } from "@/components/sortable";
 import { usePalettePeople } from "@/components/command-palette";
 import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
@@ -21,7 +22,7 @@ import { Badge, Button, EmptyState, Money } from "@/components/ui";
 import { computeDashboard } from "@/lib/dashboard";
 import { setCardBalance } from "@/lib/actions";
 import { buildCardProfiles, buildProfiles, byOwesThenName, CARD_NAMES, cardPlanStatus, emiSummary, type PlanStatus } from "@/lib/ledger";
-import { dateLong, dateShort, initials, taka, timestampLong } from "@/lib/format";
+import { dateLong, dateShort, initials, monthLabel, taka, timestampLong } from "@/lib/format";
 import { sumBy } from "@/lib/money";
 import type { DeleteItem } from "@/lib/deletion";
 import type { CardUse, FinanceData } from "@/lib/types";
@@ -75,6 +76,8 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const owing = people.filter((p) => p.owes > 0);
   const myTotal = sumBy(uses.filter((u) => !u.person_id), (u) => u.amount);
   const upcoming = dash.open.filter((o) => o.cardId === card.id && o.iso).slice(0, 8);
+  const upMax = Math.max(1, ...upcoming.map((o) => o.left));
+  const whoMax = Math.max(1, ...people.filter((p) => p.owes > 0).map((p) => p.owes));
   const share = c.balance > 0 ? Math.min(Math.max((c.othersOwe / c.balance) * 100, 0), 100) : 0;
   const rp = repaying ? everyone.find((p) => p.id === repaying) : undefined;
   const account = data.accounts[0] ? { id: data.accounts[0].id, name: data.accounts[0].name } : null;
@@ -148,40 +151,69 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <SectionCard labelledBy="up-h">
           <SectionHead id="up-h" title="Upcoming payments" sub="Your card bill, then what people owe on this card by date." />
-          <ul className="m-0 list-none border-t border-line p-0">
+          <div className="border-t border-line px-4 py-4 sm:px-5">
             {card.pay_by && card.balance > 0 && (
-              <li className="flex items-center justify-between gap-3 border-b border-soft bg-subtle px-4 py-2.5 sm:px-5">
-                <span className="text-[13.5px]"><span className={`font-medium ${c.payByPassed ? "text-bad" : ""}`}>{dateLong(card.pay_by)}</span>
-                  <span className="block text-[12.5px] text-slate-500">You pay the bank{c.payByPassed ? " · date passed" : ""}</span></span>
-                <Money value={card.balance} tone="bad" />
-              </li>
+              <div className={`mb-4 flex items-center gap-3 rounded-xl border p-3 ${c.payByPassed ? "border-bad-line bg-bad-tint" : "border-line bg-subtle"}`}>
+                <DateChip iso={card.pay_by} today={today} />
+                <span className="min-w-0 flex-auto">
+                  <span className="flex items-center gap-1.5 text-[13.5px] font-semibold"><CardIcon size={15} />Your card bill</span>
+                  <span className={`block text-[12.5px] ${c.payByPassed ? "font-medium text-bad" : "text-slate-500"}`}>{c.payByPassed ? "Pay-by date passed — update it from your new statement" : "You pay the bank the full balance"}</span>
+                </span>
+                <Money value={card.balance} tone="bad" className="text-[17px]" />
+              </div>
             )}
-            {upcoming.map((o) => (
-              <li key={o.key} className="flex items-center justify-between gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
-                <Link href={`/debtors/${o.personId}`} className="min-w-0 text-[13.5px] hover:text-brand-ink">
-                  <span className={`font-medium ${o.status === "overdue" ? "text-bad" : ""}`}>{o.status === "overdue" && <DueIcon size={12} className="mr-1 inline" />}{dateShort(o.iso)} · {o.name}</span>
-                  <span className="block text-[12.5px] text-slate-500">{o.emi ? "EMI installment" : "Full payment"}{o.status === "overdue" ? " · overdue" : ""}</span>
-                </Link>
-                <Money value={o.left} tone={o.status === "overdue" ? "bad" : "owed"} />
-              </li>
-            ))}
-            {!upcoming.length && !(card.pay_by && card.balance > 0) && <li className="p-4"><EmptyState compact title="Nothing scheduled" /></li>}
-          </ul>
+            {upcoming.length ? (
+              <ol className="relative m-0 list-none p-0">
+                {/* The rail of the timeline */}
+                <span aria-hidden="true" className="absolute bottom-3 left-[23px] top-3 w-px bg-gradient-to-b from-line-strong via-line to-transparent" />
+                {upcoming.map((o, k) => {
+                  const month = o.iso!.slice(0, 7);
+                  const newMonth = k === 0 || upcoming[k - 1].iso!.slice(0, 7) !== month;
+                  const late = o.status === "overdue";
+                  return (
+                    <li key={o.key} className="relative">
+                      {newMonth && <div className="relative z-10 mb-1.5 ml-[52px] mt-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">{monthLabel(month)}</div>}
+                      <Link href={`/debtors/${o.personId}`} style={stagger(k, 50, 500)} className="group relative flex animate-fade-up items-center gap-3 rounded-xl py-1.5 pr-2 hover:bg-subtle">
+                        <DateChip iso={o.iso} today={today} size="sm" />
+                        <span className="min-w-0 flex-auto">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-[14px] font-medium group-hover:text-brand-ink">{o.name}</span>
+                            <span className={`rounded-full px-1.5 py-px text-[10.5px] font-semibold ${o.emi ? "bg-info-tint text-info" : "bg-soft text-slate-600"}`}>{o.emi ? "EMI" : "Full"}</span>
+                          </span>
+                          <span aria-hidden="true" className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-soft">
+                            <span className={`bar-fill block h-full rounded-full ${late ? "bg-bad" : "bg-owed-bar"}`} style={{ width: `${Math.max((o.left / upMax) * 100, 4)}%`, animationDelay: `${k * 50 + 150}ms` }} />
+                          </span>
+                        </span>
+                        <Money value={o.left} tone={late ? "bad" : "owed"} className="w-[84px] flex-none text-right text-[14px]" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : !(card.pay_by && card.balance > 0) && <EmptyState compact title="Nothing scheduled" />}
+          </div>
         </SectionCard>
 
         <SectionCard labelledBy="who-h">
           <SectionHead id="who-h" title="Who owes on this card" sub="Their purchases on this card, less what they've repaid for it." />
           <ul className="m-0 list-none border-t border-line p-0">
-            {owing.map((p) => {
+            {owing.map((p, k) => {
               const emi = emiSummary([...plans.values()].filter((s) => s.personId === p.id));
+              const late = p.dueKind === "late";
               return (
-                <li key={p.id} className="flex items-center gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
-                  <Avatar text={p.initials} size={32} />
+                <li key={p.id} style={stagger(k, 50, 400)} className="flex animate-fade-up items-center gap-3 border-b border-soft px-4 py-3 last:border-0 sm:px-5">
+                  <span title={`${p.pct}% repaid`}><Ring pct={p.pct} size={44} stroke={3.5} color={late ? "var(--color-bad)" : "var(--color-brand-2)"}><Avatar text={p.initials} size={34} /></Ring></span>
                   <Link href={`/debtors/${p.id}`} className="min-w-0 flex-auto hover:text-brand-ink">
-                    <span className="block truncate text-[14px] font-medium">{p.name}</span>
-                    <span className={`block truncate text-[12px] ${p.dueKind === "late" ? "font-medium text-bad" : "text-slate-500"}`}>{p.dueKind === "late" ? "Overdue · " : ""}{emi ?? (p.due ? `Due ${dateShort(p.due)}` : "No due date")}</span>
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-[14px] font-medium">{p.name}</span>
+                      <span className="flex-none text-[11.5px] text-slate-500">{p.pct}% repaid</span>
+                    </span>
+                    <span aria-hidden="true" className="mt-1.5 block h-2 overflow-hidden rounded-full bg-soft">
+                      <span className={`bar-fill block h-full rounded-full ${late ? "bg-bad" : "bg-gradient-to-r from-owed-bar to-[#D9B46A]"}`} style={{ width: `${(p.owes / whoMax) * 100}%`, animationDelay: `${k * 50 + 150}ms` }} />
+                    </span>
+                    <span className={`mt-1 block truncate text-[12px] ${late ? "font-medium text-bad" : "text-slate-500"}`}>{late ? "Overdue · " : ""}{emi ?? (p.due ? `Due ${dateShort(p.due)}` : "No due date")}</span>
                   </Link>
-                  <Money value={p.owes} tone={p.dueKind === "late" ? "bad" : "owed"} />
+                  <Money value={p.owes} tone={late ? "bad" : "owed"} className="w-[84px] flex-none text-right text-[15px]" />
                   {!viewer && <Button size="sm" variant="secondary" onClick={() => setRepaying(p.id)} aria-label={`Record a repayment from ${p.name}`} className="max-sm:px-2.5"><TrendIcon size={14} /><span className="max-sm:hidden">Repay</span></Button>}
                 </li>
               );

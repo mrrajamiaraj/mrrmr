@@ -192,6 +192,90 @@ export function Gauge({ pct, label, sub }: { pct: number; label: string; sub?: s
   );
 }
 
+// ---- Small graphics shared by lists ------------------------------------------------------------------------------
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const dayDiff = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
+
+/** "in 3 days" / "today" / "5 days late" — always words, so the colour is never the only signal. */
+export function relDays(iso: string, today: string) {
+  const d = dayDiff(today, iso);
+  if (d === 0) return "today";
+  if (d === 1) return "tomorrow";
+  if (d === -1) return "1 day late";
+  return d > 0 ? `in ${d} days` : `${-d} days late`;
+}
+
+/** A tiny calendar page for a due date: month band, big day number, and a countdown under it. */
+export function DateChip({ iso, today, size = "md" }: { iso: string | null; today: string; size?: "sm" | "md" }) {
+  if (!iso) {
+    return <span className="grid h-12 w-12 flex-none place-items-center rounded-xl border border-dashed border-line-strong text-[10.5px] text-slate-500">No date</span>;
+  }
+  const late = iso < today, soon = !late && dayDiff(today, iso) <= 7;
+  const band = late ? "bg-bad-solid text-white" : soon ? "bg-owed-bar text-white" : "bg-ink/80 text-on-ink";
+  const sm = size === "sm";
+  return (
+    <span className="flex flex-none flex-col items-center gap-1">
+      <span className={`flex flex-col overflow-hidden rounded-xl border border-line bg-surface text-center shadow-[var(--shadow-card)] ${sm ? "w-10" : "w-12"} ${late ? "ring-2 ring-bad/25" : ""}`}>
+        <span className={`text-[9.5px] font-semibold uppercase tracking-[0.08em] leading-[16px] ${band}`}>{MON[Number(iso.slice(5, 7)) - 1]}</span>
+        <span className={`money leading-none ${sm ? "py-1 text-[15px]" : "py-1.5 text-[18px]"}`}>{Number(iso.slice(8, 10))}</span>
+      </span>
+      <span className={`whitespace-nowrap text-[10.5px] leading-none ${late ? "font-semibold text-bad" : soon ? "font-medium text-owed" : "text-slate-500"}`}>{relDays(iso, today)}</span>
+    </span>
+  );
+}
+
+/** Segmented bar: parts as fractions of the whole, sweeping in; labels live in the caller (never colour alone). */
+export function SplitBar({ parts, className = "h-2" }: { parts: { value: number; className: string }[]; className?: string }) {
+  const total = parts.reduce((s, p) => s + Math.max(p.value, 0), 0) || 1;
+  return (
+    <span aria-hidden="true" className={`flex w-full gap-[2px] overflow-hidden rounded-full bg-soft ${className}`}>
+      {parts.map((p, i) => p.value > 0 && <span key={i} className={`bar-fill h-full rounded-full ${p.className}`} style={{ width: `${(p.value / total) * 100}%`, animationDelay: `${i * 120}ms` }} />)}
+    </span>
+  );
+}
+
+/** A palette of distinct, theme-safe hues for people in a share strip (decorative; names and amounts are text). */
+export const HUES = ["#B8862E", "#16705A", "#2F5583", "#7C3445", "#4A3F78", "#285E5E", "#9A5B2C", "#5E6B2E", "#3D6FA8", "#8E4A86"];
+
+/**
+ * "Who owes what": one bar split into a segment per person, sized by what they owe, with a legend of chips.
+ * Each chip is a link to that person. The biggest few are named; the rest are grouped.
+ */
+export function ShareStrip({ items, hrefOf, max = 7 }: { items: { id: string; name: string; value: number }[]; hrefOf: (id: string) => string; max?: number }) {
+  const sorted = [...items].filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
+  const top = sorted.slice(0, max);
+  const rest = sorted.slice(max);
+  const restSum = rest.reduce((s, x) => s + x.value, 0);
+  const total = sorted.reduce((s, x) => s + x.value, 0) || 1;
+  const segs = [...top.map((x, i) => ({ ...x, hue: HUES[i % HUES.length] })), ...(restSum ? [{ id: "", name: `${rest.length} others`, value: restSum, hue: "var(--color-slate-400)" }] : [])];
+  return (
+    <div className="flex flex-col gap-3">
+      <div aria-hidden="true" className="flex h-4 w-full gap-[3px] overflow-hidden rounded-full">
+        {segs.map((s, i) => (
+          <span key={s.name} className="bar-fill h-full first:rounded-l-full last:rounded-r-full" style={{ width: `${(s.value / total) * 100}%`, background: s.hue, animationDelay: `${i * 70}ms` }} />
+        ))}
+      </div>
+      <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-2 p-0 text-[13px]">
+        {segs.map((s) => {
+          const body = (<>
+            <span aria-hidden="true" className="size-2.5 flex-none rounded-full" style={{ background: s.hue }} />
+            <span className="truncate font-medium">{s.name}</span>
+            <span className="money text-slate-500">{taka(s.value)}</span>
+            <span className="text-[11.5px] text-slate-400">{Math.round((s.value / total) * 100)}%</span>
+          </>);
+          return (
+            <li key={s.name} className="min-w-0">
+              {s.id ? <a href={hrefOf(s.id)} className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-md hover:text-brand-ink">{body}</a>
+                : <span className="inline-flex min-h-8 items-center gap-1.5">{body}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 /** Progress ring with content in the middle (e.g. a person's repaid %). */
 export function Ring({ pct, size = 64, stroke = 5, color = "var(--color-brand-2)", children }: {
   pct: number; size?: number; stroke?: number; color?: string; children?: React.ReactNode;

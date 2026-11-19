@@ -11,7 +11,7 @@ import { CardVisual } from "@/components/card-visual";
 import { Modal } from "@/components/modal";
 import { Button, EmptyState, Money } from "@/components/ui";
 import { CountUp } from "@/components/motion";
-import { TrendArea } from "@/components/viz";
+import { DateChip, TrendArea } from "@/components/viz";
 import type { MonthPoint } from "@/lib/trends";
 import { ArrowRightIcon, BankIcon, CardIcon, ChevronRight, DueIcon, InfoIcon, TrendIcon } from "@/components/icons";
 import type { Activity, Dashboard, OpenItem } from "@/lib/dashboard";
@@ -76,7 +76,7 @@ export function Hero({ d, hour, actions, trend }: { d: Dashboard; hour: number; 
         </div>
 
         <div className="flex min-w-0 flex-col justify-between gap-3">
-          <TrendArea dark color="#E8C27A" title="Owed to you · last 12 months"
+          <TrendArea dark color="#E8C27A" title={`Owed to you · last ${trend.length} months`}
             points={trend.map((p) => ({ key: p.key, label: p.label, short: p.short, value: p.owedEnd }))} />
           <p className="m-0 text-[12px] text-white/55">
             {t1 >= t0 ? "Up" : "Down"} <b className="font-semibold text-white/85">{taka(t1 - t0)}</b> since {trend[0]?.label}. Built from dated loans, card purchases and repayments.
@@ -138,10 +138,7 @@ export function Attention({ d, cardName, onRepay, canAct }: {
             const late = o.status === "overdue";
             return (
               <li key={o.key} className="flex items-center gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
-                <span className={`w-[76px] flex-none text-[12.5px] ${late ? "font-semibold text-bad" : "font-medium"}`}>
-                  {late && <DueIcon size={12} className="mr-1 inline" />}{dateShort(o.iso)}
-                  <span className="block text-[11.5px] font-normal text-slate-500">{late ? "Overdue" : o.status === "week" ? "This week" : "Next week"}</span>
-                </span>
+                <DateChip iso={o.iso} today={d.today} size="sm" />
                 <Link href={`/debtors/${o.personId}`} className="flex min-w-0 flex-auto items-center gap-2.5 rounded-lg hover:text-brand-ink">
                   <Avatar text={initials(o.name)} size={30} />
                   <span className="min-w-0">
