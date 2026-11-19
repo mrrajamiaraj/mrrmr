@@ -41,14 +41,18 @@ export async function proxy(request: NextRequest) {
     url.search = path === "/" ? "" : `?next=${encodeURIComponent(path)}`;
     return NextResponse.redirect(url);
   }
-  if (signedIn && (path === "/login" || path === "/view")) {
+  const viewer = signedIn && isViewerEmail(data?.claims?.email as string | undefined);
+  // Already signed in: /login goes home. /view goes to Research for a viewer, but for the ADMIN it stays on /view —
+  // which says "you're signed in as the admin" — instead of silently opening the admin dashboard (that made it look
+  // as if the view link showed everything).
+  if (signedIn && (path === "/login" || (path === "/view" && viewer))) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = viewer ? "/research" : "/";
     url.search = "";
     return NextResponse.redirect(url);
   }
   // View mode sees Research Finance only: every other page (and the CSV export) sends the viewer there.
-  if (signedIn && isViewerEmail(data?.claims?.email as string | undefined) && !viewerMayOpen(path)) {
+  if (viewer && !viewerMayOpen(path)) {
     const url = request.nextUrl.clone();
     url.pathname = "/research";
     url.search = "";

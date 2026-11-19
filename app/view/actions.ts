@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { viewModeConfig } from "@/lib/viewer";
+import { isViewerEmail, viewModeConfig } from "@/lib/viewer";
 import { RateLimiter, clientIp, secretEquals, waitText } from "@/lib/security";
 import type { AuthState } from "@/app/login/actions";
 
@@ -25,6 +25,12 @@ export async function enterViewMode(_prev: AuthState, formData: FormData): Promi
   if (!cfg || !secretEquals(passcode, cfg.passcode)) return { error: "That password is not correct." };
 
   const supabase = await createClient();
+  // If the admin is signed in on this browser, end that session here first, so the view-mode session that follows
+  // can never carry admin access (and the admin's refresh token is revoked rather than left in the cookie jar).
+  const { data: current } = await supabase.auth.getClaims();
+  if (current?.claims && !isViewerEmail(current.claims.email as string | undefined)) {
+    await supabase.auth.signOut({ scope: "local" });
+  }
   const { error } = await supabase.auth.signInWithPassword({ email: cfg.email, password: cfg.password });
   if (error) {
     // Server log only, without credentials or personal data.
