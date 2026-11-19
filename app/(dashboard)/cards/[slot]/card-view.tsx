@@ -23,7 +23,7 @@ import { computeDashboard } from "@/lib/dashboard";
 import { setCardBalance } from "@/lib/actions";
 import { buildCardProfiles, buildProfiles, byOwesThenName, CARD_NAMES, cardPlanStatus, emiSummary, type PlanStatus } from "@/lib/ledger";
 import { dateLong, dateShort, initials, monthLabel, taka, timestampLong } from "@/lib/format";
-import { sumBy } from "@/lib/money";
+import { subMoney, sumBy } from "@/lib/money";
 import type { DeleteItem } from "@/lib/deletion";
 import type { CardUse, FinanceData } from "@/lib/types";
 
@@ -104,16 +104,26 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
             <BalanceEditor label="You owe on this card" inputLabel="Card balance from your statement (৳)" value={card.balance}
               footnote={`As you last entered it · ${timestampLong(card.updated_at)}`} onSave={(n) => setCardBalance(card.id, n)} />
             {/* Remaining balance: what you can still spend = credit limit − what you owe. */}
-            <div className="flex flex-col gap-1.5 bg-good-tint/60 px-4 py-4 sm:px-5 sm:py-5">
-              <span className="flex min-h-7 items-center justify-between gap-2"><span className="eyebrow">Available to spend</span>
-                {!viewer && c.limit == null && <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2.5 text-[12.5px] font-medium text-brand-2 hover:bg-good-tint"><PencilIcon size={13} />Set limit</button>}
-              </span>
-              {c.limit != null ? <Money value={c.available ?? 0} tone="good" className="text-figure" /> : <span className="text-figure text-slate-400">—</span>}
-              {c.limit != null && c.balance > c.limit
-                ? <span className="text-[12.5px] font-medium text-bad"><DueIcon size={12} className="mr-1 inline" />Over the limit by {taka(c.balance - c.limit)}</span>
-                : <span className="text-[12.5px] text-slate-500">{c.limit != null ? `Limit ${taka(c.limit)} − owed ${taka(c.balance)}` : "Set the credit limit to see this"}</span>}
-              {c.limit != null && <SplitBar className="mt-1 h-1.5" parts={[{ value: c.balance, className: c.utilization! >= 80 ? "bg-bad" : "bg-owed-bar" }, { value: c.available ?? 0, className: "bg-brand-2" }]} />}
-            </div>
+            {c.limit != null ? (
+              // Editable: type what's available from your statement; what you owe becomes limit − available.
+              <div className="flex flex-col bg-good-tint/60">
+                <BalanceEditor label="Available to spend" inputLabel={`Available now (৳, up to the ${taka(c.limit)} limit)`} value={c.available ?? 0}
+                  footnote={c.balance > c.limit ? `Over the limit by ${taka(c.balance - c.limit)}` : `Limit ${taka(c.limit)} − owed ${taka(c.balance)}`}
+                  onSave={async (n) => {
+                    if (n > c.limit!) return { error: `Available can't be more than the limit (${taka(c.limit!)}).` };
+                    return setCardBalance(card.id, subMoney(c.limit!, n));
+                  }} />
+                <span className="-mt-2 px-4 pb-4 sm:px-5"><SplitBar className="h-1.5" parts={[{ value: c.balance, className: c.utilization! >= 80 ? "bg-bad" : "bg-owed-bar" }, { value: c.available ?? 0, className: "bg-brand-2" }]} /></span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5 bg-good-tint/60 px-4 py-4 sm:px-5 sm:py-5">
+                <span className="flex min-h-7 items-center justify-between gap-2"><span className="eyebrow">Available to spend</span>
+                  {!viewer && <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2.5 text-[12.5px] font-medium text-brand-2 hover:bg-good-tint"><PencilIcon size={13} />Set limit</button>}
+                </span>
+                <span className="text-figure text-slate-400">—</span>
+                <span className="text-[12.5px] text-slate-500">Set the credit limit to see this</span>
+              </div>
+            )}
             <div className="flex flex-col gap-1.5 px-4 py-4 sm:px-5 sm:py-5">
               <span className="flex min-h-7 items-center justify-between gap-2"><span className="eyebrow">Pay by</span>
                 {!viewer && <button type="button" onClick={() => setEditingCard(true)} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2.5 text-[12.5px] font-medium text-brand-2 hover:bg-good-tint"><PencilIcon size={13} />Edit</button>}
