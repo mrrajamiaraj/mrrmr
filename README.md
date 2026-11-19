@@ -26,7 +26,6 @@ dates are Asia/Dhaka. Read-only **view mode** shows the Research ledger only.
 | `/cards/1`, `/cards/2` | Card artwork + what you owe, pay-by, your share vs others', upcoming payments, EMI plans, transactions (filters, detail drawer with EMI schedule) |
 | `/reports` | Monthly summary (one month at a time), Outlook, Past dates |
 | `/export/pdf?id=…[&from&to]` | A4 PDF statement for one person (admin only) |
-| `/reconcile` | Statement comparison, adjustments and audit trail (needs migration 0011) |
 | `/research`, `/research/export` | Research ledger (separate from personal finance) and its CSV — the only pages view mode may open |
 | `/settings` | Landing page, density, paisa display, default chart range |
 | `/export` | Full backup CSV; `?type=debtor&id=` · `?type=card&slot=` · `?type=emi` |

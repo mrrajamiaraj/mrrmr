@@ -49,7 +49,7 @@ export function DeleteDialog({ data, today, items, title, personId, personName, 
   const nameOk = !needsName || typed.trim().toLowerCase() === confirmWord.toLowerCase();
   const blocked = unanswered.length > 0 || unsure.length > 0 || !nameOk || (n === 0 && !removePerson);
   const reason = unanswered.length ? `Answer ${unanswered.length === 1 ? "the balance question" : `all ${x.groups.length} balance questions`} first.`
-    : unsure.length ? "Not sure keeps the records — check your bank or card statement first (Reconcile can help)."
+    : unsure.length ? "Not sure keeps the records — check your bank or card statement first."
     : !nameOk ? `Type ${confirmWord} to confirm.` : "";
   const shown = x.entries.slice(0, 6);
 

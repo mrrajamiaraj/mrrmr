@@ -41,7 +41,6 @@ export const TABS = [
   { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Bank card", short: "Community", group: "Credit cards", key: "2", icon: CardIcon, primary: true },
   { href: "/reports", label: "Monthly summary", nav: "Monthly summary", short: "Summary", group: "Records", key: "m", icon: HistoryIcon, primary: false },
   { href: "/research", label: "Research ledger", nav: "Research ledger", short: "Research", group: "Records", key: "r", icon: FlaskIcon, primary: true },
-  { href: "/reconcile", label: "Reconcile & audit", nav: "Reconcile & audit", short: "Reconcile", group: "Records", key: "c", icon: ShieldIcon, primary: false },
   { href: "/settings", label: "Settings", nav: "Settings", short: "Settings", group: "Workspace", key: "s", icon: SettingsIcon, primary: false },
 ];
 type Tab = (typeof TABS)[number];
