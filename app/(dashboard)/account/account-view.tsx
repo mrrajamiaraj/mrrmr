@@ -19,6 +19,7 @@ import { BankMovements } from "@/components/bank-movements";
 import { setAccountBalance } from "@/lib/actions";
 import { buildProfiles, byOwesThenName, cardLabel } from "@/lib/ledger";
 import { computeDashboard } from "@/lib/dashboard";
+import { monthlySeries } from "@/lib/trends";
 import { timestampLong } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
 
@@ -36,6 +37,7 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
   const [flash, setFlash] = useState("");
 
   const d = useMemo(() => computeDashboard(data, today), [data, today]);
+  const trend = useMemo(() => monthlySeries(data, today, 12), [data, today]);
   const profiles = useMemo(() => buildProfiles(data, today).sort(byOwesThenName), [data, today]);
   usePalettePeople(profiles, (id) => id && router.push(`/debtors/${id}`));
 
@@ -54,8 +56,8 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
 
   return (
     <Shell subtitle="" hero={
-      <Hero d={d} hour={hour} actions={!viewer && <>
-        <Button onClick={() => setPicking(true)} className="flex-auto sm:flex-none"><TrendIcon size={15} />Record repayment</Button>
+      <Hero d={d} hour={hour} trend={trend} actions={!viewer && <>
+        <Button onClick={() => setPicking(true)} className="shine flex-auto sm:flex-none"><TrendIcon size={15} />Record repayment</Button>
         <Button variant="secondary" onClick={() => setAdding({ mode: "loan" })} className="flex-auto sm:flex-none"><PlusIcon size={15} />Add loan</Button>
         {data.cards.length > 0 && (
           <Menu label="Add a card purchase" align="end" items={cardItems}
@@ -65,14 +67,14 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
     }>
       <Flash text={flash} />
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <div className="reveal grid items-start gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <Attention d={d} cardName={cardName} onRepay={setRepaying} canAct={!viewer} />
         <RecentActivity d={d} />
       </div>
 
-      <CardsStrip d={d} />
+      <div className="reveal"><CardsStrip d={d} /></div>
 
-      <section id="bank" aria-labelledby="bank-h" className="flex scroll-mt-20 flex-col gap-4 border-t border-line pt-6">
+      <section id="bank" aria-labelledby="bank-h" className="reveal flex scroll-mt-20 flex-col gap-4 border-t border-line pt-6">
         <div>
           <h2 id="bank-h" className="m-0 font-display text-[26px] font-normal">{account.name}</h2>
           <p className="m-0 mt-1 text-small text-slate-500">The balance you keep up to date, your debit-card tally, and the money in and out the app recorded.</p>

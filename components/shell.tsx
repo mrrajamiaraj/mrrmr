@@ -148,7 +148,7 @@ function Sidebar({ tabs, active, admin, onSearch, onHelp }: {
   const groups = [...new Set(tabs.map((t) => t.group))];
   return (
     <aside style={{ viewTransitionName: "site-rail" }} aria-label="App"
-      className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-w)] flex-col border-r border-line bg-rail lg:flex">
+      className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-w)] flex-col border-r border-line bg-rail/70 backdrop-blur-xl backdrop-saturate-150 lg:flex">
       <div className="px-5 pb-4 pt-6">
         <Link href={tabs[0].href} aria-label="MRRMR, home" className="group inline-flex rounded-lg text-[15px]">
           <Wordmark size={32} tagline />

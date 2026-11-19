@@ -129,6 +129,17 @@
 :root {
   --sidebar-w: 256px;
   --bottom-nav-h: 62px;
+  /* Aurora light, per theme: jade, brass, indigo. */
+  --aurora-1: rgba(22, 112, 90, 0.16);
+  --aurora-2: rgba(184, 134, 46, 0.13);
+  --aurora-3: rgba(47, 85, 131, 0.11);
+  --grain-opacity: 0.045;
+}
+:root[data-theme="dark"] {
+  --aurora-1: rgba(61, 170, 128, 0.17);
+  --aurora-2: rgba(192, 141, 62, 0.11);
+  --aurora-3: rgba(90, 120, 220, 0.14);
+  --grain-opacity: 0.06;
 }
 
 /* Top level rather than inside @theme so they are always emitted: some are referenced from inline styles. */
@@ -310,6 +321,89 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
 ::view-transition-old(site-header), ::view-transition-old(site-rail) { display: none; }
 ::view-transition-new(site-header), ::view-transition-new(site-rail) { animation: none; }
 
+/* ============================================================================================================
+ * Aurora Ledger — the living layer. Everything below is decoration; reduced motion turns all of it off.
+ * ============================================================================================================ */
+
+/* A fixed field of slow-drifting light behind every page, with a fine paper grain on top. Transform-only animation
+   (GPU), no blur filters, so it stays cheap on phones. */
+.aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.aurora > span { position: absolute; border-radius: 9999px; will-change: transform; }
+.aurora > span:nth-child(1) { width: 70vmax; height: 70vmax; left: -22vmax; top: -30vmax; background: radial-gradient(closest-side, var(--aurora-1), transparent); animation: drift-a 36s ease-in-out infinite alternate; }
+.aurora > span:nth-child(2) { width: 60vmax; height: 60vmax; right: -24vmax; top: 4vmax; background: radial-gradient(closest-side, var(--aurora-2), transparent); animation: drift-b 44s ease-in-out infinite alternate; }
+.aurora > span:nth-child(3) { width: 64vmax; height: 64vmax; left: 18vmax; bottom: -40vmax; background: radial-gradient(closest-side, var(--aurora-3), transparent); animation: drift-c 52s ease-in-out infinite alternate; }
+.aurora::after {
+  content: ""; position: absolute; inset: -50%; opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes drift-a { to { transform: translate3d(12vmax, 10vmax, 0) scale(1.15); } }
+@keyframes drift-b { to { transform: translate3d(-14vmax, 12vmax, 0) scale(0.9); } }
+@keyframes drift-c { to { transform: translate3d(-10vmax, -14vmax, 0) scale(1.1); } }
+
+/* The hero "deck": a deep jade-to-ink panel with a slowly turning light ring around its edge. */
+.deck {
+  position: relative; isolation: isolate; overflow: hidden; color: #F3F7F5;
+  border-radius: var(--radius-2xl);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(92, 196, 162, 0.28), transparent 55%),
+    radial-gradient(90% 120% at 100% 100%, rgba(216, 168, 84, 0.16), transparent 60%),
+    linear-gradient(145deg, #0E3B30 0%, #0A2620 45%, #0A0F14 100%);
+  box-shadow: 0 30px 60px -30px rgba(7, 46, 37, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.deck::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; padding: 1px;
+  background: conic-gradient(from var(--deck-angle, 0deg), transparent 0 70%, rgba(125, 212, 184, 0.7) 82%, rgba(232, 194, 122, 0.6) 90%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: deck-turn 9s linear infinite;
+}
+.deck::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5;
+  background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 40px 40px; mask-image: radial-gradient(80% 80% at 70% 30%, #000, transparent);
+}
+@property --deck-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes deck-turn { to { --deck-angle: 360deg; } }
+/* Glass tiles inside the deck. */
+.deck-tile { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-xl); backdrop-filter: blur(8px); }
+.deck-tile:hover { background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.18); }
+
+/* Charts: the line draws itself, the fill wipes in, bars grow, arcs sweep, the "now" dot breathes. */
+.viz-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: viz-draw 1.6s var(--ease-out-expo) both; }
+@keyframes viz-draw { from { stroke-dashoffset: 1; } }
+.viz-wipe { transform-origin: left; animation: viz-wipe 1.6s var(--ease-out-expo) both; }
+@keyframes viz-wipe { from { transform: scaleX(0); } }
+.viz-grow { transform-origin: bottom; animation: viz-grow 900ms var(--ease-out-expo) both; }
+@keyframes viz-grow { from { transform: scaleY(0); } }
+.viz-sweep { stroke-dashoffset: var(--to); animation: viz-sweep 1.4s var(--ease-out-expo) both; }
+@keyframes viz-sweep { from { stroke-dashoffset: 100; } }
+.viz-pulse { transform-box: fill-box; transform-origin: center; animation: viz-pulse 2.4s ease-out infinite; }
+@keyframes viz-pulse { 0% { opacity: 0.45; transform: scale(0.6); } 100% { opacity: 0; transform: scale(2.2); } }
+
+/* Sections rise into view as you scroll to them (scroll-driven, no JavaScript); browsers without support just show them. */
+@supports (animation-timeline: view()) {
+  .reveal { animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 28%; }
+  @keyframes reveal { from { opacity: 0; translate: 0 28px; scale: 0.985; } }
+}
+
+/* Primary buttons: a band of light crosses them on hover. */
+.shine { position: relative; overflow: hidden; }
+.shine::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; translate: -120% 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+}
+@media (hover: hover) { .shine:hover::after { translate: 120% 0; transition: translate 700ms var(--ease-out-expo); } }
+
+/* Credit cards: they float a little at rest, tilt toward the pointer, and a holographic sheen follows it. */
+.card-3d { transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform 400ms var(--ease-out-expo); transform-style: preserve-3d; }
+.card-float { animation: card-float 7s ease-in-out infinite; }
+@keyframes card-float { 50% { translate: 0 -6px; } }
+.card-holo {
+  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: color-dodge; opacity: calc(var(--shine, 0) * 0.55); transition: opacity 300ms;
+  background:
+    radial-gradient(circle at var(--sx, 50%) var(--sy, 50%), rgba(255, 255, 255, 0.55), transparent 40%),
+    conic-gradient(from calc(var(--sx, 50%) * 3.6deg) at var(--sx, 50%) var(--sy, 50%), #ff7ad933, #7af0ff33, #b7ff7a33, #ffd27a33, #ff7ad933);
+}
+
 /* Motion is decoration here: people who ask for less get none of it. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -318,6 +412,9 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
+  /* Endless decorative loops would flicker at 1ms; stop them outright, and show revealed sections as they are. */
+  .aurora > span, .deck::before, .viz-pulse, .card-float, .reveal { animation: none !important; }
+  .card-3d { transform: none !important; }
 }
 
 /*

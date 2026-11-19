@@ -9,7 +9,10 @@ import Link from "next/link";
 import { Avatar, SectionCard, SectionHead, StatusPill } from "@/components/debtors/bits";
 import { CardVisual } from "@/components/card-visual";
 import { Modal } from "@/components/modal";
-import { Badge, Button, EmptyState, Money } from "@/components/ui";
+import { Button, EmptyState, Money } from "@/components/ui";
+import { CountUp } from "@/components/motion";
+import { TrendArea } from "@/components/viz";
+import type { MonthPoint } from "@/lib/trends";
 import { ArrowRightIcon, BankIcon, CardIcon, ChevronRight, DueIcon, InfoIcon, TrendIcon } from "@/components/icons";
 import type { Activity, Dashboard, OpenItem } from "@/lib/dashboard";
 import { addDays, dateLong, dateShort, initials, taka, timestampLong } from "@/lib/format";
@@ -24,11 +27,16 @@ const greeting = (h: number) => (h < 5 ? "Good evening" : h < 12 ? "Good morning
 
 // ---- Hero: the three numbers that matter, each a way in -------------------------------------------------------
 
-export function Hero({ d, hour, actions }: { d: Dashboard; hour: number; actions: React.ReactNode }) {
+/**
+ * The hero deck: today's date and greeting, the bank balance counting up, the two other figures as glass tiles (each a
+ * link), the 12-month "owed to you" trend drawing itself in, and the projection — labelled — underneath.
+ */
+export function Hero({ d, hour, actions, trend }: { d: Dashboard; hour: number; actions: React.ReactNode; trend: MonthPoint[] }) {
   const bank = d.bank;
   const people = new Set(d.open.map((o) => o.personId)).size;
+  const t0 = trend[0]?.owedEnd ?? 0, t1 = trend[trend.length - 1]?.owedEnd ?? 0;
   return (
-    <header className="flex flex-col gap-5 border-b border-line pb-6">
+    <header className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0">
           <div className="eyebrow">{longDate(d.today)}</div>
@@ -37,43 +45,52 @@ export function Hero({ d, hour, actions }: { d: Dashboard; hour: number; actions
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">{actions}</div>
       </div>
 
-      <section aria-label="Your position" className="grid gap-3 lg:grid-cols-[1.25fr_1fr_1fr]">
-        <Link href="#bank" className="surface-card lift group flex flex-col gap-2 p-5 sm:p-6">
-          <span className="flex items-center justify-between gap-2">
-            <span className="eyebrow flex items-center gap-1.5"><BankIcon size={14} className="text-brand-2" />Cash in {bank?.name ?? "the bank"}</span>
-            <ArrowRightIcon size={15} className="text-slate-400 transition-transform group-hover:translate-x-0.5" />
-          </span>
-          {bank ? <Money value={bank.balance} className="text-display" /> : <span className="text-figure text-slate-400">Not set up</span>}
-          <span className="text-[12.5px] text-slate-500">{bank ? `The balance you last entered · ${timestampLong(bank.updatedAt)}` : "Add your bank account to start."}</span>
-        </Link>
-        <Link href="/debtors?show=owing" className="surface-card lift group flex flex-col gap-2 p-5">
-          <span className="flex items-center justify-between gap-2">
-            <span className="eyebrow">Owed to you</span>
-            <ArrowRightIcon size={15} className="text-slate-400 transition-transform group-hover:translate-x-0.5" />
-          </span>
-          <Money value={d.receivables.total} tone="owed" className="text-figure" />
-          <span className="text-[12.5px] text-slate-500">
-            {people} {people === 1 ? "person" : "people"} · loans {taka(d.receivables.bankLoans)} · card purchases {taka(d.receivables.cards)}
-            {d.overdue.count > 0 && <span className="block font-medium text-bad"><DueIcon size={12} className="mr-1 inline" />{taka(d.overdue.amount)} overdue</span>}
-          </span>
-        </Link>
-        <Link href="#cards" className="surface-card lift group flex flex-col gap-2 p-5">
-          <span className="flex items-center justify-between gap-2">
-            <span className="eyebrow">You owe on cards</span>
-            <ArrowRightIcon size={15} className="text-slate-400 transition-transform group-hover:translate-x-0.5" />
-          </span>
-          <Money value={d.liabilities.cards} tone="bad" className="text-figure" />
-          <span className="text-[12.5px] text-slate-500">{d.cards.length} {d.cards.length === 1 ? "card" : "cards"} · {taka(d.receivables.cards)} of it is other people&apos;s purchases</span>
-        </Link>
-      </section>
+      <section aria-label="Your position" className="deck grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-5">
+          <Link href="#bank" className="group flex w-fit flex-col gap-1 rounded-xl">
+            <span className="flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/60">
+              <BankIcon size={14} className="text-[#7DD4B8]" />Cash in {bank?.name ?? "the bank"}
+              <ArrowRightIcon size={13} className="transition-transform group-hover:translate-x-0.5" />
+            </span>
+            {bank ? (
+              <span className="money text-[clamp(38px,6vw,60px)] font-medium leading-none tracking-[-0.03em] text-white">
+                <CountUp value={bank.balance} format={taka} duration={1400} intro />
+              </span>
+            ) : <span className="text-figure text-white/60">Not set up</span>}
+            <span className="text-[12.5px] text-white/55">{bank ? `The balance you last entered · ${timestampLong(bank.updatedAt)}` : "Add your bank account to start."}</span>
+          </Link>
 
-      {d.projection && (
-        <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-dashed border-line-strong px-4 py-2.5 text-[13px] text-slate-600">
-          <Badge tone="info" className="text-[11px]">Projection</Badge>
-          <span>If every bank loan were repaid, {bank?.name ?? "the bank"} would hold <Money value={d.projection.bankAfterLoans} /></span>
-          <span className="text-slate-500">— not money you have today. Card repayments go to the cards, not the bank, so they aren&apos;t included.</span>
-        </p>
-      )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link href="/debtors?show=owing" className="deck-tile group flex flex-col gap-1 p-4 transition-colors">
+              <span className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Owed to you<ArrowRightIcon size={13} className="transition-transform group-hover:translate-x-0.5" /></span>
+              <span className="money text-[26px] leading-tight text-[#F0C77E]"><CountUp value={d.receivables.total} format={taka} duration={1300} intro /></span>
+              <span className="text-[12px] text-white/55">{people} {people === 1 ? "person" : "people"} · loans {taka(d.receivables.bankLoans)} · cards {taka(d.receivables.cards)}</span>
+              {d.overdue.count > 0 && <span className="text-[12px] font-medium text-[#FFA08F]"><DueIcon size={12} className="mr-1 inline" />{taka(d.overdue.amount)} overdue</span>}
+            </Link>
+            <Link href="#cards" className="deck-tile group flex flex-col gap-1 p-4 transition-colors">
+              <span className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">You owe on cards<ArrowRightIcon size={13} className="transition-transform group-hover:translate-x-0.5" /></span>
+              <span className="money text-[26px] leading-tight text-[#FFA08F]"><CountUp value={d.liabilities.cards} format={taka} duration={1300} intro /></span>
+              <span className="text-[12px] text-white/55">{d.cards.length} {d.cards.length === 1 ? "card" : "cards"} · {taka(d.receivables.cards)} is others&apos; purchases</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-between gap-3">
+          <TrendArea dark color="#E8C27A" title="Owed to you · last 12 months"
+            points={trend.map((p) => ({ key: p.key, label: p.label, short: p.short, value: p.owedEnd }))} />
+          <p className="m-0 text-[12px] text-white/55">
+            {t1 >= t0 ? "Up" : "Down"} <b className="font-semibold text-white/85">{taka(t1 - t0)}</b> since {trend[0]?.label}. Built from dated loans, card purchases and repayments.
+          </p>
+        </div>
+
+        {d.projection && (
+          <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/10 pt-4 text-[12.5px] text-white/65 lg:col-span-2">
+            <span className="rounded-full border border-[#92B5E8]/40 bg-[#92B5E8]/10 px-2 py-0.5 text-[11px] font-semibold text-[#B9D0F2]">Projection</span>
+            If every bank loan were repaid, {bank?.name ?? "the bank"} would hold <b className="money font-medium text-white">{taka(d.projection.bankAfterLoans)}</b>
+            <span className="text-white/45">— not money you have today; card repayments go to the cards, not the bank.</span>
+          </p>
+        )}
+      </section>
     </header>
   );
 }

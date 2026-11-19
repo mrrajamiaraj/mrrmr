@@ -11,6 +11,7 @@ import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
 import { OneSchedule } from "@/components/debtors/emi-schedule";
 import { EditPersonDialog, ExportPdfDialog, RepayDialog } from "@/components/debtors/person-dialogs";
 import { DeleteDialog } from "@/components/delete-dialog";
+import { Ring } from "@/components/viz";
 import { Badge, Button, buttonClass, EmptyState, IconButton, Menu, Money } from "@/components/ui";
 import { ChevronDown, ChevronLeft, DownloadIcon, DueIcon, FileIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, CardIcon, TrendIcon } from "@/components/icons";
 import { buildProfiles, cardLabel, cardPlanStatus, type PlanStatus } from "@/lib/ledger";
@@ -78,7 +79,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
         <Link href="/debtors" className="inline-flex min-h-8 w-fit items-center gap-1 rounded-md text-[13px] text-slate-500 hover:text-ink"><ChevronLeft size={15} />People</Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
-            <Avatar text={p.initials} size={56} />
+            <span title={`${p.pct}% repaid`}><Ring pct={p.taken ? p.pct : 0} size={72} stroke={4}><Avatar text={p.initials} size={56} /></Ring></span>
             <div className="min-w-0">
               <h1 className="m-0 break-words font-display text-title font-normal">{p.name}</h1>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">

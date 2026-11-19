@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Shell } from "@/components/shell";
 import { UnderlineTabs } from "@/components/motion";
+import { FlowBars } from "@/components/viz";
 import { SectionCard, SectionHead } from "@/components/debtors/bits";
 import { Badge, Button, EmptyState, Money } from "@/components/ui";
 import { ChevronLeft, ChevronRight, InfoIcon } from "@/components/icons";
@@ -59,8 +60,17 @@ function MonthSummary({ data, research, today }: { data: FinanceData; research: 
   const entries = d.activity.filter((a) => a.iso.startsWith(r.key) && (kind === "all" || (kind === "in" ? a.kind === "repayment" : a.kind !== "repayment")));
   const step = (by: number) => { const k = rows[i - by]?.key; if (k) setKey(k); };
 
+  const bars = rows.slice(0, 12).reverse().map((x) => ({
+    key: x.key, label: monthLabel(x.key), short: monthLabel(x.key).split(" ")[0],
+    a: sumBy([x.lentLoans, x.lentCard], (v) => v), b: sumBy([x.collectedLoans, x.collectedCard], (v) => v),
+  }));
+
   return (
     <>
+      <section aria-label="Last 12 months" className="surface-card p-4 sm:p-5">
+        <FlowBars months={bars} selected={key} onSelect={setKey} />
+      </section>
+
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="secondary" size="sm" onClick={() => step(-1)} disabled={i >= rows.length - 1} aria-label="Previous month"><ChevronLeft size={16} /></Button>
         <label className="sr-only" htmlFor="month-pick">Month</label>

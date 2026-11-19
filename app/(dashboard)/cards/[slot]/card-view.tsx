@@ -9,6 +9,7 @@ import { BalanceEditor } from "@/components/balance-editor";
 import { Avatar, Flash, SectionCard, SectionHead } from "@/components/debtors/bits";
 import { EditCardDialog, SetupCard } from "@/components/setup-forms";
 import { CardVisual } from "@/components/card-visual";
+import { Gauge } from "@/components/viz";
 import { SortTh, useSort } from "@/components/sortable";
 import { usePalettePeople } from "@/components/command-palette";
 import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
@@ -88,7 +89,12 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       actions={<HeaderButton onClick={() => setBuying(true)}><CardIcon size={15} />Add purchase</HeaderButton>}>
 
       <section aria-label="This card" className="grid items-start gap-5 lg:grid-cols-[minmax(280px,400px)_minmax(0,1fr)]">
-        <div className="mx-auto w-full max-w-[400px]"><CardVisual card={card} /></div>
+        <div className="mx-auto flex w-full max-w-[400px] flex-col items-center gap-6 pt-2">
+          <CardVisual card={card} />
+          {c.limit != null && c.utilization != null && (
+            <Gauge pct={c.utilization} label="of the limit used" sub={`${taka(c.balance)} of ${taka(c.limit)} · ${taka(c.available ?? 0)} available`} />
+          )}
+        </div>
 
         <div className="surface-card flex flex-col overflow-hidden">
           <div className="grid sm:grid-cols-2 [&>*+*]:border-t [&>*+*]:border-line sm:[&>*+*]:border-l sm:[&>*+*]:border-t-0">

@@ -79,7 +79,7 @@ export function PersonButton({ name, initials, onClick, size = 28 }: { name: str
 
 /** Design-system card for a page section (tables, lists). Labelled by its SectionHead when one is used. */
 export function SectionCard({ children, className = "", labelledBy }: { children: React.ReactNode; className?: string; labelledBy?: string }) {
-  return <section aria-labelledby={labelledBy} className={`spot surface-card overflow-hidden ${className}`}>{children}</section>;
+  return <section aria-labelledby={labelledBy} className={`reveal spot surface-card overflow-hidden ${className}`}>{children}</section>;
 }
 
 export function SectionHead({ id, title, sub, action }: { id: string; title: string; sub?: string; action?: React.ReactNode }) {

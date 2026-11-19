@@ -11,6 +11,7 @@ import { repayTargets } from "@/components/debtors/repay-form";
 import { Avatar, Flash } from "@/components/debtors/bits";
 import { Button, EmptyState, IconButton, Money } from "@/components/ui";
 import { usePalettePeople } from "@/components/command-palette";
+import { stagger } from "@/components/motion";
 import { buildProfiles, type Profile } from "@/lib/ledger";
 import { dateLong, dateShort } from "@/lib/format";
 import { sumBy } from "@/lib/money";
@@ -108,10 +109,10 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
           <span>Person</span><span className="text-right">Borrowed</span><span className="text-right">Repaid</span><span className="text-right">Outstanding</span><span>Next due</span><span />
         </div>
         <ul className="m-0 list-none p-0">
-          {people.map((p) => {
+          {people.map((p, i) => {
             const s = standing(p);
             return (
-              <li key={p.id} className="relative border-b border-soft last:border-0 hover:bg-subtle">
+              <li key={p.id} style={stagger(i, 30, 360)} className="relative animate-fade-up border-b border-soft last:border-0 hover:bg-subtle">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 md:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,0.8fr))_minmax(0,0.9fr)_88px] md:gap-4 md:px-5">
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar text={p.initials} size={38} />
@@ -125,7 +126,7 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
                   <span className="hidden text-right md:block"><Money value={p.paid} tone={p.paid ? "good" : "muted"} /></span>
                   <span className="text-right md:order-none">
                     <Money value={p.owes} tone={p.owes ? (s.tone === "bad" ? "bad" : "owed") : "muted"} className="text-[15.5px]" />
-                    {p.taken > 0 && <span aria-hidden="true" className="ml-auto mt-1 block h-1 w-20 overflow-hidden rounded-full bg-soft md:w-full"><span className="block h-full rounded-full bg-brand-2" style={{ width: `${Math.min(p.pct, 100)}%` }} /></span>}
+                    {p.taken > 0 && <span aria-hidden="true" className="ml-auto mt-1 block h-1 w-20 overflow-hidden rounded-full bg-soft md:w-full"><span className="bar-fill block h-full rounded-full bg-gradient-to-r from-brand-2 to-[#3DAA80]" style={{ width: `${Math.min(p.pct, 100)}%`, animationDelay: `${Math.min(i * 30, 360) + 200}ms` }} /></span>}
                   </span>
                   <span className={`col-span-2 text-[13px] md:col-span-1 ${p.owes > 0 && p.dueKind === "late" ? "font-medium text-bad" : "text-slate-600"}`}>
                     <span className="text-slate-500 md:hidden">Next due </span>
