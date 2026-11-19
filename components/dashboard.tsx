@@ -175,8 +175,10 @@ export function CardsStrip({ d }: { d: Dashboard }) {
             <CardVisual card={c.card} size="sm" />
             <div className="flex min-w-0 flex-col gap-1">
               <span className="flex items-center justify-between gap-2 text-[14px] font-semibold"><span className="truncate">{c.label}</span><ArrowRightIcon size={15} className="flex-none text-slate-400 transition-transform group-hover:translate-x-0.5" /></span>
-              <span className="eyebrow mt-1">You owe</span>
-              <Money value={c.balance} tone="bad" className="text-[22px] leading-tight" />
+              <span className="mt-1 grid grid-cols-2 gap-3">
+                <span className="flex flex-col"><span className="eyebrow">You owe</span><Money value={c.balance} tone="bad" className="text-[20px] leading-tight" /></span>
+                <span className="flex flex-col"><span className="eyebrow">Available</span>{c.available != null ? <Money value={c.available} tone="good" className="text-[20px] leading-tight" /> : <span className="text-[20px] text-slate-400">—</span>}</span>
+              </span>
               <span className="text-[12.5px] text-slate-500">
                 Others owe you <Money value={c.othersOwe} tone="owed" />
                 {c.payBy && <span className={`block ${c.payByPassed ? "font-medium text-bad" : ""}`}>Pay by {dateLong(c.payBy)}{c.payByPassed ? " · passed" : ""}</span>}
