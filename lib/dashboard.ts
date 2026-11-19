@@ -8,9 +8,9 @@
 //   PROJECTION   what the bank balance would be if bank-loan receivables were repaid — never "available"
 //
 // Relative imports so Node's test runner can load this file directly.
-import { addDays, dateLong, monthLabel } from "./format.ts";
+import { addDays, monthLabel } from "./format.ts";
 import { fromPaisa, subMoney, sumBy, toPaisa } from "./money.ts";
-import { buildProfiles, cardLabel, installmentsOf, NO_DUE, owedOf, settle, settleLoans } from "./ledger.ts";
+import { cardLabel, installmentsOf, NO_DUE, owedOf, settle, settleLoans } from "./ledger.ts";
 import type { Card, FinanceData } from "./types.ts";
 
 export type DueStatus = "overdue" | "week" | "later" | "undated";
@@ -66,7 +66,6 @@ export type Activity = {
 };
 
 export type Period = { lentLoans: number; lentCard: number; lent: number; recovered: number; ownCard: number };
-export type Insight = { id: string; tone: "bad" | "owed" | "good" | "info"; title: string; detail: string; href?: string };
 
 export type Dashboard = {
   today: string;
@@ -79,12 +78,9 @@ export type Dashboard = {
   overdue: { count: number; amount: number };
   dueWeek: { count: number; amount: number };
   undated: { count: number; amount: number };
-  largest: { id: string; name: string; owes: number; share: number }[];
-  collection: { lentEver: number; recoveredEver: number; pct: number };
   monthToDate: { label: string; days: number; current: Period; previous: Period; previousLabel: string };
   activity: Activity[];
   obligations: { cardId: string; label: string; iso: string; amount: number; passed: boolean }[];
-  insights: Insight[];
 };
 
 const statusOf = (iso: string | null, today: string): DueStatus =>
@@ -174,14 +170,6 @@ export function computeDashboard(data: FinanceData, today: string): Dashboard {
     };
   });
 
-  // ---- largest receivables (authoritative per-person totals from the view) ---------------------------------------
-  const profiles = buildProfiles(data, today).filter((p) => p.owes > 0).sort((a, b) => b.owes - a.owes);
-  const largest = profiles.slice(0, 5).map((p) => ({ id: p.id, name: p.name, owes: p.owes, share: viewTotal ? Math.round((p.owes / viewTotal) * 100) : 0 }));
-
-  // Everything ever owed to you (card shares include EMI charges), so 100% means fully repaid.
-  const lentEver = sumBy([sumBy(data.loans, (l) => l.amount), sumBy(data.cardUses.filter((u) => u.person_id), owedOf)], (x) => x);
-  const recoveredEver = sumBy(data.repayments, (r) => r.amount);
-
   // ---- month to date vs the same days last month (never a full month against a partial one) -----------------------
   const ym = today.slice(0, 7);
   const day = Number(today.slice(8, 10));
@@ -248,10 +236,8 @@ export function computeDashboard(data: FinanceData, today: string): Dashboard {
     receivables: { bankLoans, byCard, cards: cardsRecv, total, viewTotal, reconciled: toPaisa(total) === toPaisa(viewTotal) },
     projection: account ? { bankAfterLoans: sumBy([account.balance, bankLoans], (x) => x) } : null,
     liabilities: { cards: sumBy(data.cards, (c) => c.balance) },
-    cards, open, overdue, dueWeek, undated, largest,
-    collection: { lentEver, recoveredEver, pct: lentEver ? Math.round((recoveredEver / lentEver) * 1000) / 10 : 0 },
+    cards, open, overdue, dueWeek, undated,
     monthToDate, activity, obligations,
-    insights: insights({ open, overdue, dueWeek, cards, monthToDate, today, total, viewTotal, data }),
   };
 }
 
@@ -274,76 +260,5 @@ export function similarNames(names: string[]): [string, string][] {
   for (let i = 0; i < n.length; i++)
     for (let k = i + 1; k < n.length; k++)
       if (n[i].length >= 4 && n[k].length >= 4 && within1(n[i], n[k])) out.push([names[i], names[k]]);
-  return out;
-}
-const people = (xs: OpenItem[]) => {
-  const ns = [...new Set(xs.map((x) => x.name))];
-  return ns.length <= 2 ? ns.join(" and ") : `${ns.slice(0, 2).join(", ")} and ${ns.length - 2} more`;
-};
-
-/** Deterministic observations: each is a fact computed from the ledger, with the numbers that prove it. */
-function insights(x: {
-  open: OpenItem[]; overdue: { count: number; amount: number }; dueWeek: { count: number; amount: number };
-  cards: CardSummary[]; monthToDate: Dashboard["monthToDate"]; today: string; total: number; viewTotal: number; data: FinanceData;
-}): Insight[] {
-  const out: Insight[] = [];
-  const { current: cur, previous: prev } = x.monthToDate;
-
-  if (x.overdue.count) {
-    out.push({ id: "overdue", tone: "bad", title: `${fmt(x.overdue.amount)} overdue`,
-      detail: `${x.overdue.count} ${x.overdue.count === 1 ? "payment is" : "payments are"} past due — ${people(x.open.filter((o) => o.status === "overdue"))}.`, href: "/debtors" });
-  }
-  if (x.dueWeek.count) {
-    out.push({ id: "week", tone: "owed", title: `${fmt(x.dueWeek.amount)} due in the next 7 days`,
-      detail: `${x.dueWeek.count} ${x.dueWeek.count === 1 ? "repayment" : "repayments"} from ${people(x.open.filter((o) => o.status === "week"))}.`, href: "/debtors" });
-  }
-  const emiSoon = x.open.filter((o) => o.emi && o.iso && o.iso >= x.today && o.iso <= addDays(x.today, 30));
-  if (emiSoon.length) {
-    out.push({ id: "emi", tone: "info", title: `${emiSoon.length} EMI ${emiSoon.length === 1 ? "installment" : "installments"} in the next 30 days`,
-      detail: `${fmt(sumBy(emiSoon, (o) => o.left))} expected from ${people(emiSoon)}.` });
-  }
-  // Collections: this month so far vs the same days last month.
-  if (cur.recovered || prev.recovered) {
-    const diff = subMoney(cur.recovered, prev.recovered);
-    // A percentage on a tiny base misleads (৳350 → ৳58,916 is "+16,733%"): only quote one within ±300%.
-    const change = prev.recovered ? Math.round((diff / prev.recovered) * 100) : null;
-    out.push({ id: "collect", tone: diff >= 0 ? "good" : "owed",
-      title: change != null && Math.abs(change) <= 300 ? `Collections ${diff >= 0 ? "up" : "down"} ${Math.abs(change)}% vs last month`
-        : diff >= 0 ? `${fmt(cur.recovered)} collected this month` : `Collections down to ${fmt(cur.recovered)} this month`,
-      detail: `${fmt(cur.recovered)} recovered in ${x.monthToDate.label} so far, against ${fmt(prev.recovered)} in ${x.monthToDate.previousLabel}.` });
-  }
-  // Change in receivables this month = new lending − recoveries (exact, from dated entries).
-  const net = subMoney(cur.lent, cur.recovered);
-  if (cur.lent || cur.recovered) {
-    out.push({ id: "net", tone: net > 0 ? "owed" : "good",
-      title: net > 0 ? `Receivables up ${fmt(net)} this month` : net < 0 ? `Receivables down ${fmt(-net)} this month` : "Receivables unchanged this month",
-      detail: `Lent ${fmt(cur.lent)} (loans ${fmt(cur.lentLoans)}, card ${fmt(cur.lentCard)}) and recovered ${fmt(cur.recovered)} since ${x.monthToDate.label.split(" ")[0]} 1.` });
-  }
-  for (const c of x.cards) {
-    if (c.utilization != null && c.utilization >= 80) {
-      out.push({ id: `util-${c.card.id}`, tone: "owed", title: `${c.label} is ${Math.round(c.utilization)}% used`,
-        detail: `${fmt(c.balance)} of ${fmt(c.limit!)}; ${fmt(c.othersOwe)} of that is owed to you by others.`, href: `/cards/${c.card.slot}` });
-    }
-    if (c.payByPassed) {
-      out.push({ id: `payby-${c.card.id}`, tone: "info", title: `${c.label}: pay-by date has passed`,
-        detail: `It is set to ${dateLong(c.payBy)}. If you have a new statement, update the pay-by date on the card page.`, href: `/cards/${c.card.slot}` });
-    }
-  }
-  const undatedLoans = x.open.filter((o) => o.source === "loan" && !o.iso);
-  if (undatedLoans.length) {
-    out.push({ id: "nodue", tone: "info", title: `${undatedLoans.length} outstanding ${undatedLoans.length === 1 ? "loan has" : "loans have"} no pay-back date`,
-      detail: `${fmt(sumBy(undatedLoans, (o) => o.left))} from ${people(undatedLoans)} can't be tracked as due or late.`, href: "/debtors" });
-  }
-  // Data quality: two people whose names differ by one letter are often one person typed two ways, which splits
-  // their loans and repayments across two profiles (and makes both balances wrong).
-  const dupes = similarNames(x.data.people.map((p) => p.name));
-  if (dupes.length) {
-    out.push({ id: "dupes", tone: "info", title: dupes.length === 1 ? "Possible duplicate person" : `${dupes.length} possible duplicate people`,
-      detail: `${dupes.slice(0, 3).map(([a, b]) => `“${a}” and “${b}”`).join(", ")} differ by one letter. If they're the same person, their records are split across two profiles.`, href: "/debtors" });
-  }
-  if (toPaisa(x.total) !== toPaisa(x.viewTotal)) {
-    out.push({ id: "recon", tone: "info", title: "Per-source and per-person totals differ",
-      detail: `By source ${fmt(x.total)}, by person ${fmt(x.viewTotal)}: someone has paid more than they owed on one loan or card while still owing on another.` });
-  }
   return out;
 }

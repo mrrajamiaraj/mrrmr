@@ -60,7 +60,6 @@ test("overpaid on one source while owing on another: flagged, not hidden", () =>
   assert.equal(x.receivables.total, 500, "per source: loan 0 (overpaid), card 500");
   assert.equal(x.receivables.viewTotal, 300, "per person, netted");
   assert.equal(x.receivables.reconciled, false);
-  assert.ok(x.insights.some((i) => i.id === "recon"));
 });
 
 test("due buckets: overdue, next 7 days, later, undated", () => {
@@ -70,7 +69,6 @@ test("due buckets: overdue, next 7 days, later, undated", () => {
   const x = computeDashboard(d, TODAY);
   assert.deepEqual([x.overdue.count, x.dueWeek.count], [1, 1]);
   assert.equal(x.open.find((o) => o.key === "l:c").status, "later");
-  assert.ok(x.insights.some((i) => i.id === "overdue") && x.insights.some((i) => i.id === "week"));
 });
 
 test("activity lists every ledger row exactly once, newest first", () => {
@@ -98,28 +96,21 @@ test("month to date compares the same number of days, never a partial month to a
   assert.equal(m.previousLabel, "Oct 2026 1–19");
 });
 
-test("card pay-by in the past and high utilisation produce insights; no bank account → no projection", () => {
+test("card pay-by in the past is flagged on the card; no bank account → no projection", () => {
   const d = data({ accounts: [], cards: [card({ balance: 95000, pay_by: "2026-10-13" })] });
   const x = computeDashboard(d, TODAY);
   assert.equal(x.bank, null);
   assert.equal(x.projection, null);
-  assert.ok(x.insights.some((i) => i.id === "util-c1"));
-  assert.ok(x.insights.some((i) => i.id === "payby-c1"));
+  assert.equal(x.cards[0].payByPassed, true, "shown in Needs attention and on the card page");
+  assert.equal(x.cards[0].utilization, 95);
   assert.equal(x.obligations[0].passed, true);
 });
 
-test("possible duplicate people: names one letter apart (4+ letters), case-insensitive", async () => {
+test("possible duplicate people: names one letter apart (4+ letters), case-insensitive (Data checks)", async () => {
   const { similarNames } = await import("../lib/dashboard.ts");
   assert.deepEqual(similarNames(["Mamun Vai", "Mamun Vau", "Mom", "Mon", "Home", "homes", "Raja", "Rajib", "Shafin"]),
     [["Mamun Vai", "Mamun Vau"], ["Home", "homes"]]);
+  const { findAnomalies } = await import("../lib/anomalies.ts");
   const d = data({ people: [person("p1", "Mamun Vai"), person("p2", "Mamun Vau")] });
-  assert.ok(computeDashboard(d, TODAY).insights.some((i) => i.id === "dupes"));
-});
-
-test("collections insight never quotes a percentage on a tiny base", () => {
-  const d = data({ repayments: [rep({ paid_on: "2026-10-05", amount: 350 }), rep({ id: "r2", paid_on: "2026-11-05", amount: 58916 })], loans: [loan({ amount: 60000 })] });
-  const i = computeDashboard(d, TODAY).insights.find((x) => x.id === "collect");
-  assert.equal(i.title, "৳58,916 collected this month");
-  const d2 = data({ repayments: [rep({ paid_on: "2026-10-05", amount: 1000 }), rep({ id: "r2", paid_on: "2026-11-05", amount: 1500 })], loans: [loan({ amount: 5000 })] });
-  assert.equal(computeDashboard(d2, TODAY).insights.find((x) => x.id === "collect").title, "Collections up 50% vs last month");
+  assert.ok(findAnomalies(d, computeDashboard(d, TODAY), TODAY).some((a) => a.kind === "Possible duplicate person"));
 });

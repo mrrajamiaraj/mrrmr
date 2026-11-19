@@ -7,7 +7,6 @@ import { passwordProblems } from "@/lib/password";
 import { cleanText, siteOrigin } from "@/lib/security";
 import { EMI_MONTHS, type PayPlan } from "@/lib/types";
 import { compareMoney, roundMoney, subMoney, sumBy } from "@/lib/money";
-import { normalizeLayout } from "@/lib/dashboard-layout";
 import { normalizePrefs } from "@/lib/prefs";
 import { MAX_AMOUNT, isUuid, optionalDate } from "@/lib/validate";
 
@@ -390,48 +389,53 @@ export async function deletePerson(personId: string): Promise<ActionResult> {
 }
 
 export type RecordKind = "loan" | "card_use" | "repayment";
+export type DeleteEntry = { kind: RecordKind; id: string; undo: boolean };
+const KINDS: RecordKind[] = ["loan", "card_use", "repayment"];
+const TABLE: Record<RecordKind, "loans" | "card_uses" | "repayments"> = { loan: "loans", card_use: "card_uses", repayment: "repayments" };
 
-/** Permanently deletes one loan, card use or repayment; optionally undoes its balance change in the same transaction. */
-export async function deleteRecord(kind: RecordKind, id: string, undoBalance: boolean): Promise<ActionResult> {
-  if (!["loan", "card_use", "repayment"].includes(kind)) return { error: "Unknown record type." };
-  const supabase = await writer();
-  const { error } = await supabase.rpc("delete_record", { p_kind: kind, p_id: id, p_undo_balance: undoBalance });
-  return done(error);
+/** True when none of these records exist any more (or can't be seen) — used to make a repeated delete a no-op. */
+async function allGone(supabase: Awaited<ReturnType<typeof writer>>, entries: { kind: RecordKind; id: string }[]) {
+  for (const k of KINDS) {
+    const ids = entries.filter((e) => e.kind === k).map((e) => e.id);
+    if (!ids.length) continue;
+    const { count, error } = await supabase.from(TABLE[k]).select("id", { count: "exact", head: true }).in("id", ids);
+    if (error || count) return false;
+  }
+  return true;
 }
 
 /**
- * Permanently deletes several records (e.g. a person's whole history), each via delete_record.
- * Every record is its own transaction, so a failure part-way leaves the ones already deleted consistent.
+ * Permanently deletes one or more history entries — and, per entry, reverses its effect on the linked bank or card
+ * balance when the admin confirmed it changed one — in ONE transaction (delete_records, migration 0013). Optionally
+ * removes the person too, once their whole history is included.
+ *
+ * Repeated submissions are safe: if the entries are already gone (a double-click, a retry after a lost response),
+ * nothing changes and the result says so. Before 0013, a single entry still works through delete_record (always
+ * atomic); deleting several at once asks for the migration rather than falling back to a non-atomic loop.
  */
-export async function deleteRecords(
-  records: { kind: RecordKind; id: string }[],
-  undoBalance: boolean
-): Promise<ActionResult> {
-  if (!Array.isArray(records) || records.length > 500) return { error: "Too many records at once." };
-  if (records.some((r) => !["loan", "card_use", "repayment"].includes(r.kind))) return { error: "Unknown record type." };
+export async function deleteEntries(input: { entries: DeleteEntry[]; personId?: string | null; removePerson?: boolean }): Promise<ActionResult & { already?: boolean; count?: number }> {
+  const entries = Array.isArray(input.entries) ? input.entries : [];
+  if (entries.length > 500) return { error: "Too many records at once (500 at most)." };
+  if (entries.some((e) => !KINDS.includes(e.kind) || !isUuid(e.id))) return { error: "Unknown record." };
+  if (input.personId && !isUuid(input.personId)) return { error: "Unknown person." };
+  if (!entries.length && !input.removePerson) return { error: "Nothing to delete." };
   const supabase = await writer();
-  let deleted = 0;
-  for (const r of records) {
-    const { error } = await supabase.rpc("delete_record", { p_kind: r.kind, p_id: r.id, p_undo_balance: undoBalance });
-    if (error) {
-      revalidatePath("/", "layout");
-      return { error: `${deleted} of ${records.length} records were deleted, then: ${friendly(error)}` };
-    }
-    deleted++;
+  const items = entries.map((e) => ({ kind: e.kind, id: e.id, undo: e.undo === true }));
+
+  let { error } = await supabase.rpc("delete_records", {
+    p_items: items, p_person_id: input.personId ?? null, p_remove_person: input.removePerson === true,
+  });
+  const missingFn = error && (error.code === "PGRST202" || /could not find the function/i.test(error.message));
+  if (missingFn) {
+    if (items.length !== 1 || input.removePerson)
+      return { error: "Deleting several records at once needs a database update. Run supabase/migrations/0013_delete_records.sql in the Supabase SQL Editor, then try again." };
+    ({ error } = await supabase.rpc("delete_record", { p_kind: items[0].kind, p_id: items[0].id, p_undo_balance: items[0].undo }));
   }
-  return done(null);
-}
-
-// ---- dashboard preferences ----------------------------------------------------
-
-/** Saves the Overview layout (section order and hidden sections) to the signed-in admin's user metadata. */
-export async function saveDashboardLayout(layout: unknown): Promise<ActionResult> {
-  const clean = normalizeLayout(layout);
-  const supabase = await writer();
-  const { error } = await supabase.auth.updateUser({ data: { dashboard_layout: clean } });
-  if (error) return { error: error.message };
-  revalidatePath("/account");
-  return {};
+  if (error && /not found/i.test(error.message) && items.length && (await allGone(supabase, items))) {
+    revalidatePath("/", "layout");
+    return { already: true, count: 0, personId: input.personId ?? null };
+  }
+  return error ? done(error) : { ...done(null, { personId: input.personId ?? null }), count: items.length };
 }
 
 /**

@@ -35,13 +35,13 @@ export function useViewer() {
  */
 export const TABS = [
   { href: "/account", label: "Overview", nav: "Overview", short: "Home", group: "Money", key: "b", icon: HomeIcon, primary: true },
-  { href: "/debtors", label: "Debtors & Loans", nav: "Debtors & Loans", short: "Debtors", group: "Lending", key: "d", icon: PeopleIcon, primary: true },
-  { href: "/repayments", label: "Repayment Center", nav: "Repayments", short: "Repay", group: "Lending", key: "p", icon: TrendIcon, primary: false },
-  { href: "/cards/1", label: CARD_NAMES[1], nav: "City Bank Card", short: "Card 1", group: "Credit cards", key: "1", icon: CardIcon, primary: true },
-  { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Card", short: "Card 2", group: "Credit cards", key: "2", icon: CardIcon, primary: true },
-  { href: "/reports", label: "Reports & Outlook", nav: "Reports & Outlook", short: "Reports", group: "Insight", key: "i", icon: HistoryIcon, primary: false },
-  { href: "/reconcile", label: "Reconcile & Audit", nav: "Reconcile & Audit", short: "Reconcile", group: "Insight", key: "c", icon: ShieldIcon, primary: false },
-  { href: "/research", label: "Research Finance", nav: "Research Ledger", short: "Research", group: "Ledgers", key: "r", icon: FlaskIcon, primary: true },
+  { href: "/debtors", label: "People", nav: "People & loans", short: "People", group: "Lending", key: "d", icon: PeopleIcon, primary: true },
+  { href: "/repayments", label: "Repayments", nav: "Repayments", short: "Repay", group: "Lending", key: "p", icon: TrendIcon, primary: false },
+  { href: "/cards/1", label: CARD_NAMES[1], nav: "City Bank card", short: "City", group: "Credit cards", key: "1", icon: CardIcon, primary: true },
+  { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Bank card", short: "Community", group: "Credit cards", key: "2", icon: CardIcon, primary: true },
+  { href: "/reports", label: "Monthly summary", nav: "Monthly summary", short: "Summary", group: "Records", key: "m", icon: HistoryIcon, primary: false },
+  { href: "/research", label: "Research ledger", nav: "Research ledger", short: "Research", group: "Records", key: "r", icon: FlaskIcon, primary: true },
+  { href: "/reconcile", label: "Reconcile & audit", nav: "Reconcile & audit", short: "Reconcile", group: "Records", key: "c", icon: ShieldIcon, primary: false },
   { href: "/settings", label: "Settings", nav: "Settings", short: "Settings", group: "Workspace", key: "s", icon: SettingsIcon, primary: false },
 ];
 type Tab = (typeof TABS)[number];

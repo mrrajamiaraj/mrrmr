@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Shell } from "@/components/shell";
+import { useRouter } from "next/navigation";
+import { Shell, useViewer } from "@/components/shell";
 import { Figure, Statement } from "@/components/balance-editor";
 import { Avatar, Flash, SectionCard, SectionHead, StatusPill } from "@/components/debtors/bits";
-import { ProfileModal } from "@/components/debtors/profile-modal";
-import { Ring } from "@/components/charts";
+import { RepayDialog } from "@/components/debtors/person-dialogs";
+import { repayTargets } from "@/components/debtors/repay-form";
 import { Badge, Button, EmptyState, Money, type BadgeTone } from "@/components/ui";
 import { AlertIcon, DueIcon, InfoIcon } from "@/components/icons";
 import { usePalettePeople } from "@/components/command-palette";
@@ -24,7 +25,10 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
   const anomalies = useMemo(() => findAnomalies(data, d, today), [data, d, today]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [flash, setFlash] = useState("");
-  usePalettePeople(profiles, setOpenId);
+  const viewer = useViewer();
+  const router = useRouter();
+  usePalettePeople(profiles, (id) => id && router.push(`/debtors/${id}`));
+  const go = (id: string) => router.push(`/debtors/${id}`);
 
   const since = addDays(today, -30);
   const recent = data.repayments.filter((r) => r.paid_on >= since && r.paid_on <= today).sort((a, b) => b.paid_on.localeCompare(a.paid_on) || b.created_at.localeCompare(a.created_at));
@@ -48,13 +52,13 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
       <Flash text={flash} />
 
       <div className="grid items-start gap-5 lg:grid-cols-2">
-        <DueList title="Overdue" id="ov-h" items={overdue} empty="Nothing is overdue." onOpen={setOpenId} cards={data.cards} tone="bad" />
-        <DueList title="Due in the next 30 days" id="up-h" items={upcoming} empty="Nothing is due in the next 30 days." onOpen={setOpenId} cards={data.cards} tone="owed" />
+        <DueList title="Overdue" id="ov-h" items={overdue} empty="Nothing is overdue." onOpen={go} cards={data.cards} tone="bad" />
+        <DueList title="Due in the next 30 days" id="up-h" items={upcoming} empty="Nothing is due in the next 30 days." onOpen={go} cards={data.cards} tone="owed" />
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <SectionCard labelledBy="who-h">
-          <SectionHead id="who-h" title="Who owes" sub="Biggest first. “Record” opens their profile with the repayment form." />
+          <SectionHead id="who-h" title="Who owes" sub="Biggest first. “Record” takes a repayment without leaving this page." />
           <ul className="m-0 list-none border-t border-line p-0">
             {owing.map((p) => (
               <li key={p.id} className="flex items-center gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
@@ -65,7 +69,7 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
                 </span>
                 <StatusPill status={p.status} className="max-sm:hidden" />
                 <Money value={p.owes} tone="owed" className="w-[92px] text-right" />
-                <Button size="sm" variant="secondary" onClick={() => setOpenId(p.id)}>Record</Button>
+                {!viewer && <Button size="sm" variant="secondary" onClick={() => setOpenId(p.id)} aria-label={`Record a repayment from ${p.name}`}>Record</Button>}
               </li>
             ))}
             {!owing.length && <li className="p-5"><EmptyState compact title="Nobody owes you">Everything lent has been repaid.</EmptyState></li>}
@@ -73,13 +77,6 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
         </SectionCard>
 
         <div className="flex flex-col gap-5">
-          <SectionCard labelledBy="prog-h">
-            <SectionHead id="prog-h" title="Collection progress" />
-            <div className="flex items-center gap-4 border-t border-line p-4 sm:p-5">
-              <Ring value={d.collection.pct} size={92} stroke={9}><span className="money text-[16px]">{Math.round(d.collection.pct)}%</span></Ring>
-              <p className="m-0 text-[13px] text-slate-600"><Money value={d.collection.recoveredEver} tone="good" /> recovered of <Money value={d.collection.lentEver} /> ever owed to you (loans + others' card purchases, incl. EMI charges).</p>
-            </div>
-          </SectionCard>
           <SectionCard labelledBy="rec-h">
             <SectionHead id="rec-h" title="Recently collected" sub={`Since ${dateLong(since)}.`} />
             <ul className="m-0 max-h-[360px] list-none overflow-y-auto border-t border-line p-0">
@@ -118,8 +115,8 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
       </SectionCard>
 
       {pv && (
-        <ProfileModal profile={pv} variant="all" cards={data.cards} account={account} today={today}
-          onClose={() => setOpenId(null)} onMore={() => setOpenId(null)} onSaved={(t) => setFlash(t)} />
+        <RepayDialog p={pv} targets={repayTargets(pv, data.cards)} account={account}
+          onClose={() => setOpenId(null)} onSaved={(t) => { setOpenId(null); setFlash(t); }} />
       )}
     </Shell>
   );

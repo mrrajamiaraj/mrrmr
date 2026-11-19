@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540" role="img" aria-label="City Bank credit card illustration">
+  <!-- MRRMR original illustration (not official card art). Colours from City Bank's website stylesheet:
+       red #F20823, near-black #231F20 (thecitybank.com, read 2026-11-19). No logos or trademarks. -->
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E2A2B"/>
+      <stop offset="0.55" stop-color="#231F20"/>
+      <stop offset="1" stop-color="#121011"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#F20823" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#F20823" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#F71932" stop-opacity="0.75"/>
+    </linearGradient>
+    <linearGradient id="ribbon2" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#F20823" stop-opacity="0"/>
+      <stop offset="1" stop-color="#F20823" stop-opacity="0.35"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EAD9A8"/>
+      <stop offset="0.5" stop-color="#C8A65A"/>
+      <stop offset="1" stop-color="#9B7A36"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.85" cy="0.05" r="0.7">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="r"><rect width="856" height="540" rx="38"/></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="856" height="540" fill="url(#base)"/>
+    <path d="M-40 520 C 260 420, 470 300, 900 40 L 900 150 C 520 360, 300 470, -40 600 Z" fill="url(#ribbon)"/>
+    <path d="M-40 600 C 300 500, 560 380, 900 200 L 900 250 C 560 430, 320 540, -40 660 Z" fill="url(#ribbon2)"/>
+    <g fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.2">
+      <circle cx="720" cy="80" r="120"/><circle cx="720" cy="80" r="160"/><circle cx="720" cy="80" r="200"/>
+      <circle cx="720" cy="80" r="240"/><circle cx="720" cy="80" r="280"/><circle cx="720" cy="80" r="320"/>
+    </g>
+    <rect width="856" height="540" fill="url(#glow)"/>
+    <rect x="64" y="200" width="92" height="70" rx="12" fill="url(#chip)"/>
+    <g fill="none" stroke="#7E6128" stroke-opacity="0.55" stroke-width="2">
+      <path d="M64 224 H100 M120 224 H156 M64 246 H100 M120 246 H156 M110 200 V270"/>
+    </g>
+    <g fill="none" stroke="#FFFFFF" stroke-opacity="0.75" stroke-width="5" stroke-linecap="round" transform="translate(186 214)">
+      <path d="M0 6 a 30 30 0 0 1 0 30"/><path d="M14 -4 a 46 46 0 0 1 0 50"/><path d="M28 -14 a 62 62 0 0 1 0 70"/>
+    </g>
+    <rect x="0.5" y="0.5" width="855" height="539" rx="38" fill="none" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  </g>
+</svg>

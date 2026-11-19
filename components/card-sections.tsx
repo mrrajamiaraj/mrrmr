@@ -7,92 +7,58 @@ import { useMemo, useState } from "react";
 import { SectionCard, SectionHead } from "@/components/debtors/bits";
 import { OneSchedule } from "@/components/debtors/emi-schedule";
 import { Modal } from "@/components/modal";
-import { Badge, Button, EmptyState, Money } from "@/components/ui";
-import { DueIcon, SearchIcon, TrashIcon } from "@/components/icons";
-import type { CardSummary, OpenItem } from "@/lib/dashboard";
+import { Button, EmptyState, Money } from "@/components/ui";
+import { ChevronDown, SearchIcon, TrashIcon } from "@/components/icons";
 import { owedOf, type PlanStatus } from "@/lib/ledger";
-import { dateLong, dateShort, taka, timestampLong } from "@/lib/format";
+import { dateLong, dateShort, taka, takaExact, timestampLong } from "@/lib/format";
 import { sumBy } from "@/lib/money";
 import type { CardUse } from "@/lib/types";
 
-// ---- Breakdown + upcoming dates ---------------------------------------------------------------------------------
-
-export function CardBreakdown({ c, open, today }: { c: CardSummary; open: OpenItem[]; today: string }) {
-  const upcoming = open.filter((o) => o.cardId === c.card.id && o.iso).slice(0, 6);
-  const parts = [
-    { label: "Others owe you", value: c.othersOwe, cls: "bg-owed-bar", tone: "owed" as const, note: "Their purchases on this card, still unpaid (incl. any EMI charges)." },
-    { label: "Your own liability", value: c.myShare, cls: "bg-slate-500", tone: "ink" as const, note: "Card balance − what others owe: the part you pay yourself." },
-  ];
-  const pctOthers = c.balance > 0 ? Math.min(Math.max((c.othersOwe / c.balance) * 100, 0), 100) : 0;
-  return (
-    <SectionCard labelledBy="bd-h">
-      <SectionHead id="bd-h" title="Breakdown" sub="What you owe on this card, and whose spending it is. The card balance is money you owe the bank — not money you have." />
-      <div className="grid gap-0 border-t border-line lg:grid-cols-[1.3fr_1fr] [&>*+*]:border-t [&>*+*]:border-line lg:[&>*+*]:border-l lg:[&>*+*]:border-t-0">
-        <div className="flex flex-col gap-4 p-4 sm:p-5">
-          <div>
-            <div className="flex items-center gap-1.5"><span className="eyebrow">Outstanding balance</span><Badge tone="bad" className="text-[10.5px]">Liability</Badge></div>
-            <Money value={c.balance} tone="bad" className="text-figure" />
-            <div className="text-[12px] text-slate-500">As entered · updated {timestampLong(c.card.updated_at)}</div>
-          </div>
-          <div>
-            <div className="flex h-3 overflow-hidden rounded-full bg-soft" role="img" aria-label={`Of ${taka(c.balance)}: others owe ${taka(c.othersOwe)}, your own ${taka(c.myShare)}`}>
-              <span className="bar-fill h-full bg-owed-bar" style={{ width: `${pctOthers}%` }} />
-              <span className="bar-fill h-full bg-slate-500" style={{ width: `${100 - pctOthers}%` }} />
-            </div>
-            <dl className="m-0 mt-3 grid gap-3 sm:grid-cols-2">
-              {parts.map((p) => (
-                <div key={p.label}>
-                  <dt className="flex items-center gap-1.5 text-[12.5px] text-slate-500"><span aria-hidden="true" className={`size-2 rounded-full ${p.cls}`} />{p.label}</dt>
-                  <dd className="m-0"><Money value={p.value} tone={p.tone} className="text-[18px]" /><span className="block text-[11.5px] text-slate-500">{p.note}</span></dd>
-                </div>
-              ))}
-            </dl>
-            {c.myShare < 0 && <p className="m-0 mt-2 text-[12px] font-medium text-owed">Others owe more than the card balance — the balance may be out of date (e.g. EMI charges not yet billed).</p>}
-          </div>
-          {c.limit != null ? (
-            <div className="rounded-lg border border-line bg-subtle p-3 text-[12.5px]">
-              <div className="flex justify-between"><span className="text-slate-500">Utilisation</span><span className={`money ${c.utilization! >= 80 ? "text-bad" : ""}`}>{c.utilization}%</span></div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line"><span className={`block h-full rounded-full ${c.utilization! >= 80 ? "bg-bad" : "bg-brand-2"}`} style={{ width: `${Math.min(c.utilization!, 100)}%` }} /></div>
-              <div className="mt-1.5 flex justify-between text-slate-500"><span>Limit <Money value={c.limit} /></span><span>Available <Money value={c.available ?? 0} tone="good" /></span></div>
-            </div>
-          ) : <p className="m-0 text-[12.5px] text-slate-500">No credit limit recorded, so utilisation isn't shown.</p>}
-        </div>
-        <div className="flex flex-col gap-3 p-4 sm:p-5">
-          <h3 className="eyebrow m-0">Upcoming dates</h3>
-          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px]">
-            {c.payBy && (
-              <li className="flex items-center justify-between gap-2 rounded-lg bg-subtle px-2.5 py-2">
-                <span><span className={`font-medium ${c.payByPassed ? "text-bad" : ""}`}>{dateLong(c.payBy)}</span><span className="block text-[12px] text-slate-500">Your card bill{c.payByPassed ? " — date passed, update it" : ""}</span></span>
-                <Money value={c.balance} tone="bad" />
-              </li>
-            )}
-            {upcoming.map((o) => (
-              <li key={o.key} className="flex items-center justify-between gap-2 px-2.5 py-1.5">
-                <span><span className={`font-medium ${o.status === "overdue" ? "text-bad" : ""}`}>{o.status === "overdue" && <DueIcon size={12} className="mr-1 inline" />}{dateShort(o.iso)}</span>
-                  <span className="block text-[12px] text-slate-500">{o.name} {o.emi ? "· EMI installment" : "· full payment"}{o.iso! < today ? " · overdue" : ""}</span></span>
-                <Money value={o.left} tone="owed" />
-              </li>
-            ))}
-            {!c.payBy && !upcoming.length && <li className="text-slate-500">Nothing scheduled.</li>}
-          </ul>
-        </div>
-      </div>
-    </SectionCard>
-  );
-}
-
 // ---- EMI plans on this card ---------------------------------------------------------------------------------------
 
+/**
+ * One row per EMI plan — who, what, progress through its installments, what's left and the next date — expanding to
+ * the full schedule. Active plans first.
+ */
 export function CardEmiPlans({ plans, names, today }: { plans: PlanStatus[]; names: Map<string, string>; today: string }) {
-  const emis = plans.filter((p) => p.plan === "emi").sort((a, b) => b.left - a.left || a.usedOn.localeCompare(b.usedOn));
+  const emis = plans.filter((p) => p.plan === "emi").sort((a, b) => Number(b.left > 0) - Number(a.left > 0) || (a.next?.iso ?? "").localeCompare(b.next?.iso ?? "") || a.usedOn.localeCompare(b.usedOn));
   const remaining = sumBy(emis, (p) => p.left);
+  const [open, setOpen] = useState<string | null>(null);
   return (
     <SectionCard labelledBy="emi-h">
       <SectionHead id="emi-h" title="EMI plans" sub={emis.length ? `${emis.length} plan${emis.length === 1 ? "" : "s"} · ${taka(remaining)} still to come. Repayments clear the earliest installment first.` : "Purchases paid back in monthly installments appear here."} />
-      <div className="flex flex-col gap-3 border-t border-line p-4 sm:p-5">
-        {emis.length ? emis.map((p) => <OneSchedule key={p.useId} plan={p} today={today} who={names.get(p.personId)} />)
-          : <EmptyState compact title="No EMI plans">Choose “EMI” when you record a card transaction to spread it over 3–36 months.</EmptyState>}
-      </div>
+      {emis.length ? (
+        <ul className="m-0 list-none border-t border-line p-0">
+          {emis.map((p) => {
+            const isOpen = open === p.useId;
+            const late = !!p.next && p.next.iso < today;
+            return (
+              <li key={p.useId} className="border-b border-soft last:border-0">
+                <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : p.useId)}
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 text-left hover:bg-subtle sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto] sm:px-5">
+                  <span className="min-w-0">
+                    <span className="block truncate text-[14px] font-medium">{names.get(p.personId) ?? "Unknown"} · {p.reason}</span>
+                    <span className="block text-[12.5px] text-slate-500">{p.of} × {takaExact(p.perMonth)} · bought {dateShort(p.usedOn)}</span>
+                  </span>
+                  <span className="order-last col-span-2 flex items-center gap-2 sm:order-none sm:col-span-1">
+                    {/* One segment per installment: filled = paid; the word count beside it says the same. */}
+                    <span aria-hidden="true" className="flex h-2 flex-auto gap-[2px]">
+                      {p.installments.map((s) => <span key={s.n} className={`h-full flex-1 rounded-sm ${s.left <= 0 ? "bg-brand-2" : s.iso < today ? "bg-bad" : "bg-line"}`} />)}
+                    </span>
+                    <span className="flex-none text-[12px] text-slate-600">{p.paidCount}/{p.of} paid</span>
+                  </span>
+                  <span className="text-right">
+                    <Money value={p.left} tone={p.left ? (late ? "bad" : "owed") : "good"} className="text-[14.5px]" />
+                    <span className={`block text-[12px] ${late ? "font-medium text-bad" : "text-slate-500"}`}>{p.next ? `${late ? "Late · " : "Next "}${dateShort(p.next.iso)}` : "Paid off"}</span>
+                  </span>
+                  <ChevronDown size={16} className={`hidden flex-none text-slate-400 transition-transform sm:block ${isOpen ? "rotate-180" : ""}`} />
+                </button>
+                {isOpen && <div className="bg-subtle p-3 sm:p-4"><OneSchedule plan={p} today={today} who={names.get(p.personId)} /></div>}
+              </li>
+            );
+          })}
+        </ul>
+      ) : <div className="border-t border-line p-4"><EmptyState compact title="No EMI plans">Choose “EMI” when you add a card purchase to spread it over 3–36 months.</EmptyState></div>}
     </SectionCard>
   );
 }
@@ -148,10 +114,13 @@ export function TxnFilters({ f, setF, people, shown, total }: {
   );
 }
 
-/** Everything about one card transaction, including the other shares of a split purchase. Delete is the only action. */
-export function TxnDrawer({ u, all, plan, nameOf, onDelete, onClose, viewer }: {
+/**
+ * Everything about one card purchase: its breakdown, the other shares of a split purchase, and its EMI schedule.
+ * Delete is the only action (edits are delete + re-add, by design).
+ */
+export function TxnDrawer({ u, all, plan, nameOf, onDelete, onClose, viewer, today }: {
   u: CardUse; all: CardUse[]; plan?: PlanStatus; nameOf: (id: string | null) => string;
-  onDelete: () => void; onClose: () => void; viewer: boolean;
+  onDelete: () => void; onClose: () => void; viewer: boolean; today: string;
 }) {
   const siblings = u.purchase_group ? all.filter((x) => x.purchase_group === u.purchase_group && x.id !== u.id) : [];
   const rows: [string, React.ReactNode][] = [
@@ -167,7 +136,7 @@ export function TxnDrawer({ u, all, plan, nameOf, onDelete, onClose, viewer }: {
     ["Recorded", timestampLong(u.created_at)],
   ];
   return (
-    <Modal title="Transaction details" onClose={onClose} maxWidth={460} side
+    <Modal title="Purchase details" onClose={onClose} maxWidth={plan?.plan === "emi" ? 640 : 460} side
       footer={!viewer ? <>
         <Button variant="ghost" onClick={onClose} className="mr-auto">Close</Button>
         <Button variant="danger" onClick={onDelete}><TrashIcon size={15} />Delete…</Button>
@@ -185,7 +154,13 @@ export function TxnDrawer({ u, all, plan, nameOf, onDelete, onClose, viewer }: {
             </ul>
           </div>
         )}
-        <p className="m-0 text-[12px] text-slate-500">To change a transaction, delete it and record it again — deleting asks whether to undo its effect on the card balance.</p>
+        {plan && plan.plan === "emi" && (
+          <div>
+            <h3 className="eyebrow m-0 mb-1.5">EMI schedule</h3>
+            <OneSchedule plan={plan} today={today} />
+          </div>
+        )}
+        <p className="m-0 text-[12px] text-slate-500">To change a purchase, delete it and add it again. Deleting shows exactly what changes and asks before touching the card balance.</p>
       </div>
     </Modal>
   );

@@ -1,7 +1,5 @@
 import { loadFinance } from "@/lib/data";
 import { todayIso } from "@/lib/format";
-import { createClient } from "@/lib/supabase/server";
-import { normalizeLayout } from "@/lib/dashboard-layout";
 import { AccountView } from "./account-view";
 
 export const metadata = { title: "Overview" };
@@ -12,8 +10,6 @@ function dhakaHour() {
 }
 
 export default async function AccountPage() {
-  const supabase = await createClient();
-  const [data, { data: auth }] = await Promise.all([loadFinance(), supabase.auth.getUser()]);
-  const layout = normalizeLayout(auth.user?.user_metadata?.dashboard_layout);
-  return <AccountView data={data} today={todayIso()} hour={dhakaHour()} layout={layout} />;
+  const data = await loadFinance();
+  return <AccountView data={data} today={todayIso()} hour={dhakaHour()} />;
 }
