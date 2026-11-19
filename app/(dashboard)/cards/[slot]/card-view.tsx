@@ -75,6 +75,8 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const c = dash.cards.find((x) => x.card.id === card.id)!;
   const owing = people.filter((p) => p.owes > 0);
   const myTotal = sumBy(uses.filter((u) => !u.person_id), (u) => u.amount);
+  // Part of the balance that no recorded purchase explains (your share beyond your own recorded spending).
+  const unmatched = Math.max(subMoney(Math.max(c.myShare, 0), myTotal), 0);
   const upcoming = dash.open.filter((o) => o.cardId === card.id && o.iso).slice(0, 8);
   const upMax = Math.max(1, ...upcoming.map((o) => o.left));
   const whoMax = Math.max(1, ...people.filter((p) => p.owes > 0).map((p) => p.owes));
@@ -151,7 +153,21 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                 <dd className="m-0"><Money value={c.myShare} className="text-[19px]" /><span className="ml-1.5 text-[12px] text-slate-500">{taka(myTotal)} spent by you in total</span></dd>
               </div>
             </dl>
-            {c.myShare < 0 && <p className="m-0 text-[12.5px] font-medium text-owed">Others owe more than the card balance — the balance may be out of date.</p>}
+            {/* How the card balance adds up: others' purchases + your recorded spending + whatever isn't matched to a
+                purchase. Shown as an equation so "who owes" vs "you owe" is never a mystery. */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-line bg-subtle px-3 py-2 text-[12.5px] text-slate-600">
+              <span className="font-medium text-ink">How {taka(c.balance)} adds up:</span>
+              <span>others owe <Money value={c.othersOwe} tone="owed" /></span><span aria-hidden="true">+</span>
+              <span>your recorded spending <Money value={Math.min(myTotal, Math.max(c.myShare, 0))} /></span>
+              {unmatched > 0 && <><span aria-hidden="true">+</span><span className="font-medium text-owed">not matched to any purchase <Money value={unmatched} tone="owed" /></span></>}
+            </div>
+            {unmatched > 0 && (
+              <p className="m-0 text-[12.5px] text-slate-500">
+                {taka(unmatched)} of the balance isn&apos;t linked to a recorded purchase — usually bank fees or interest, your own spending that
+                wasn&apos;t entered, or a balance to update. Add it with <b className="font-medium text-ink">Add purchase</b> (as “Me”), or correct <b className="font-medium text-ink">You owe</b>.
+              </p>
+            )}
+            {c.myShare < 0 && <p className="m-0 text-[12.5px] font-medium text-owed">Others owe {taka(-c.myShare)} more than the card balance — the balance may be out of date (e.g. EMI charges not yet billed).</p>}
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-subtle px-4 py-3 text-[13px] sm:px-5">
