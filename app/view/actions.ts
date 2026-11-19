@@ -3,11 +3,11 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { VIEW_PASSCODE, VIEWER_EMAIL, VIEWER_PASSWORD } from "@/lib/viewer";
+import { viewModeConfig } from "@/lib/viewer";
 import { RateLimiter, clientIp, secretEquals, waitText } from "@/lib/security";
 import type { AuthState } from "@/app/login/actions";
 
-// The view key is short and shared, so guessing it must be slow: 8 tries per IP every 15 minutes.
+// The view key is shared, so guessing it must be slow: 8 tries per IP every 15 minutes.
 const viewLimit = new RateLimiter(8, 15 * 60_000);
 
 export async function enterViewMode(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -18,13 +18,17 @@ export async function enterViewMode(_prev: AuthState, formData: FormData): Promi
   const ip = clientIp((n) => h.get(n));
   const wait = viewLimit.hit(ip);
   if (wait) return { error: waitText(wait) };
-  if (!secretEquals(passcode, VIEW_PASSCODE)) return { error: "That password is not correct." };
+
+  // Fails closed: no configured (and strong enough) credentials → no view mode. Same message as a wrong key so the
+  // form can't be used to learn whether view mode is set up.
+  const cfg = viewModeConfig();
+  if (!cfg || !secretEquals(passcode, cfg.passcode)) return { error: "That password is not correct." };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email: VIEWER_EMAIL, password: VIEWER_PASSWORD });
-  // The real reason goes to the server log only; visitors don't need to learn about the viewer account.
+  const { error } = await supabase.auth.signInWithPassword({ email: cfg.email, password: cfg.password });
   if (error) {
-    console.error("View mode sign-in failed:", error.message);
+    // Server log only, without credentials or personal data.
+    console.error("[view] viewer sign-in failed:", error.status ?? "", error.code ?? "");
     return { error: "View mode is unavailable right now. Try again later." };
   }
 
@@ -32,8 +36,12 @@ export async function enterViewMode(_prev: AuthState, formData: FormData): Promi
   redirect("/research");
 }
 
+/**
+ * Ends THIS viewer's session only. The viewer account is shared, so the default global sign-out would also sign out
+ * every other person viewing. (Admin sign-out in app/login/actions.ts stays global: it ends every admin session.)
+ */
 export async function exitViewMode() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/view");
 }

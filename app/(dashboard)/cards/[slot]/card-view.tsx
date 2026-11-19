@@ -107,7 +107,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
   const account = data.accounts[0] ? { id: data.accounts[0].id, name: data.accounts[0].name } : null;
 
   const openAdd = (prefill = "") => setAdding({ prefill });
-  const linkBtn = "rounded px-1.5 py-0.5 text-[12.5px] font-medium text-brand-2 underline decoration-good-line underline-offset-2 hover:bg-soft";
+  const linkBtn = "inline-flex min-h-6 items-center rounded px-1.5 text-[12.5px] font-medium text-brand-2 underline decoration-good-line underline-offset-2 hover:bg-soft";
 
   return (
     <Shell

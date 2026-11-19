@@ -1,186 +1,116 @@
-# RMR Finance
+# MRRMR — private financial workspace
 
-Personal finance and loan-recovery workspace, with day and night themes (header toggle, `T`, or follows the device).
+A personal finance and receivables app for one owner: City Bank balance and debit tally, two credit cards (with
+third-party purchases, split purchases and EMI plans), people who owe money (loans and card purchases), repayments,
+a separate team **Research ledger**, reports, forecasts and data checks. Amounts are Bangladeshi Taka (৳1,43,345),
+dates are Asia/Dhaka. Read-only **view mode** shows the Research ledger only.
 
-A private dashboard for one person: City Bank balance, two credit cards, who owes you money (loans and card
-use), repayments, and a monthly recovery summary. Built with Next.js (App Router), TypeScript, Tailwind CSS and
-Supabase (`@supabase/ssr`). Amounts are Bangladeshi Taka with Indian grouping (৳1,43,345).
+> Engineering-reviewed, not certified. See `docs/SECURITY.md` for what was and wasn't verified.
 
-| Page | Route | Design |
+## Architecture
+| Layer | What |
+| --- | --- |
+| App | Next.js 16 (App Router, Turbopack), React 19, TypeScript 7, Tailwind CSS 4 |
+| Data | Supabase Postgres + Auth via `@supabase/ssr`, called **only from the server** (no `NEXT_PUBLIC_` keys) |
+| Writes | Server actions (`lib/actions.ts`, `lib/research-actions.ts`) → atomic Postgres functions (RPCs) |
+| Rules | Pure, unit-tested modules: `lib/money` (exact paisa), `lib/ledger` (allocation, EMI), `lib/dashboard`, `lib/history`, `lib/forecast`, `lib/reports`, `lib/anomalies`, `lib/bank`, `lib/exports`, `lib/validate` |
+| Security | Postgres RLS (authoritative) → `proxy.ts` route allow-list → server-action guards → UI |
+| Design | Tokens in `app/globals.css` (Executive Minimal / Midnight Finance), primitives in `components/ui.tsx`; see `docs/DESIGN.md` |
+
+## Pages
+| Route | Purpose |
+| --- | --- |
+| `/account` | **Overview** (home): cash / receivables / liabilities / projection, insights, snapshot, cash movement, receivables, cards, activity, City Bank tools |
+| `/debtors`, `/debtors/[id]` | Receivables list (search, status filters, sorting) and full debtor profile with timeline and statement |
+| `/repayments` | Repayment Center: overdue, due soon, recent collections, quick record, data checks |
+| `/cards/1`, `/cards/2` | Per-card breakdown, EMI plans, transactions (filters, detail drawer), guided purchase flow |
+| `/reports` | Monthly/yearly reports, Outlook (scenarios), Time machine |
+| `/reconcile` | Statement comparison, adjustments and audit trail (needs migration 0011) |
+| `/research`, `/research/export` | Research ledger (separate from personal finance) and its CSV — the only pages view mode may open |
+| `/settings` | Landing page, density, paisa display, default chart range |
+| `/export` | Full backup CSV; `?type=debtor&id=` · `?type=card&slot=` · `?type=emi` |
+| `/login`, `/view`, `/auth/*` | Admin sign-in, view-mode passcode, password reset |
+
+## Environment variables (server-only; set in `.env.local` and Vercel)
+| Name | Required | Notes |
 | --- | --- | --- |
-| Overview dashboard (home; `/` redirects here) — includes the City Bank tools | `/account` | `docs/METRICS.md` (definitions) |
-| Debtors & Loans | `/debtors` | `design/Lending.dc.html` |
-| City Bank Credit Card | `/cards/1` | `design/Cards.dc.html` |
-| Community Bank Credit Card | `/cards/2` | `design/Card2.dc.html` |
-| Research Finance Ledger | `/research` | screenshots of the Google Sheets dashboard |
-| Admin password dialog | header, every page | `design/AdminButton.dc.html` |
-| Debtor profile (full timeline, statement) | `/debtors/[id]` | — |
-| Repayment Center (dues, collections, data checks) | `/repayments` | — |
-| Reports, Outlook, Time machine | `/reports` | `docs/METRICS.md` |
-| Reconcile & Audit (needs 0011 for adjustments/trail) | `/reconcile` | — |
-| Settings (landing page, density, paisa, chart range) | `/settings` | — |
-| CSV backup / reports | `/export` (full) · `?type=debtor&id=` · `?type=card&slot=` · `?type=emi` | — |
-| Research CSV (viewer allowed) | `/research/export[?from&to]` | — |
-| View mode (read-only, password `mrrmr`) | `/view` | Research Finance only, no edit buttons |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | yes | Project Settings → API |
+| `SITE_URL` | production | `https://<domain>` — used in password-reset emails |
+| `VIEW_PASSCODE` | for view mode | ≥ 12 characters. Without it (or with a weak one) view mode is **off** |
+| `VIEWER_EMAIL`, `VIEWER_PASSWORD` | for view mode | the shared viewer account; password ≥ 16 random characters, never typed by people |
 
-## One-time Supabase setup
+Never add the `service_role` key to this app.
 
-The tables, RLS policies and the `debtor_summary` view already exist (`supabase/migrations/0001_finance_schema.sql`,
-kept for reference — don't run it again).
-
-1. **Add the write functions.** Open the Supabase dashboard → SQL Editor → New query, paste the contents of
-   `supabase/migrations/0002_finance_functions.sql`, and run it. It creates four functions (`add_loan`,
-   `add_card_use`, `record_repayment`, `find_or_create_person`) and changes no tables. They let the app insert a
-   row and move a balance in a single transaction, so balances never drift. They run as the signed-in user, so RLS
-   still applies.
-   Then do the same with `supabase/migrations/0003_research_ledger.sql`, which creates the two Research tables
-   (`research_expenses`, `research_contributions`) with the same owner-only RLS.
-   Finally run `supabase/migrations/0004_delete_records.sql` (one function, `delete_record`, no table changes). It
-   powers the 🗑 Delete buttons: it permanently deletes a loan, card use or repayment and, if you tick the box,
-   undoes its balance change in the same transaction.
-2. **Create your login.** Authentication → Users → Add user → enter your email and a password, tick
-   “Auto Confirm User”. Then Authentication → Sign In / Providers → turn **off** “Allow new users to sign up”, so
-   nobody else can create an account on your deployed site.
-3. **Allow the reset link.** Authentication → URL Configuration: set Site URL to your Vercel URL and add
-   `http://localhost:3000/auth/callback` and `https://<your-vercel-domain>/auth/callback` to Redirect URLs.
-4. **Make reset links work in any browser** (optional but recommended). Authentication → Emails → Templates →
-   Reset Password: change the link to
-   `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset`.
-   Without this, a reset link only works in the same browser where you pressed “Forgot password?”.
-
-## View mode
-
-Anyone who opens `/view` (or “Just viewing?” on the sign-in page) and types the view password (`mrrmr`, or
-`VIEW_PASSCODE` if set) can see the **Research Finance** page only, and change nothing. Every other page and the CSV
-export redirect to Research, and since `0007_viewer_research_only.sql` the database itself gives the viewer no read
-access to the bank, card, people, loan or repayment tables. Behind the scenes they are signed in as one shared
-Supabase user, the *viewer*. Add/edit/delete buttons are hidden for that user, the server actions refuse it, and
-the database itself blocks every write from it, so view mode stays read-only even if someone calls the API directly.
-
-One-time setup:
-
-1. Run `supabase/migrations/0005_view_mode.sql`, then `0007_viewer_research_only.sql`, in the SQL Editor.
-2. Authentication → Users → Add user: an email such as `viewer@yourdomain.com` and a long random password, tick
-   “Auto Confirm User”. Visitors never see or type this password.
-3. Link the viewer to your account by running the `insert into public.viewers …` statement at the bottom of
-   `0005_view_mode.sql`, with both emails filled in.
-4. Already done for this project: the viewer `viewer@mrrmr.app` exists and its login is the built-in default in
-   `lib/viewer.ts`, so nothing needs adding to Vercel. To use a different viewer, set `VIEWER_EMAIL` and
-   `VIEWER_PASSWORD`; `VIEW_PASSCODE` (default `mrrmr`) changes the key visitors type.
-
-“Exit” in the header signs the viewer out. Opening `/view` while you are signed in as admin just goes to the dashboard.
-
-## Run locally
-
-Requires Node.js 20.9 or newer.
-
+## Local setup
+Requires Node.js 20.9+ (tests use Node's built-in TypeScript support: Node 23.6+ recommended).
 ```bash
 npm install
-cp .env.example .env.local   # then fill in the two values (on Windows: copy .env.example .env.local)
-npm run dev
+cp .env.example .env.local      # fill in the values (Windows: copy .env.example .env.local)
+npm run dev                     # http://localhost:3000
+npm test                        # unit tests
+npm run build                   # production build
+npm run audit                   # dependency check
 ```
 
-Open http://localhost:3000 and sign in.
+## Supabase setup
+1. Run the migrations in `supabase/migrations` in order in the SQL Editor (0001 is reference only — already applied in
+   the original project). **0001–0008 are applied in production; 0009–0012 are written and awaiting review**
+   (apply 0010 → 0011 → 0012; 0010 includes 0009).
+2. Authentication → Users: create the admin (auto-confirm) and the viewer; link them with the `insert into public.viewers…`
+   statement at the end of `0005_view_mode.sql`. Turn **off** sign-ups; turn **on** leaked-password protection.
+3. Authentication → URL Configuration: Site URL = your domain; Redirect URLs = `https://<domain>/auth/callback`
+   (+ `http://localhost:3000/auth/callback` for dev). Reset-password template link:
+   `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset`.
 
-### Environment variables
+## Authentication & view mode
+* Admin: email + password (generic errors, per-IP rate limits, reset only from a fresh recovery session, sign-out
+  revokes all sessions). Sign-ups disabled.
+* View mode: a passcode (server-checked, constant-time, rate-limited) signs the visitor in as the shared **viewer**
+  account. The database lets that account **read the two research tables only** and blocks every write
+  (0005 + 0007); `proxy.ts` redirects it away from every other route; server actions refuse it. Verified with
+  `supabase/tests/rls_viewer.sql`. Exiting signs out that one viewer only.
 
-| Name | Where to find it |
-| --- | --- |
-| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API Keys → Publishable key |
-| `VIEWER_EMAIL`, `VIEWER_PASSWORD` | Optional; the read-only viewer user (built-in default: `viewer@mrrmr.app`) |
-| `VIEW_PASSCODE` | Optional; the password visitors type at `/view` (default `mrrmr`) |
+## Database: tables and functions
+Tables: `accounts`, `cards`, `people`, `loans`, `card_uses`, `repayments`, `research_expenses`,
+`research_contributions`, `viewers` (+ `balance_adjustments`, `audit_log` from 0011). View: `debtor_summary`.
+Every table: RLS "owner only"; viewer read on research only; restrictive "viewer no insert/update/delete".
+Functions (all `SECURITY INVOKER`, fixed `search_path`): `add_loan`, `add_card_use`, `add_card_purchase` (0010),
+`record_repayment` (limit + lock from 0009/0010, idempotency from 0012), `delete_record`, `add_debit_use`,
+`find_or_create_person`, `reconcile_balance` (0011), `viewed_owner`. Audit trigger (0011) is the only `SECURITY DEFINER`
+function MRRMR adds; it can only append to `audit_log`.
 
-Only server code (`proxy.ts`, `lib/supabase/server.ts`) reads them, so they have no `NEXT_PUBLIC_` prefix and
-never reach the browser. **Never** put the `service_role` / secret key in this app.
+## Money rules (summary — full definitions in `docs/METRICS.md`)
+* All arithmetic in integer paisa (`lib/money.ts`); display in whole taka unless "Show paisa" is on.
+* Bank and cards are separate: loans/loan repayments may move the bank (only when you choose); card purchases and
+  card repayments move only that card. A cash repayment is never added to the bank unless you tick it.
+* Repayments can't exceed what's owed to that source. Allocation: loans earliest pay-back date first; card
+  installments earliest-due first.
+* EMI: total payable (purchase + recorded statement charges, owed by the buyer) ÷ months, rounded down to the paisa;
+  the last installment absorbs the remainder.
 
-## Security
+## Testing
+* `npm test` — 68 unit tests: money precision, allocation, EMI rounding, dashboard reconciliation, history, forecast,
+  reports, anomalies, exports, contrast, validation, view-mode fail-closed, route allow-list.
+* `supabase/tests/rls_viewer.sql`, `supabase/tests/integration_rollback.sql` — run in the SQL Editor; both roll back.
+* Not automated yet: browser end-to-end tests (Playwright) — see `docs/ACCEPTANCE.md`.
 
-What the app enforces (tests: `npm test`; dependency check: `npm run audit`):
+## Backup and recovery
+* **Before every migration:** Supabase → Database → Backups (daily backups on paid plans; on the free plan download a
+  backup with `pg_dump` or the dashboard's manual export) **and** `/export` (full CSV).
+* Recovery: restore the Supabase backup (point-in-time on paid plans). The CSV is a human-readable record and an
+  audit aid; there is **no in-app import** — restoring from CSV is a manual, reviewed SQL task.
+* Every migration file ends with a DOWN section.
 
-- **Database is the real boundary.** Every table has owner-only RLS; view mode is blocked from writing by restrictive
-  policies. Server actions also refuse signed-out and view-mode callers before any query runs.
-- **Sign-in:** per-IP limits (view key 8 tries / 15 min, admin 10 / 15 min, reset emails 5 / hour), one generic error
-  message, constant-time view-key check, safe `next` redirects (no `//` or `/\` tricks).
-- **Password reset** without the old password only works from a fresh reset-email session, never for the viewer.
-- **Session cookies** are `httpOnly`, `SameSite=Lax`, and `Secure` in production.
-- **Headers:** CSP (`connect-src 'self'`, `frame-ancestors 'none'`), HSTS, `nosniff`, Referrer- and Permissions-Policy;
-  private pages and the CSV are `no-store`. CSV cells that start with `= + - @` are defused for Excel.
+## Deployment (Vercel)
+Import the repo, set the env vars above (Production), deploy, then add the domain to Supabase URL configuration.
+Follow the deployment checklist in `docs/SECURITY.md` §5. The GitHub Action `keep-supabase-awake.yml` sends one
+anonymous, RLS-denied read per day to keep a free project awake; it has no write access and `permissions: {}`.
 
-The in-memory rate limits are per server instance, so on Vercel they slow guessing rather than cap it globally.
+## Known limitations
+* Bank and card balances have no history before migration 0011 (time machine can't reconstruct them).
+* Legacy records don't store whether they changed a balance (undo on delete asks you).
+* Viewer is one shared account (per-person viewer accounts would allow individual revocation).
+* No MFA, no in-app restore, no nonce-based CSP, no automated browser tests yet.
+* Phone layout verified on the sign-in page only (see `docs/ACCEPTANCE.md`).
 
-**Do these yourself (the app can't):**
-
-1. **Rotate the viewer password.** Its old value is in the source (`lib/viewer.ts`). Supabase → Authentication → Users →
-   the viewer → set a new long random password; put it in Vercel as `VIEWER_PASSWORD` with `VIEWER_EMAIL`.
-2. **Use a stronger view key.** Set `VIEW_PASSCODE` in Vercel to a passphrase (e.g. four random words), not `mrrmr`.
-3. **Set `SITE_URL`** in Vercel to your https address (reset emails use it).
-4. Supabase → Authentication → Providers → Email: turn on **Secure password change**; keep sign-ups **off**;
-   check that **Redirect URLs** only lists your own domains.
-5. If this repository is public on GitHub, make it private (it contains the old viewer login and project ref).
-
-## Deploy to Vercel
-
-1. Push this repo to GitHub.
-2. In Vercel: Add New → Project → import the repo. The framework is detected as Next.js; keep the defaults.
-3. Under Environment Variables add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
-4. Deploy, then add the Vercel URL to Supabase's URL Configuration (step 3 above).
-
-## Keep the free Supabase project awake
-
-Free projects pause after a week with no activity. `.github/workflows/keep-supabase-awake.yml` sends one tiny
-request every day. In GitHub → Settings → Secrets and variables → Actions, add:
-
-- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` — the same values as in `.env.local`
-
-You can run it by hand from the Actions tab (“Run workflow”) to check it works.
-
-## How the money logic works
-
-- **Bank account and cards are kept separate.** The bank page only counts loans; card use and card
-  repayments only ever touch that card's balance, never the bank balance.
-- **Bank Account:** money now + what people owe on loans = balance after everyone pays back. “Add Debtor”
-  finds or creates the person, inserts a loan, and (if ticked) takes the amount out of the account balance — all
-  in one `add_loan` call. Loan repayments recorded here are added to the account balance.
-- **Credit cards:** card balance − what people owe for this card = your own share. “Add Debtor” inserts a
-  `card_use` (type **Me** as the name for your own spending) and optionally adds it to the card balance.
-  Repayments can optionally lower the card balance.
-- **Debtors & Loans:** totals, status (Pending / Partially Paid / Repaid — the view's 'Overdue' is shown as Pending or Partially Paid) and next due date come from
-  the `debtor_summary` view. “Borrowed” there means loans + card use by that person.
-- **Card EMI:** a card use is paid back in full by one date, or in 3–36 monthly installments (migration 0008).
-  Each installment is the amount ÷ months rounded down to the paisa; the last one takes the remainder. A person's
-  card repayments clear that card's installments oldest-payment-first, earliest-due-first.
-- **Which loan is repaid:** a person's loan repayments pay off their loans earliest pay-back date first (loans with
-  no date last; same date → older loan first). The due date and “late” label shown everywhere is the first loan or
-  card installment that is not fully paid.
-- **Repayment limit:** a repayment can't be more than the person owes on bank loans, or on the one card it is for.
-- **Debit card:** `debit_used` on the account is a running total you raise one entry at a time (migration 0006).
-- **Monthly view:** there is no Overview page (`/` opens Bank Account). Each page has a per-month “money out vs paid
-  back” chart, and Research has its own Monthly tab.
-- **Exact money:** all totals, EMI splits and allocations are computed in integer paisa (`lib/money.ts`), never by
-  adding floating-point taka.
-
-## Project layout
-
-```
-app/
-  (dashboard)/          signed-in pages: account/, debtors/, cards/[slot]/, research/ (page.tsx redirects to /account)
-  login/                sign-in + forgot password
-  auth/callback, reset  password-reset link handling
-  export/route.ts       CSV backup
-components/             shell (header + nav), Admin dialog, modals, debtor profile/slider/forms
-lib/
-  data.ts               loads everything for a page from Supabase
-  ledger.ts             per-person totals, history, EMI schedules and “owes after” running balances
-  money.ts              exact paisa arithmetic (sums, rounding, EMI splits)
-  actions.ts            server actions (all writes)
-  format.ts             ৳ formatting and dates (Asia/Dhaka)
-proxy.ts                sends signed-out visitors to /login (Next.js 16's name for middleware)
-supabase/migrations/    0001 schema (reference) … 0008 card EMI — all applied in production;
-                        0009 repayment limit in the database — written, NOT yet applied (review, then run once)
-                        0010 split purchases + EMI charges (includes 0009) — written, NOT yet applied
-                        0011 audit trail + reconciliation adjustments — written, NOT yet applied
-tests/                  security, money and ledger tests (npm test)
-docs/AUDIT.md           architecture, mutation map, risk register and roadmap
-design/                 the approved HTML designs
-```
+More: `docs/AUDIT.md` (original audit), `docs/METRICS.md`, `docs/DESIGN.md`, `docs/SECURITY.md`, `docs/ACCEPTANCE.md`.

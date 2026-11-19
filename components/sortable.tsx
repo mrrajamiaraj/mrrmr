@@ -48,7 +48,7 @@ export function SortTh<K extends string>({
   return (
     <th scope="col" aria-sort={on ? (asc ? "ascending" : "descending") : "none"} className={`${th} ${right ? "text-right" : ""}`}>
       <button type="button" onClick={() => onSort(k, text)} title={`Sort by ${label.toLowerCase()}`}
-        className={`group/sort -mx-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 uppercase tracking-[0.04em] hover:bg-soft hover:text-ink ${on ? "text-ink" : ""} ${right ? "flex-row-reverse" : ""}`}>
+        className={`group/sort -mx-1.5 inline-flex min-h-6 items-center gap-1 rounded px-1.5 uppercase tracking-[0.04em] hover:bg-soft hover:text-ink ${on ? "text-ink" : ""} ${right ? "flex-row-reverse" : ""}`}>
         {label}
         <svg aria-hidden="true" width="9" height="12" viewBox="0 0 9 12" className="flex-none">
           <path d="M4.5 1 8 5H1z" className={`transition-opacity ${on && asc ? "fill-ink opacity-100" : on ? "fill-current opacity-20" : "fill-current opacity-25 group-hover/sort:opacity-50"}`} />

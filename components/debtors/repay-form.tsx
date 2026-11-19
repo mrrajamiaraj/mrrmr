@@ -54,6 +54,8 @@ export function RepayForm({
   const [toBill, setToBill] = useState(true);
   const [error, setError] = useState("");
   const [dupe, setDupe] = useState(false);
+  // One id per submission attempt: retries and double-clicks reuse it (recorded once); a new id after each success.
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [pending, start] = useTransition();
   const target = targets.find((t) => t.key === targetKey) ?? targets[0];
   if (!target) return null;
@@ -74,11 +76,11 @@ export function RepayForm({
       const r = await recordRepayment({
         personId, amount: n, via, paidOn: date,
         appliesTo: target.appliesTo, cardId: target.cardId,
-        accountId: intoBank ? account!.id : null, addToAccount: intoBank, lowerCard, confirmDuplicate,
+        accountId: intoBank ? account!.id : null, addToAccount: intoBank, lowerCard, confirmDuplicate, requestId,
       });
       if (r.duplicate) { setDupe(true); return setError(r.error ?? "This looks like a repeat."); }
       if (r.error) return setError(r.error);
-      setAmt(""); setDupe(false); setToAccount(null);
+      setAmt(""); setDupe(false); setToAccount(null); setRequestId(crypto.randomUUID());
       onSaved(
         `${first} paid back ${taka(n)} via ${via}.` +
           (intoBank ? ` Added to your ${account!.name} balance.` : forLoan ? " Not added to the bank." : lowerCard ? " Put toward the card bill." : "")

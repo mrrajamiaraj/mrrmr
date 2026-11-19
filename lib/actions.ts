@@ -9,6 +9,7 @@ import { EMI_MONTHS, type PayPlan } from "@/lib/types";
 import { compareMoney, roundMoney, subMoney, sumBy } from "@/lib/money";
 import { normalizeLayout } from "@/lib/dashboard-layout";
 import { normalizePrefs } from "@/lib/prefs";
+import { MAX_AMOUNT, isUuid, optionalDate } from "@/lib/validate";
 
 export type ActionResult = { error?: string; personId?: string | null; groupId?: string | null };
 
@@ -41,9 +42,18 @@ function todayIsoServer() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date());
 }
 
-/** Exact two-decimal rounding of client input (half away from zero); NaN for anything that isn't an amount. */
+/**
+ * Exact two-decimal rounding of client input (half away from zero). NaN for anything that isn't an amount or is
+ * beyond what the database column holds (≥ ৳100 billion), so every "above 0" / "0 or more" check also rejects it.
+ */
 function money(n: unknown) {
-  return roundMoney(n);
+  const v = roundMoney(n);
+  return Math.abs(v) > MAX_AMOUNT ? NaN : v;
+}
+
+/** First invalid date among the given optional dates, as a user-facing error; "" when all are fine. */
+function dateError(...values: unknown[]): string {
+  return values.every((v) => optionalDate(v).ok) ? "" : "Enter a real date (DD/MM/YYYY between 1990 and 2100).";
 }
 
 // Free text is trimmed and capped server-side; the forms are not the only way to call these actions.
@@ -111,6 +121,7 @@ export async function createCard(input: {
   if (input.slot !== 1 && input.slot !== 2) return { error: "Unknown card slot." };
   if (!req(input.bank, NAME) || !req(input.name, NAME)) return { error: "Enter the bank and card name." };
   if (input.last4 && !/^\d{4}$/.test(input.last4)) return { error: "Last 4 digits must be 4 numbers." };
+  if (dateError(input.pay_by)) return { error: dateError(input.pay_by) };
   const b = money(input.balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
   const supabase = await writer();
@@ -131,6 +142,8 @@ export async function updateCardDetails(
   cardId: string,
   input: { credit_limit: number | null; pay_by: string }
 ): Promise<ActionResult> {
+  if (dateError(input.pay_by)) return { error: dateError(input.pay_by) };
+  if (input.credit_limit != null && !(money(input.credit_limit) >= 0)) return { error: "Enter a credit limit of 0 or more." };
   const supabase = await writer();
   const { error } = await supabase
     .from("cards")
@@ -154,6 +167,7 @@ export async function addLoan(input: {
   notes?: string;
 }): Promise<ActionResult> {
   const amount = money(input.amount);
+  if (dateError(input.takenOn, input.dueOn)) return { error: dateError(input.takenOn, input.dueOn) };
   if (!req(input.name, NAME)) return { error: "Enter who took the money." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
   if (!req(input.reason)) return { error: "Enter why they took it." };
@@ -186,6 +200,7 @@ export async function addCardUse(input: {
   emiMonths?: number;
 }): Promise<ActionResult> {
   const amount = money(input.amount);
+  if (dateError(input.usedOn, input.dueOn)) return { error: dateError(input.usedOn, input.dueOn) };
   if (!req(input.name, NAME)) return { error: "Enter who used the card (or “Me” for your own spending)." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
   if (!req(input.reason)) return { error: "Enter why or where it was used." };
@@ -221,6 +236,7 @@ export async function addCardPurchase(input: {
 }): Promise<ActionResult & { groupId?: string | null }> {
   if (!req(input.reason)) return { error: "Enter why or where the card was used." };
   if (!Array.isArray(input.parts) || input.parts.length < 1 || input.parts.length > 10) return { error: "A purchase can have 1 to 10 payers." };
+  if (dateError(input.usedOn, ...input.parts.map((p) => p.dueOn))) return { error: dateError(input.usedOn, ...input.parts.map((p) => p.dueOn)) };
   const parts = [];
   const seen = new Set<string>();
   for (const p of input.parts) {
@@ -273,15 +289,26 @@ export async function recordRepayment(input: {
   lowerCard: boolean;
   /** set after the user confirmed that an identical-looking repayment really is a second payment */
   confirmDuplicate?: boolean;
+  /** one id per form submission: a retry or double-submit with the same id is recorded once (migration 0012) */
+  requestId?: string;
 }): Promise<ActionResult & { duplicate?: boolean }> {
   const amount = money(input.amount);
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
+  if (dateError(input.paidOn)) return { error: dateError(input.paidOn) };
+  if (input.appliesTo !== "loan" && input.appliesTo !== "card") return { error: "Pick what this repayment is for." };
   if (input.appliesTo === "card" && !input.cardId) return { error: "Pick which card this repayment is for." };
   // Never put money in the bank without saying which account (and only for loan repayments).
   if (input.addToAccount && (!input.accountId || input.appliesTo !== "loan")) return { error: "Only a loan repayment can be added to a bank account — pick the account." };
   if (!input.addToAccount && input.accountId) return { error: "Inconsistent request: an account was given but the money isn't being added to it." };
 
   const supabase = await writer();
+  const requestId = isUuid(input.requestId) ? input.requestId : null;
+  // Idempotency (0012): this exact submission already saved → report success, change nothing. (Before 0012 the
+  // column doesn't exist; the query errors and we simply carry on.)
+  if (requestId) {
+    const { data: prior, error: priorErr } = await supabase.from("repayments").select("id").eq("request_id", requestId).maybeSingle();
+    if (!priorErr && prior) return { personId: input.personId };
+  }
   // Duplicate guard: the same person, amount, date and source recorded in the last 2 minutes is almost always a
   // double-tap or a resubmitted form. Ask once; the user can confirm it is a genuinely separate payment.
   if (!input.confirmDuplicate) {
@@ -301,7 +328,7 @@ export async function recordRepayment(input: {
     return { error: owed > 0 ? `They only owe ৳${owed.toLocaleString("en-IN", { maximumFractionDigits: 2 })} ${where}.` : `They owe nothing ${where}.` };
   }
 
-  const { error } = await supabase.rpc("record_repayment", {
+  const args = {
     p_person_id: input.personId,
     p_amount: amount,
     p_applies_to: input.appliesTo,
@@ -311,7 +338,12 @@ export async function recordRepayment(input: {
     p_account_id: input.accountId,
     p_add_to_account: input.addToAccount,
     p_lower_card: input.lowerCard,
-  });
+  };
+  let { error } = await supabase.rpc("record_repayment", requestId ? { ...args, p_request_id: requestId } : args);
+  // Before migration 0012 the function has no p_request_id: retry once without it (same atomic call).
+  if (error && requestId && (error.code === "PGRST202" || /could not find the function/i.test(error.message))) {
+    ({ error } = await supabase.rpc("record_repayment", args));
+  }
   return done(error, { personId: input.personId });
 }
 
@@ -409,6 +441,7 @@ export async function saveDashboardLayout(layout: unknown): Promise<ActionResult
  */
 export async function reconcileBalance(input: { target: "account" | "card"; id: string; statement: number; statementDate: string; note: string }): Promise<ActionResult> {
   if (input.target !== "account" && input.target !== "card") return { error: "Pick the bank account or a card." };
+  if (dateError(input.statementDate)) return { error: dateError(input.statementDate) };
   const s = money(input.statement);
   if (!(s >= 0)) return { error: "Enter the statement figure (0 or more)." };
   const supabase = await writer();

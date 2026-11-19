@@ -121,3 +121,35 @@ test("public paths are exact roots, not prefixes", () => {
   assert.equal(isPublicPath("/loginx"), false);
   assert.equal(isPublicPath("/viewer-secrets"), false);
 });
+
+import { viewModeConfig } from "../lib/view-config.ts";
+import { isIsoDate, optionalDate, amountInRange, isUuid, MAX_AMOUNT } from "../lib/validate.ts";
+import { readFileSync } from "node:fs";
+
+test("view mode fails closed: no defaults, weak passcode or missing password → disabled", () => {
+  assert.equal(viewModeConfig({}), null, "nothing configured");
+  assert.equal(viewModeConfig({ VIEW_PASSCODE: "mrrmr", VIEWER_PASSWORD: "x".repeat(32) }), null, "the old 5-letter key is rejected");
+  assert.equal(viewModeConfig({ VIEW_PASSCODE: "long enough key", VIEWER_PASSWORD: "short" }), null);
+  assert.deepEqual(viewModeConfig({ VIEW_PASSCODE: "correct horse battery", VIEWER_PASSWORD: "p".repeat(24) }),
+    { passcode: "correct horse battery", email: "viewer@mrrmr.app", password: "p".repeat(24) });
+});
+
+test("no viewer secret is written in the source any more", () => {
+  for (const f of ["../lib/viewer.ts", "../lib/view-config.ts", "../app/view/actions.ts"]) {
+    const src = readFileSync(new URL(f, import.meta.url), "utf8");
+    assert.ok(!/\|\|\s*"mrrmr"/.test(src), `${f}: passcode default`);
+    assert.ok(!/VIEWER_PASSWORD\s*\|\|\s*"/.test(src), `${f}: password default`);
+  }
+});
+
+test("dates must be real calendar dates in range; amounts within the column's range", () => {
+  for (const ok of ["2026-11-19", "2024-02-29", "1990-01-01", "2100-12-31"]) assert.equal(isIsoDate(ok), true, ok);
+  for (const no of ["2026-02-29", "2026-13-01", "2026-11-31", "19-11-2026", "2026-11-19T00:00", "1989-12-31", "2101-01-01", "", null, 20261119]) assert.equal(isIsoDate(no), false, String(no));
+  assert.deepEqual(optionalDate(""), { ok: true, value: null });
+  assert.deepEqual(optionalDate("2026-02-30"), { ok: false });
+  assert.equal(amountInRange(0.01), true);
+  assert.equal(amountInRange(MAX_AMOUNT), true);
+  for (const no of [0, -1, MAX_AMOUNT + 1, Infinity, NaN]) assert.equal(amountInRange(no), false, String(no));
+  assert.equal(isUuid("9056aabe-a678-4339-90ad-304210f19cfd"), true);
+  assert.equal(isUuid("'; drop table loans; --"), false);
+});

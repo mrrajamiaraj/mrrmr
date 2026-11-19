@@ -218,7 +218,7 @@ export function DebtorsView({ data, today }: { data: FinanceData; today: string 
                   <div className="flex items-start gap-3">
                     <Avatar text={p.initials} size={38} />
                     <div className="min-w-0 flex-auto">
-                      <button type="button" onClick={() => setOpenId(p.id)} className="text-left text-[15px] font-medium decoration-slate-400 underline-offset-4 hover:text-brand-ink hover:underline">{p.name}</button>
+                      <button type="button" onClick={() => setOpenId(p.id)} className="min-h-7 text-left text-[15px] font-medium decoration-slate-400 underline-offset-4 hover:text-brand-ink hover:underline">{p.name}</button>
                       <div className="text-[12.5px] text-slate-500">{records}{p.owes > 0 && <> · due {dateLong(p.due)}</>}</div>
                     </div>
                     <StatusPill status={p.status} />

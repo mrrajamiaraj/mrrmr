@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { writer } from "@/lib/viewer";
 import { cleanText } from "@/lib/security";
 import { roundMoney } from "@/lib/money";
+import { amountInRange, optionalDate } from "@/lib/validate";
 
 export type Result = { error?: string };
 
@@ -19,7 +20,8 @@ function done(error: { code?: string; message: string } | null): Result {
   return {};
 }
 
-const amountOk = (n: number) => typeof n === "number" && Number.isFinite(n) && roundMoney(n) > 0 && n < 1e12;
+const amountOk = (n: number) => typeof n === "number" && amountInRange(roundMoney(n));
+const dateOk = (s: string) => optionalDate(s).ok;
 // Trimmed and capped server-side: these actions can be called without the form.
 const clean = (s: string) => cleanText(s, 300);
 
@@ -27,6 +29,7 @@ export async function saveExpense(
   id: string | null,
   input: { spent_on: string; facility: string; member: string; description: string; tag: string; amount: number }
 ): Promise<Result> {
+  if (!dateOk(input.spent_on)) return { error: "Enter a real date." };
   if (!clean(input.facility)) return { error: "Enter the facility / center." };
   if (!clean(input.member)) return { error: "Enter who paid." };
   if (!amountOk(input.amount)) return { error: "Enter an amount above 0." };
@@ -55,6 +58,7 @@ export async function saveContribution(
   id: string | null,
   input: { paid_on: string; member: string; note: string; amount: number }
 ): Promise<Result> {
+  if (!dateOk(input.paid_on)) return { error: "Enter a real date." };
   if (!clean(input.member)) return { error: "Enter who contributed." };
   if (!amountOk(input.amount)) return { error: "Enter an amount above 0." };
   const row = {

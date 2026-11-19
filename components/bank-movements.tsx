@@ -80,7 +80,7 @@ export function BankMovements({ data, accountId, accountName, onOpen }: { data: 
           {shown.slice(0, limit).map((r) => (
             <li key={r.id} className="flex items-center gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
               <div className="min-w-0 flex-auto">
-                <button type="button" onClick={() => onOpen(r.personId)} className="text-left text-[13.5px] font-medium hover:text-brand-ink hover:underline">{r.name}</button>
+                <button type="button" onClick={() => onOpen(r.personId)} className="min-h-6 text-left text-[13.5px] font-medium hover:text-brand-ink hover:underline">{r.name}</button>
                 <div className="truncate text-[12.5px] text-slate-500">{dateLong(r.iso)} · {r.detail}</div>
               </div>
               <div className="flex flex-none flex-col items-end gap-1">
