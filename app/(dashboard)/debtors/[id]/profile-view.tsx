@@ -227,7 +227,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
                       </td>
                     </tr>
                     {isOpen && plan && (
-                      <tr className="border-b border-soft bg-subtle"><td colSpan={7} className="p-3 sm:p-4"><OneSchedule plan={plan} today={today} /></td></tr>
+                      <tr className="border-b border-soft bg-subtle"><td colSpan={7} className="stack-full p-3 sm:p-4"><OneSchedule plan={plan} today={today} /></td></tr>
                     )}
                   </Fragment>
                 );

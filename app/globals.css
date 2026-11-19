@@ -368,6 +368,8 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   .stack-table :is(td, th)[colspan]:not(:empty) { justify-content: center; text-align: center; font-weight: 400; padding: 16px 0; }
   .stack-table tr:has(> .stack-corner) > :not([data-label], .stack-corner) { padding-right: 40px; }
   .stack-table .stack-corner { position: absolute; top: 8px; right: 8px; padding: 0; }
+  /* An expanded detail row (e.g. an EMI schedule) spans the card as normal, left-aligned content. */
+  .stack-table :is(td, th)[colspan].stack-full:not(:empty) { display: block; text-align: left; padding: 12px 0 4px; font-weight: 400; }
 }
 
 @utility money {
