@@ -24,7 +24,7 @@ function parallax(e: React.PointerEvent<HTMLElement>) {
 }
 
 /** Shared by /login and /view: one card, Viewer (read-only key) or Admin (email + password). */
-export function SignInCard({ next, error, initialMode }: { next: string; error?: string; initialMode: Mode }) {
+export function SignInCard({ next, error, initialMode, adminSignedIn = false }: { next: string; error?: string; initialMode: Mode; adminSignedIn?: boolean }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const tab = (m: Mode) =>
     `relative z-10 inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-md text-[14px] font-medium ${
@@ -100,7 +100,7 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
           <div>
             <h1 className="m-0 font-display text-[32px] font-normal leading-tight text-ink">Welcome back</h1>
             <p key={mode} className="m-0 mt-1 animate-fade-in text-[14px] text-slate-500">
-              {mode === "viewer" ? "Enter the viewer key for a read-only look at the workspace." : "Sign in as admin to add and edit records."}
+              {mode === "viewer" ? "Open a read-only view of the Research ledger. No key needed." : "Sign in as admin to add and edit records."}
             </p>
           </div>
 
@@ -118,6 +118,14 @@ export function SignInCard({ next, error, initialMode }: { next: string; error?:
             </button>
           </div>
 
+          {adminSignedIn && (
+            <div role="status" className="rounded-lg border border-owed-line bg-owed-tint px-3 py-2.5 text-[13.5px] text-slate-700">
+              <b className="font-semibold text-ink">You&apos;re signed in as the admin on this browser.</b>{" "}
+              {mode === "viewer"
+                ? "Opening the read-only view signs you out as admin here first."
+                : <>Go to <a href="/" className="font-medium text-brand-2 underline underline-offset-2">your dashboard</a>.</>}
+            </div>
+          )}
           {error && (
             <div className="animate-pop-in rounded-lg border border-bad-line bg-bad-tint px-3 py-2.5 text-sm text-bad" role="alert">
               {error}

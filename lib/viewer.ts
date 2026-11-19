@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 /** The viewer account's email. Not a secret (it identifies sessions for the route allow-list); override with VIEWER_EMAIL. */
 export const VIEWER_EMAIL = process.env.VIEWER_EMAIL || "viewer@mrrmr.app";
 
-export { viewModeConfig, MIN_PASSCODE, type ViewModeConfig } from "@/lib/view-config";
+export { viewModeConfig, type ViewModeConfig } from "@/lib/view-config";
 
 export function isViewerEmail(email: string | null | undefined) {
   return Boolean(email && email.toLowerCase() === VIEWER_EMAIL.toLowerCase());
