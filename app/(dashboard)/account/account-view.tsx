@@ -3,24 +3,21 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Shell, useViewer } from "@/components/shell";
-import { BalanceEditor } from "@/components/balance-editor";
+import { BankBalancePanel, DebitCardPanel } from "@/components/bank-panel";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { RepayDialog } from "@/components/debtors/person-dialogs";
 import { repayTargets } from "@/components/debtors/repay-form";
 import { Flash } from "@/components/debtors/bits";
 import { SetupAccount } from "@/components/setup-forms";
-import { DebitUsed } from "@/components/debit-used";
 import { usePalettePeople } from "@/components/command-palette";
 import { CardsStrip, Hero, RepayPicker } from "@/components/dashboard";
 import { Button, buttonClass, Menu, type MenuItem } from "@/components/ui";
 import { CardIcon, PlusIcon, TrendIcon } from "@/components/icons";
 import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
 import { BankMovements } from "@/components/bank-movements";
-import { setAccountBalance } from "@/lib/actions";
 import { buildProfiles, byOwesThenName, cardLabel } from "@/lib/ledger";
 import { computeDashboard } from "@/lib/dashboard";
 import { monthlySeries } from "@/lib/trends";
-import { timestampLong } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
 
 /**
@@ -78,12 +75,9 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
           <h2 id="bank-h" className="m-0 font-display text-[26px] font-normal">{account.name}</h2>
           <p className="m-0 mt-1 text-small text-slate-500">The balance you keep up to date, your debit-card tally, and the money in and out the app recorded.</p>
         </div>
-        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-          <div className="surface-card overflow-hidden">
-            <BalanceEditor label={`Balance in ${account.name}`} inputLabel={`New ${account.name} balance (৳)`} value={account.balance}
-              footnote={`Updated ${timestampLong(account.updated_at)}`} onSave={(n) => setAccountBalance(account.id, n)} />
-          </div>
-          <DebitUsed accountId={account.id} total={account.debit_used} />
+        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+          <BankBalancePanel account={account} />
+          <DebitCardPanel account={account} />
         </div>
         <BankMovements data={data} accountId={account.id} accountName={account.name} onOpen={(id) => router.push(`/debtors/${id}`)} />
       </section>

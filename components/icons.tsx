@@ -2,7 +2,7 @@
 // name and props the pages already use, so swapping the family never touches a call site.
 // Icons are decorative by default (aria-hidden); a control that shows only an icon must carry its own aria-label.
 import {
-  ArrowRight, ArrowUp, CalendarClock, Check, ChevronDown as LChevronDown, ChevronLeft as LChevronLeft, ChevronRight as LChevronRight, CircleAlert,
+  ArrowDownLeft, ArrowRight, ArrowUp, ArrowUpRight, CalendarClock, Check, ChevronDown as LChevronDown, ChevronLeft as LChevronLeft, ChevronRight as LChevronRight, CircleAlert,
   Command, CreditCard, Download, Ellipsis, Eye, EyeOff, FileText, FlaskConical, House, Inbox, Info, KeyRound, Landmark,
   LockKeyhole, LogOut, Monitor, Moon, PanelLeft, PenLine, Plus, RefreshCw, RotateCcwClock, Search, Settings2, ShieldCheck, Sun,
   Trash, TrendingUp, UserRound, Users, Wallet, X, type LucideIcon,
@@ -59,6 +59,8 @@ export const HomeIcon = icon(House);
 export const SidebarIcon = icon(PanelLeft, 2);
 export const SettingsIcon = icon(Settings2, 2);
 export const FileIcon = icon(FileText, 2);
+export const InIcon = icon(ArrowDownLeft, 2.2);
+export const OutIcon = icon(ArrowUpRight, 2.2);
 export const ChevronDown = icon(LChevronDown, 2);
 
 /** The card chip on the card visual: not an icon, a drawing, so it stays custom. */
