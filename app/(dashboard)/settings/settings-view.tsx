@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Shell } from "@/components/shell";
 import { SectionCard, SectionHead } from "@/components/debtors/bits";
@@ -53,12 +52,6 @@ export function SettingsView() {
               {LANDING_PAGES.map(([href, name]) => <option key={href} value={href}>{name}</option>)}
             </select>
           </label>
-          <label className="field-label">Default chart range
-            <select value={p.chartRange} onChange={(e) => setP({ ...p, chartRange: e.target.value as Prefs["chartRange"] })} className={sel}>
-              <option value="6">Last 6 months</option><option value="12">Last 12 months</option><option value="all">All months</option><option value="year">By year</option>
-            </select>
-          </label>
-          <p className="m-0 text-[13px] text-slate-500">Dashboard sections are reordered on the <Link href="/account" className="text-brand-2 underline underline-offset-2">Overview</Link> → “Customize dashboard”.</p>
         </div>
       </SectionCard>
 

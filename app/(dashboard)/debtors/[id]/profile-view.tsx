@@ -1,179 +1,297 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Shell, useViewer } from "@/components/shell";
 import { Avatar, Flash, SectionCard, SectionHead, StatusPill } from "@/components/debtors/bits";
-import { RepayForm, repayTargets } from "@/components/debtors/repay-form";
+import { repayTargets } from "@/components/debtors/repay-form";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
 import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
-import { Badge, Button, EmptyState, Money } from "@/components/ui";
-import { ChevronLeft, DownloadIcon, DueIcon } from "@/components/icons";
-import { buildProfiles, cardLabel } from "@/lib/ledger";
+import { OneSchedule } from "@/components/debtors/emi-schedule";
+import { EditPersonDialog, ExportPdfDialog, RepayDialog } from "@/components/debtors/person-dialogs";
+import { DeleteDialog } from "@/components/delete-dialog";
+import { Ring } from "@/components/viz";
+import { Badge, Button, buttonClass, EmptyState, IconButton, Menu, Money } from "@/components/ui";
+import { ChevronDown, ChevronLeft, DownloadIcon, DueIcon, FileIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, CardIcon, TrendIcon } from "@/components/icons";
+import { buildProfiles, cardLabel, cardPlanStatus, type PlanStatus } from "@/lib/ledger";
 import { computeDashboard } from "@/lib/dashboard";
-import { dateLong, dateShort, taka } from "@/lib/format";
-import { sumBy } from "@/lib/money";
+import { buildStatement, type StatementRow } from "@/lib/statement";
+import { personItems, type DeleteItem } from "@/lib/deletion";
+import { dateLong, taka } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
 
+type Show = "all" | "out" | "in";
+type Deleting = { items: DeleteItem[]; title: string; whole: boolean };
+
 /**
- * A debtor's complete record: totals, loan vs card breakdown, upcoming dues, repayment methods, and one timeline of
- * every event with the balance after it. Figures come from lib/ledger and lib/dashboard (the same tested rules as
- * every other page), so this page always agrees with the Overview and the card pages.
+ * One person: totals, what's due next, and the full history with a running balance. Every figure comes from
+ * lib/ledger, lib/dashboard and lib/statement — the same tested rules as every other page — and only this
+ * person's records are read. Actions: record a repayment, add a loan or card purchase, export a PDF statement, and
+ * (in the Actions menu) edit details or delete history.
  */
 export function DebtorProfileView({ data, personId, today }: { data: FinanceData; personId: string; today: string }) {
   const viewer = useViewer();
-  const p = useMemo(() => buildProfiles(data, today).find((x) => x.id === personId)!, [data, today, personId]);
+  const router = useRouter();
+  const p = useMemo(() => buildProfiles(data, today).find((x) => x.id === personId), [data, today, personId]);
   const d = useMemo(() => computeDashboard(data, today), [data, today]);
-  const [flash, setFlash] = useState("");
-  const [adding, setAdding] = useState<"loan" | "card" | null>(null);
-  const [filter, setFilter] = useState<"all" | "out" | "in">("all");
+  const person = data.people.find((x) => x.id === personId);
   const account = data.accounts[0] ? { id: data.accounts[0].id, name: data.accounts[0].name } : null;
-  const person = data.people.find((x) => x.id === personId)!;
+
+  const [flash, setFlash] = useState("");
+  const [dialog, setDialog] = useState<"loan" | "card" | "repay" | "edit" | "pdf" | null>(null);
+  const [deleting, setDeleting] = useState<Deleting | null>(null);
+  const [show, setShow] = useState<Show>("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+
+  const statement = useMemo(() => buildStatement(data, personId, today, { from: from || null, to: to || null }), [data, personId, today, from, to]);
+  const plans = useMemo(() => {
+    const m = new Map<string, PlanStatus>();
+    for (const c of data.cards) for (const [k, v] of cardPlanStatus(data, c.id)) if (v.personId === personId) m.set(k, v);
+    return m;
+  }, [data, personId]);
+  const all = useMemo(() => personItems(data, personId), [data, personId]);
+
+  // Removed (e.g. just now, from the Actions menu) or a stale link.
+  if (!p || !person || !statement) {
+    return (
+      <Shell subtitle="This person isn't in your list.">
+        <EmptyState title="Person not found" action={<Link href="/debtors" className={buttonClass("secondary")}>Back to People</Link>}>
+          They may have been removed.
+        </EmptyState>
+      </Shell>
+    );
+  }
+
+  const rows = statement.rows.filter((r) => show === "all" || (show === "in" ? r.repaid != null : r.borrowed != null)).slice().reverse();
   const dues = d.open.filter((o) => o.personId === personId);
-  const reps = data.repayments.filter((r) => r.person_id === personId);
-  const methods = [...new Set(reps.map((r) => r.via))].map((via) => {
-    const rs = reps.filter((r) => r.via === via);
-    return { via, count: rs.length, total: sumBy(rs, (r) => r.amount), toBank: rs.filter((r) => r.account_id).length, last: rs.map((r) => r.paid_on).sort().at(-1)! };
-  }).sort((a, b) => b.total - a.total);
-  const events = p.events.filter((e) => filter === "all" || (filter === "in" ? e.sign < 0 : e.sign > 0));
-  const cardsOwed = Object.entries(p.cardOutByCard);
+  const targets = repayTargets(p, data.cards);
+  const filtered = !!(from || to);
+
+  const cardName = (id: string | null) => cardLabel(data.cards.find((c) => c.id === id));
+  const askDelete = (r: StatementRow) => setDeleting({ items: [{ kind: r.kind, id: r.id }], title: `Delete this ${r.type.toLowerCase()}?`, whole: false });
 
   return (
     <Shell subtitle="" hero={
-      <header className="flex flex-col gap-4 border-b border-line pb-6">
-        <Link href="/debtors" className="inline-flex w-fit items-center gap-1 rounded-md text-[13px] text-slate-500 hover:text-ink"><ChevronLeft size={15} />All debtors</Link>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-col gap-5 border-b border-line pb-6">
+        <Link href="/debtors" className="inline-flex min-h-8 w-fit items-center gap-1 rounded-md text-[13px] text-slate-500 hover:text-ink"><ChevronLeft size={15} />People</Link>
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
-            <Avatar text={p.initials} size={56} />
+            <span title={`${p.pct}% repaid`}><Ring pct={p.taken ? p.pct : 0} size={72} stroke={4}><Avatar text={p.initials} size={56} /></Ring></span>
             <div className="min-w-0">
-              <div className="eyebrow flex items-center gap-2">Debtor <StatusPill status={p.status} /></div>
-              <h1 className="m-0 mt-1 truncate font-display text-title font-normal">{p.name}</h1>
-              <p className="m-0 mt-1 text-[13.5px] text-slate-500">{[person.relation, person.phone, person.notes].filter(Boolean).join(" · ") || "No contact details recorded"}</p>
+              <h1 className="m-0 break-words font-display text-title font-normal">{p.name}</h1>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
+                <StatusPill status={p.status} />
+                {p.dueKind === "late" && p.owes > 0 && <Badge tone="bad"><DueIcon size={12} />Overdue</Badge>}
+                <span>{[person.relation, person.phone].filter(Boolean).join(" · ") || "No contact details"}</span>
+              </div>
             </div>
           </div>
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            {!viewer && <Button onClick={() => setAdding("loan")}>Add loan</Button>}
-            {!viewer && data.cards.length > 0 && <Button variant="secondary" onClick={() => setAdding("card")}>Card transaction</Button>}
-            <a href={`/export?type=debtor&id=${personId}`} download className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-line px-3.5 text-[14px] text-slate-700 hover:bg-soft"><DownloadIcon size={15} />Statement CSV</a>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            {!viewer && p.owes > 0 && <Button onClick={() => setDialog("repay")} className="flex-auto sm:flex-none"><TrendIcon size={15} />Record repayment</Button>}
+            {!viewer && (
+              <Menu label="Add for this person" align="end" triggerClass={buttonClass("secondary", "md", "flex-auto sm:flex-none")}
+                trigger={<><PlusIcon size={15} />Add<ChevronDown size={14} /></>}
+                items={[
+                  { label: "Loan", icon: <PlusIcon size={16} />, onSelect: () => setDialog("loan") },
+                  ...(data.cards.length ? [{ label: "Card purchase", icon: <CardIcon size={16} />, onSelect: () => setDialog("card") }] : []),
+                ]} />
+            )}
+            {!viewer && <Button variant="secondary" onClick={() => setDialog("pdf")} className="flex-auto sm:flex-none"><FileIcon size={15} />Export PDF</Button>}
+            {!viewer && (
+              <Menu label="Actions" align="end" trigger={<><MoreIcon size={18} /><span className="text-[14px] font-medium">Actions</span></>}
+                triggerClass={buttonClass("ghost", "md", "border border-line")}
+                items={[
+                  { label: "Edit details", icon: <PencilIcon size={16} />, onSelect: () => setDialog("edit") },
+                  { kind: "link", label: "Export CSV", icon: <DownloadIcon size={16} />, href: `/export?type=debtor&id=${personId}`, download: true },
+                  { kind: "separator" },
+                  { label: all.length ? "Delete data…" : `Remove ${p.first}…`, icon: <TrashIcon size={16} />, danger: true,
+                    onSelect: () => setDeleting({ items: all, title: all.length ? `Delete ${p.first}'s data?` : `Remove ${p.name}?`, whole: true }) },
+                ]} />
+            )}
           </div>
         </div>
-        <section aria-label="Totals" className="surface-card grid grid-cols-2 overflow-hidden md:grid-cols-4 [&>*]:border-line [&>*+*]:border-l max-md:[&>*:nth-child(3)]:border-l-0 max-md:[&>*:nth-child(n+3)]:border-t">
-          <Fig label="Borrowed" value={p.taken} note={`${p.loanCount} loan${p.loanCount === 1 ? "" : "s"} · ${p.cardCount} card use${p.cardCount === 1 ? "" : "s"}`} />
-          <Fig label="Repaid" value={p.paid} tone="good" note={`${p.payCount} payment${p.payCount === 1 ? "" : "s"} · ${p.pct}%`} />
-          <Fig label="Outstanding" value={p.owes} tone="owed" note={p.owes > 0 ? p.dueText : "All paid back"} />
-          <Fig label="Next due" value={null} text={p.due ? dateLong(p.due) : "—"} note={p.due ? (p.dueKind === "late" ? "Overdue" : p.dueKind === "soon" ? "Within 7 days" : "Later") : "Nothing scheduled"} late={p.dueKind === "late" && p.owes > 0} />
+
+        <section aria-label="Totals" className="surface-card grid grid-cols-2 overflow-hidden md:grid-cols-4 [&>*]:border-line max-md:[&>*:nth-child(2n)]:border-l max-md:[&>*:nth-child(n+3)]:border-t md:[&>*+*]:border-l">
+          <Fig label="Total borrowed" value={<Money value={p.taken} className="text-figure" />} note={`${p.loanCount} ${p.loanCount === 1 ? "loan" : "loans"} · ${p.cardCount} card ${p.cardCount === 1 ? "purchase" : "purchases"}`} />
+          <Fig label="Total repaid" value={<Money value={p.paid} tone="good" className="text-figure" />} note={`${p.payCount} ${p.payCount === 1 ? "payment" : "payments"}`} />
+          <Fig label="Outstanding" value={<Money value={p.owes} tone={p.owes ? "owed" : "muted"} className="text-figure" />}
+            note={p.owes ? `${p.pct}% repaid` : "All paid back"} bar={p.taken ? Math.min(p.pct, 100) : null} />
+          <Fig label="Next due" value={<span className={`text-[20px] font-medium leading-tight ${p.dueKind === "late" && p.owes > 0 ? "text-bad" : ""}`}>{p.owes > 0 && p.due ? dateLong(p.due) : "—"}</span>}
+            note={p.owes <= 0 ? "Nothing owed" : !p.due ? "No due date set" : p.dueKind === "late" ? "Overdue" : p.dueKind === "soon" ? "Within 7 days" : "Upcoming"} />
         </section>
       </header>
     }>
       <Flash text={flash} />
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <SectionCard labelledBy="src-h">
-          <SectionHead id="src-h" title="Where the debt is" sub="Bank loans and each card are separate. A repayment is applied to the one you choose." />
-          <ul className="m-0 flex list-none flex-col border-t border-line p-0">
-            <li className="flex items-center justify-between gap-3 border-b border-soft px-4 py-3 sm:px-5">
-              <span><span className="block text-[14px] font-medium">Bank loans</span><span className="text-[12.5px] text-slate-500">{taka(p.loanTotal)} lent · {taka(p.paidLoan)} repaid</span></span>
-              <Money value={p.loanOut} tone={p.loanOut ? "owed" : "muted"} className="text-[16px]" />
-            </li>
-            {data.cards.map((c) => {
-              const out = Object.fromEntries(cardsOwed)[c.id] ?? 0;
-              const used = sumBy(data.cardUses.filter((u) => u.person_id === personId && u.card_id === c.id), (u) => u.amount);
-              if (!used && !out) return null;
-              return (
-                <li key={c.id} className="flex items-center justify-between gap-3 border-b border-soft px-4 py-3 last:border-0 sm:px-5">
-                  <span><span className="block text-[14px] font-medium">{cardLabel(c)}</span><span className="text-[12.5px] text-slate-500">{taka(used)} put on the card</span></span>
-                  <Money value={out} tone={out ? "owed" : "muted"} className="text-[16px]" />
-                </li>
-              );
-            })}
-          </ul>
-        </SectionCard>
-
-        <SectionCard labelledBy="due-h">
-          <SectionHead id="due-h" title="Upcoming dues" sub="What's still to pay, earliest first." />
-          {dues.length ? (
-            <ul className="m-0 flex list-none flex-col border-t border-line p-0">
-              {dues.slice(0, 8).map((o) => (
-                <li key={o.key} className="flex items-center justify-between gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
-                  <span className="text-[13.5px]">
-                    <span className={`font-medium ${o.status === "overdue" ? "text-bad" : ""}`}>{o.status === "overdue" && <DueIcon size={13} className="mr-1 inline" />}{o.iso ? dateLong(o.iso) : "No due date"}</span>
-                    <span className="block text-[12.5px] text-slate-500">{o.source === "loan" ? "Bank loan" : cardLabel(data.cards.find((c) => c.id === o.cardId))}{o.emi ? " · EMI installment" : ""}{o.status === "overdue" ? " · overdue" : ""}</span>
-                  </span>
-                  <Money value={o.left} tone={o.status === "overdue" ? "bad" : "owed"} />
-                </li>
-              ))}
+      {(dues.length > 0 || p.owes > 0) && (
+        <div className="grid items-start gap-5 lg:grid-cols-2">
+          <SectionCard labelledBy="due-h">
+            <SectionHead id="due-h" title="Coming up" sub="What's still to pay, earliest first. A repayment clears the earliest item first." />
+            {dues.length ? (
+              <ul className="m-0 list-none border-t border-line p-0">
+                {dues.slice(0, 6).map((o) => (
+                  <li key={o.key} className="flex items-center justify-between gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
+                    <span className="min-w-0 text-[13.5px]">
+                      <span className={`font-medium ${o.status === "overdue" ? "text-bad" : ""}`}>{o.iso ? dateLong(o.iso) : "No due date"}</span>
+                      <span className="block truncate text-[12.5px] text-slate-500">{o.source === "loan" ? "Bank loan" : cardName(o.cardId)}{o.emi ? " · EMI installment" : ""}{o.status === "overdue" ? " · overdue" : o.status === "week" ? " · due this week" : ""}</span>
+                    </span>
+                    <Money value={o.left} tone={o.status === "overdue" ? "bad" : "owed"} />
+                  </li>
+                ))}
+                {dues.length > 6 && <li className="px-4 py-2 text-[12.5px] text-slate-500 sm:px-5">+ {dues.length - 6} later</li>}
+              </ul>
+            ) : <div className="border-t border-line p-4"><EmptyState compact title="No due dates">What they owe has no due dates set.</EmptyState></div>}
+          </SectionCard>
+          <SectionCard labelledBy="src-h">
+            <SectionHead id="src-h" title="Where it's owed" sub="Bank loans and each card are kept apart. A repayment goes to the one you choose." />
+            <ul className="m-0 list-none border-t border-line p-0">
+              <Source label="Bank loans" note={`${taka(p.loanTotal)} lent · ${taka(p.paidLoan)} repaid`} value={p.loanOut} />
+              {data.cards.map((c) => {
+                const used = data.cardUses.some((u) => u.person_id === personId && u.card_id === c.id);
+                return used ? <Source key={c.id} label={cardLabel(c)} note="Their purchases on your card" value={p.cardOutByCard[c.id] ?? 0} /> : null;
+              })}
             </ul>
-          ) : <div className="border-t border-line p-4"><EmptyState compact title="Nothing due">{p.owes > 0 ? "What they owe has no due dates set." : "All paid back."}</EmptyState></div>}
-        </SectionCard>
-      </div>
-
-      {!viewer && p.owes > 0 && (
-        <RepayForm personId={personId} first={p.first} targets={repayTargets(p, data.cards)} mode="all" account={account} withDate
-          onSaved={(t) => setFlash(t)} />
+          </SectionCard>
+        </div>
       )}
 
-      <SectionCard labelledBy="via-h">
-        <SectionHead id="via-h" title="How they repay" sub="Every repayment method used, and how many went into the bank." />
-        {methods.length ? (
-          <div className="grid gap-px border-t border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-            {methods.map((m) => (
-              <div key={m.via} className="flex flex-col gap-0.5 bg-surface px-4 py-3">
-                <span className="text-[13.5px] font-medium">{m.via}</span>
-                <Money value={m.total} tone="good" className="text-[18px]" />
-                <span className="text-[12px] text-slate-500">{m.count} payment{m.count === 1 ? "" : "s"} · {m.toBank} into the bank · last {dateShort(m.last)}</span>
-              </div>
-            ))}
-          </div>
-        ) : <div className="border-t border-line p-4"><EmptyState compact title="No repayments yet" /></div>}
-      </SectionCard>
-
-      <SectionCard labelledBy="tl-h">
-        <SectionHead id="tl-h" title="Timeline" sub="Every loan, card use and repayment in date order, with what they owed after it."
+      <SectionCard labelledBy="hist-h">
+        <SectionHead id="hist-h" title="History" sub="Every entry in date order (newest first) with what they owe after it."
           action={
             <div role="group" aria-label="Show" className="flex gap-1">
-              {([["all", "All"], ["out", "Borrowing"], ["in", "Repayments"]] as const).map(([k, l]) => (
-                <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)}
-                  className={`min-h-8 rounded-full border px-3 text-[12.5px] font-medium ${filter === k ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:text-ink"}`}>{l}</button>
+              {([["all", "All"], ["out", "Borrowing"], ["in", "Repayments"]] as [Show, string][]).map(([k, l]) => (
+                <button key={k} type="button" aria-pressed={show === k} onClick={() => setShow(k)}
+                  className={`min-h-9 rounded-full border px-3 text-[13px] font-medium ${show === k ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:text-ink"}`}>{l}</button>
               ))}
             </div>
           } />
-        <ol className="m-0 list-none border-t border-line p-0">
-          {events.map((e) => (
-            <li key={e.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-soft px-4 py-3 last:border-0 sm:px-5">
-              <span aria-hidden="true" className={`size-2.5 rounded-full ${e.sign < 0 ? "bg-brand-2" : "bg-owed-bar"}`} />
-              <span className="min-w-0">
-                <span className="flex flex-wrap items-center gap-2 text-[13.5px] font-medium">{e.kind}{e.paidFor && <Badge className="text-[10.5px]">{e.paidFor === "card" ? "card" : "loan"}</Badge>}</span>
-                <span className="block truncate text-[12.5px] text-slate-500">{dateLong(e.iso)} · {e.detail}</span>
-              </span>
-              <span className="text-right">
-                <Money value={e.sign < 0 ? e.amount : -e.amount} signed tone={e.sign < 0 ? "good" : "owed"} className="text-[14px]" />
-                <span className="block text-[12px] text-slate-500">owes after <span className="money text-ink">{taka(e.owesAfter)}</span></span>
-              </span>
-            </li>
-          ))}
-          {!events.length && <li className="p-5 text-[13.5px] text-slate-500">Nothing recorded.</li>}
-        </ol>
+        <div className="flex flex-wrap items-end gap-3 border-t border-line px-4 py-3 sm:px-5">
+          <label className="flex flex-col gap-1 text-[12.5px] font-medium text-slate-600">From
+            <input type="date" value={from} max={to || today} onChange={(e) => setFrom(e.target.value)} className="min-h-10 rounded-lg border border-line-strong bg-surface px-2.5 text-[14px] text-ink" />
+          </label>
+          <label className="flex flex-col gap-1 text-[12.5px] font-medium text-slate-600">To
+            <input type="date" value={to} min={from || undefined} max={today} onChange={(e) => setTo(e.target.value)} className="min-h-10 rounded-lg border border-line-strong bg-surface px-2.5 text-[14px] text-ink" />
+          </label>
+          {filtered && <Button variant="quiet" size="sm" onClick={() => { setFrom(""); setTo(""); }}>Clear dates</Button>}
+          <span role="status" className="ml-auto text-[12.5px] text-slate-500">{rows.length} {rows.length === 1 ? "entry" : "entries"}{filtered ? " in range" : ""}</span>
+        </div>
+
+        <div className="overflow-x-auto border-t border-line">
+          <table className="stack-table w-full min-w-[760px] border-collapse text-[14px]">
+            <thead>
+              <tr className="bg-subtle text-left">
+                <th scope="col" className={TH}>Date</th>
+                <th scope="col" className={TH}>Entry</th>
+                <th scope="col" className={TH}>Method</th>
+                <th scope="col" className={`${TH} text-right`}>Borrowed</th>
+                <th scope="col" className={`${TH} text-right`}>Repaid</th>
+                <th scope="col" className={`${TH} text-right`}>Balance</th>
+                <th scope="col" className="w-12"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered && to && (
+                <tr className="border-b border-soft bg-subtle/60"><td className={`${TD} text-slate-500`} colSpan={5}>Balance at {dateLong(to)}</td><td data-label="Balance" className={`${TD} money text-right`}>{bal(statement.closing)}</td><td /></tr>
+              )}
+              {rows.map((r) => {
+                const plan = r.kind === "card_use" ? plans.get(r.id) : undefined;
+                const expandable = !!plan && plan.of > 0;
+                const isOpen = open === r.id;
+                return (
+                  <Fragment key={r.id}>
+                    <tr className="border-b border-soft align-top">
+                      <td className={`${TD} whitespace-nowrap text-slate-600`}>{dateLong(r.iso)}</td>
+                      <td data-label="Entry" className={TD}>
+                        <span className="flex flex-col items-end gap-0.5 text-right sm:items-start sm:text-left">
+                          <span className="flex flex-wrap items-center gap-1.5 font-medium">
+                            <Badge tone={r.repaid != null ? "good" : r.kind === "loan" ? "neutral" : "info"} className="text-[11px]">{r.type}</Badge>
+                            {plan?.plan === "emi" && <Badge tone="info" className="text-[11px]">EMI {plan.paidCount}/{plan.of}</Badge>}
+                          </span>
+                          <span className="text-[13px] text-slate-600">{r.description}</span>
+                          {expandable && (
+                            <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : r.id)}
+                              className="inline-flex min-h-8 items-center gap-1 rounded-md text-[12.5px] font-medium text-brand-2 hover:underline">
+                              <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />{isOpen ? "Hide" : plan!.plan === "emi" ? "EMI schedule" : "Payment detail"}
+                            </button>
+                          )}
+                        </span>
+                      </td>
+                      <td data-label="Method" className={`${TD} text-slate-600`}>{r.method ?? <span className="text-slate-400">—</span>}</td>
+                      <td data-label="Borrowed" className={`${TD} money text-right`}>{r.borrowed != null ? taka(r.borrowed) : <span className="text-slate-400 max-sm:hidden">—</span>}</td>
+                      <td data-label="Repaid" className={`${TD} money text-right text-brand-2`}>{r.repaid != null ? taka(r.repaid) : <span className="text-slate-400 max-sm:hidden">—</span>}</td>
+                      <td data-label="Balance" className={`${TD} money text-right`}>{bal(r.balance)}</td>
+                      <td className="stack-corner px-2 py-2 text-right">
+                        {!viewer && <IconButton size={36} label={`Delete ${r.type.toLowerCase()} of ${taka(r.borrowed ?? r.repaid ?? 0)} on ${dateLong(r.iso)}`} onClick={() => askDelete(r)} className="text-slate-400 hover:bg-bad-tint hover:text-bad"><TrashIcon size={16} /></IconButton>}
+                      </td>
+                    </tr>
+                    {isOpen && plan && (
+                      <tr className="border-b border-soft bg-subtle"><td colSpan={7} className="stack-full p-3 sm:p-4"><OneSchedule plan={plan} today={today} /></td></tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+              {filtered && from && (
+                <tr className="border-b border-soft bg-subtle/60"><td className={`${TD} text-slate-500`} colSpan={5}>Opening balance, before {dateLong(from)}</td><td data-label="Opening balance" className={`${TD} money text-right`}>{bal(statement.opening)}</td><td /></tr>
+              )}
+              {!rows.length && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">{statement.rows.length || !filtered ? (filtered || show !== "all" ? "No entries match." : "Nothing recorded for this person yet.") : "No entries in this date range."}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {filtered && (
+          <p className="m-0 border-t border-line px-4 py-2.5 text-[12.5px] text-slate-500 sm:px-5">
+            Opening {bal(statement.opening)} + borrowed {taka(statement.borrowed)} − repaid {taka(statement.repaid)} = closing {bal(statement.closing)}
+          </p>
+        )}
       </SectionCard>
 
-      {adding === "loan" && (
+      {dialog === "loan" && (
         <AddDebtorDialog mode="loan" title={`Add loan — ${p.name}`} account={account} knownNames={data.people.map((x) => x.name)}
           lockedPerson={{ name: p.name, initials: p.initials, owes: p.owes }}
-          onClose={() => setAdding(null)} onAdded={(_, t) => { setAdding(null); setFlash(t); }} />
+          onClose={() => setDialog(null)} onAdded={(_, t) => { setDialog(null); setFlash(t); }} />
       )}
-      {adding === "card" && (
+      {dialog === "card" && (
         <CardPurchaseDialog cards={data.cards} knownNames={data.people.map((x) => x.name)} initialPayer={p.name}
-          onClose={() => setAdding(null)} onSaved={(t) => { setAdding(null); setFlash(t); }} />
+          onClose={() => setDialog(null)} onSaved={(t) => { setDialog(null); setFlash(t); }} />
+      )}
+      {dialog === "repay" && <RepayDialog p={p} targets={targets} account={account} onClose={() => setDialog(null)} onSaved={(t) => { setDialog(null); setFlash(t); }} />}
+      {dialog === "edit" && <EditPersonDialog p={person} onClose={() => setDialog(null)} onSaved={(t) => { setDialog(null); setFlash(t); }} />}
+      {dialog === "pdf" && <ExportPdfDialog personId={personId} name={p.name} today={today} initial={{ from, to }} onClose={() => setDialog(null)} />}
+      {deleting && (
+        <DeleteDialog data={data} today={today} items={deleting.items} title={deleting.title} personId={personId} personName={p.name}
+          wholeHistory={deleting.whole} onClose={() => setDeleting(null)}
+          onDone={(msg, removed) => { setDeleting(null); setFlash(msg); if (removed) router.push("/debtors"); }} />
       )}
     </Shell>
   );
 }
 
-function Fig({ label, value, text, note, tone = "ink", late }: { label: string; value: number | null; text?: string; note: string; tone?: "ink" | "good" | "owed"; late?: boolean }) {
+const TH = "px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-slate-500";
+const TD = "px-4 py-3";
+const bal = (n: number) => (n < 0 ? `${taka(n)} credit` : taka(n));
+
+function Fig({ label, value, note, bar }: { label: string; value: React.ReactNode; note: string; bar?: number | null }) {
   return (
-    <div className="flex flex-col gap-1 px-4 py-4 sm:px-5">
+    <div className="flex min-w-0 flex-col gap-1 px-4 py-4 sm:px-5">
       <span className="eyebrow">{label}</span>
-      {value != null ? <Money value={value} tone={tone} className="text-figure" /> : <span className={`text-[20px] font-medium ${late ? "text-bad" : ""}`}>{text}</span>}
-      <span className={`text-[12px] ${late ? "font-medium text-bad" : "text-slate-500"}`}>{note}</span>
+      {value}
+      {bar != null && (
+        <span aria-hidden="true" className="mt-1 h-1.5 overflow-hidden rounded-full bg-soft"><span className="bar-fill block h-full rounded-full bg-brand-2" style={{ width: `${bar}%` }} /></span>
+      )}
+      <span className="text-[12px] text-slate-500">{note}</span>
     </div>
+  );
+}
+
+function Source({ label, note, value }: { label: string; note: string; value: number }) {
+  return (
+    <li className="flex items-center justify-between gap-3 border-b border-soft px-4 py-3 last:border-0 sm:px-5">
+      <span className="min-w-0"><span className="block text-[14px] font-medium">{label}</span><span className="text-[12.5px] text-slate-500">{note}</span></span>
+      <Money value={value} tone={value ? "owed" : "muted"} className="text-[16px]" />
+    </li>
   );
 }

@@ -20,12 +20,12 @@ dates are Asia/Dhaka. Read-only **view mode** shows the Research ledger only.
 ## Pages
 | Route | Purpose |
 | --- | --- |
-| `/account` | **Overview** (home): cash / receivables / liabilities / projection, insights, snapshot, cash movement, receivables, cards, activity, City Bank tools |
-| `/debtors`, `/debtors/[id]` | Receivables list (search, status filters, sorting) and full debtor profile with timeline and statement |
-| `/repayments` | Repayment Center: overdue, due soon, recent collections, quick record, data checks |
-| `/cards/1`, `/cards/2` | Per-card breakdown, EMI plans, transactions (filters, detail drawer), guided purchase flow |
-| `/reports` | Monthly/yearly reports, Outlook (scenarios), Time machine |
-| `/reconcile` | Statement comparison, adjustments and audit trail (needs migration 0011) |
+| `/account` | **Overview** (home): cash in the bank, owed to you, owed on cards (separate, clickable), labelled projection, Needs attention, recent activity, cards, City Bank tools |
+| `/debtors`, `/debtors/[id]` | People (search, status filters, sort by amount owed or due date) and each person's profile: totals, history with running balance and date range, Export PDF, Actions → Delete data |
+| `/repayments` | Repayments: overdue, due soon, recent collections, quick record, data checks |
+| `/cards/1`, `/cards/2` | Card artwork + what you owe, pay-by, your share vs others', upcoming payments, EMI plans, transactions (filters, detail drawer with EMI schedule) |
+| `/reports` | Monthly summary (one month at a time), Outlook, Past dates |
+| `/export/pdf?id=…[&from&to]` | A4 PDF statement for one person (admin only) |
 | `/research`, `/research/export` | Research ledger (separate from personal finance) and its CSV — the only pages view mode may open |
 | `/settings` | Landing page, density, paisa display, default chart range |
 | `/export` | Full backup CSV; `?type=debtor&id=` · `?type=card&slot=` · `?type=emi` |
@@ -53,8 +53,9 @@ npm run audit                   # dependency check
 
 ## Supabase setup
 1. Run the migrations in `supabase/migrations` in order in the SQL Editor (0001 is reference only — already applied in
-   the original project). **0001–0008 are applied in production; 0009–0012 are written and awaiting review**
-   (apply 0010 → 0011 → 0012; 0010 includes 0009).
+   the original project). **0001–0008 and 0013 are applied in production; 0009–0012 are written and awaiting review**
+   (apply 0010 → 0011 → 0012; 0010 includes 0009). 0013 (`delete_records`, atomic multi-entry deletion) is
+   independent of them.
 2. Authentication → Users: create the admin (auto-confirm) and the viewer; link them with the `insert into public.viewers…`
    statement at the end of `0005_view_mode.sql`. Turn **off** sign-ups; turn **on** leaked-password protection.
 3. Authentication → URL Configuration: Site URL = your domain; Redirect URLs = `https://<domain>/auth/callback`
@@ -89,7 +90,7 @@ function MRRMR adds; it can only append to `audit_log`.
   the last installment absorbs the remainder.
 
 ## Testing
-* `npm test` — 68 unit tests: money precision, allocation, EMI rounding, dashboard reconciliation, history, forecast,
+* `npm test` — 81 unit tests (incl. statements/PDF and deletion impact): money precision, allocation, EMI rounding, dashboard reconciliation, history, forecast,
   reports, anomalies, exports, contrast, validation, view-mode fail-closed, route allow-list.
 * `supabase/tests/rls_viewer.sql`, `supabase/tests/integration_rollback.sql` — run in the SQL Editor; both roll back.
 * Not automated yet: browser end-to-end tests (Playwright) — see `docs/ACCEPTANCE.md`.

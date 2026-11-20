@@ -8,13 +8,24 @@ let hydrated = false;
 const reduceMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - 2 ** (-10 * t));
 
-/** A number that rolls from its previous value to the new one. */
-export function CountUp({ value, format, duration = 900 }: { value: number; format: (n: number) => string; duration?: number }) {
+/**
+ * A number that rolls from its previous value to the new one. `intro`: also count up from zero on the very first
+ * page load (for hero figures) — the server-rendered value is hidden until the count starts, so nothing flashes.
+ */
+export function CountUp({ value, format, duration = 900, intro = false }: { value: number; format: (n: number) => string; duration?: number; intro?: boolean }) {
   const [shown, setShown] = useState(() => (hydrated ? 0 : value));
+  const [ready, setReady] = useState(!intro);
   const from = useRef(shown);
+
+  useLayoutEffect(() => {
+    if (!intro || ready) return;
+    if (!reduceMotion()) { from.current = 0; setShown(0); }
+    setReady(true);
+  }, [intro, ready]);
 
   useEffect(() => {
     hydrated = true;
+    if (!ready) return;
     const start = from.current;
     if (start === value || reduceMotion()) {
       from.current = value;
@@ -32,9 +43,15 @@ export function CountUp({ value, format, duration = 900 }: { value: number; form
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
+  }, [value, duration, ready]);
 
-  return <span className="tabular-nums">{format(shown)}</span>;
+  // The final figure for assistive tech straight away; the rolling digits are visual only.
+  return (
+    <span className="tabular-nums">
+      <span className="sr-only">{format(value)}</span>
+      <span aria-hidden="true" style={ready ? undefined : { opacity: 0 }}>{format(shown)}</span>
+    </span>
+  );
 }
 
 /**

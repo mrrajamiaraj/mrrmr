@@ -1,31 +1,33 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Shell } from "@/components/shell";
 import { UnderlineTabs } from "@/components/motion";
+import { FlowBars } from "@/components/viz";
 import { SectionCard, SectionHead } from "@/components/debtors/bits";
-import { Badge, EmptyState, Money } from "@/components/ui";
-import { InfoIcon } from "@/components/icons";
-import { computeDashboard } from "@/lib/dashboard";
+import { Badge, Button, EmptyState, Money } from "@/components/ui";
+import { ChevronLeft, ChevronRight, InfoIcon } from "@/components/icons";
+import { computeDashboard, type Activity } from "@/lib/dashboard";
 import { forecast } from "@/lib/forecast";
 import { reportRows } from "@/lib/reports";
 import { timeMachine } from "@/lib/history";
-import { addDays, dateLong, monthLabel } from "@/lib/format";
-import { sumBy } from "@/lib/money";
+import { addDays, dateLong, dateShort, monthLabel, taka } from "@/lib/format";
+import { subMoney, sumBy, toPaisa } from "@/lib/money";
 import type { FinanceData } from "@/lib/types";
 import type { ResearchData } from "@/lib/research";
 
-type Tab = "report" | "outlook" | "past";
+type Tab = "month" | "outlook" | "past";
 
 export function ReportsView({ data, research, today }: { data: FinanceData; research: ResearchData; today: string }) {
-  const [tab, setTab] = useState<Tab>("report");
+  const [tab, setTab] = useState<Tab>("month");
   return (
-    <Shell subtitle="Monthly and yearly reports, a forward-looking outlook, and what can be rebuilt for past dates.">
+    <Shell subtitle="What changed in a month: money lent out, money paid back, and what people owe you at the end.">
       <div className="border-b border-line">
-        <UnderlineTabs label="Views" value={tab} onChange={setTab} tabs={[["report", "Reports", null], ["outlook", "Outlook", null], ["past", "Time machine", null]]} />
+        <UnderlineTabs label="Views" value={tab} onChange={setTab} tabs={[["month", "By month", null], ["outlook", "Outlook", null], ["past", "Past dates", null]]} />
       </div>
       <div key={tab} className="flex animate-fade-in flex-col gap-5">
-        {tab === "report" && <Report data={data} research={research} today={today} />}
+        {tab === "month" && <MonthSummary data={data} research={research} today={today} />}
         {tab === "outlook" && <Outlook data={data} today={today} />}
         {tab === "past" && <Past data={data} research={research} today={today} />}
       </div>
@@ -33,64 +35,154 @@ export function ReportsView({ data, research, today }: { data: FinanceData; rese
   );
 }
 
-// ---- Reports -------------------------------------------------------------------------------------------------------
+// ---- One month ------------------------------------------------------------------------------------------------------
 
-const COLS = [
-  ["lentLoans", "Loans given", "Bank loans made in the period."],
-  ["lentCard", "Others' card use", "Purchases others made on your cards (incl. EMI charges). A card liability, not cash."],
-  ["ownCard", "Your card spending", "Your own purchases on your cards."],
-  ["collectedLoans", "Loan repayments", "Repayments received for loans."],
-  ["collectedCard", "Card repayments", "Repayments received for card purchases."],
-  ["creditedToBank", "Into the bank", "The part of loan repayments recorded as added to the bank. Already included in “Loan repayments” — don't add them."],
-  ["emiDue", "EMI due", "EMI installments scheduled in the period (a schedule, not money moved)."],
-  ["receivablesEnd", "Owed at end", "What people owed you at the end of the period (a balance, not a flow)."],
-  ["researchSpent", "Research spent", "Separate research ledger."],
-  ["researchContributed", "Research contributed", "Separate research ledger."],
-] as const;
+const KIND_LABEL: Record<Activity["kind"], string> = { loan: "Loan", card_other: "Card purchase", card_own: "Your card spending", repayment: "Repayment" };
 
-function Report({ data, research, today }: { data: FinanceData; research: ResearchData; today: string }) {
-  const [mode, setMode] = useState<"month" | "year">("month");
-  const rows = useMemo(() => reportRows(data, research, mode, today), [data, research, mode, today]);
-  const flows = COLS.slice(0, 5).map(([k]) => k);
+/**
+ * One selected month. Every figure comes from lib/reports (each ledger entry is counted once, in one line) and
+ * lib/history; the lines that are easy to misread say what they are.
+ */
+function MonthSummary({ data, research, today }: { data: FinanceData; research: ResearchData; today: string }) {
+  const rows = useMemo(() => reportRows(data, research, "month", today), [data, research, today]);
+  const d = useMemo(() => computeDashboard(data, today), [data, today]);
+  const [key, setKey] = useState(rows[0]?.key ?? today.slice(0, 7));
+  const [kind, setKind] = useState<"all" | "out" | "in">("all");
+  const i = rows.findIndex((r) => r.key === key);
+  const r = rows[i];
+  if (!r) return <EmptyState title="No activity yet">Once you record a loan, card purchase or repayment, each month's summary appears here.</EmptyState>;
+
+  const start = rows[i + 1]?.receivablesEnd ?? 0;
+  const lent = sumBy([r.lentLoans, r.lentCard], (x) => x);
+  const back = sumBy([r.collectedLoans, r.collectedCard], (x) => x);
+  const change = subMoney(r.receivablesEnd, start);
+  const flowChange = subMoney(lent, back);
+  const entries = d.activity.filter((a) => a.iso.startsWith(r.key) && (kind === "all" || (kind === "in" ? a.kind === "repayment" : a.kind !== "repayment")));
+  const step = (by: number) => { const k = rows[i - by]?.key; if (k) setKey(k); };
+
+  const bars = rows.slice(0, 12).reverse().map((x) => ({
+    key: x.key, label: monthLabel(x.key), short: monthLabel(x.key).split(" ")[0],
+    a: sumBy([x.lentLoans, x.lentCard], (v) => v), b: sumBy([x.collectedLoans, x.collectedCard], (v) => v),
+  }));
+
   return (
-    <SectionCard labelledBy="rep-h">
-      <SectionHead id="rep-h" title={mode === "month" ? "Monthly report" : "Yearly report"} sub="Each ledger event appears once, in one column of one period."
-        action={
-          <div role="group" aria-label="Period" className="flex rounded-lg border border-line bg-soft p-0.5">
-            {(["month", "year"] as const).map((m) => (
-              <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}
-                className={`min-h-8 rounded-md px-3 text-[13px] font-medium ${mode === m ? "bg-surface text-ink shadow-[var(--shadow-card)]" : "text-slate-500"}`}>{m === "month" ? "Monthly" : "Yearly"}</button>
-            ))}
-          </div>
-        } />
-      {rows.length ? (
+    <>
+      <section aria-label="Last 12 months" className="surface-card p-4 sm:p-5">
+        <FlowBars months={bars} selected={key} onSelect={setKey} />
+      </section>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={() => step(-1)} disabled={i >= rows.length - 1} aria-label="Previous month"><ChevronLeft size={16} /></Button>
+        <label className="sr-only" htmlFor="month-pick">Month</label>
+        <select id="month-pick" value={key} onChange={(e) => setKey(e.target.value)} className="min-h-10 rounded-lg border border-line-strong bg-surface px-3 font-display text-[22px] leading-none">
+          {rows.map((x) => <option key={x.key} value={x.key}>{monthLabel(x.key)}</option>)}
+        </select>
+        <Button variant="secondary" size="sm" onClick={() => step(1)} disabled={i <= 0} aria-label="Next month"><ChevronRight size={16} /></Button>
+        {r.key === today.slice(0, 7) && <Badge tone="info">So far · to {dateLong(today)}</Badge>}
+      </div>
+
+      <section aria-label={`${monthLabel(r.key)} at a glance`} className="grid gap-3 md:grid-cols-3">
+        <Block title="Lent out" total={lent} tone="owed" lines={[["Bank loans given", r.lentLoans], ["Other people's card purchases", r.lentCard, "Includes any EMI charges they owe. A charge on your card, not cash from the bank."]]} />
+        <Block title="Paid back to you" total={back} tone="good" lines={[["For loans", r.collectedLoans], ["For card purchases", r.collectedCard], [`… of which put into ${d.bank?.name ?? "the bank"}`, r.creditedToBank, "Part of “For loans”, not extra money — don't add it again."]]} />
+        <div className="surface-card flex flex-col gap-2 p-4">
+          <span className="eyebrow">Owed to you</span>
+          <span className="flex flex-wrap items-baseline gap-x-2"><Money value={start} tone="muted" className="text-[15px]" /><span aria-hidden="true" className="text-slate-400">→</span><Money value={r.receivablesEnd} tone="owed" className="text-figure" /></span>
+          <span className={`text-[13px] font-medium ${change > 0 ? "text-owed" : change < 0 ? "text-brand-2" : "text-slate-500"}`}>
+            {change > 0 ? `Up ${taka(change)}` : change < 0 ? `Down ${taka(change)}` : "No change"} over the month
+          </span>
+          <span className="text-[12px] text-slate-500">
+            A balance at the start and end of {monthLabel(r.key)}.{toPaisa(change) !== toPaisa(flowChange) ? ` It moved by ${taka(change)} while lent − repaid is ${taka(flowChange)}: someone paid more than they owed on one source, and an overpayment doesn't reduce what's owed elsewhere.` : " Lent out − paid back = the change."}
+          </span>
+        </div>
+      </section>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Mini label="Your own card spending" value={r.ownCard} note="Not owed to you — part of your card bill." />
+        <Mini label="EMI installments due" value={r.emiDue} note="Scheduled for this month, whether paid or not." />
+        <Mini label="Research ledger" value={null} note={`Spent ${taka(r.researchSpent)} · contributed ${taka(r.researchContributed)}. Kept separate from your money.`} />
+      </div>
+
+      <SectionCard labelledBy="mo-h">
+        <SectionHead id="mo-h" title={`Entries in ${monthLabel(r.key)}`} sub={`${entries.length} ${entries.length === 1 ? "entry" : "entries"}, newest first. Open a name for their history.`}
+          action={
+            <div role="group" aria-label="Show" className="flex gap-1">
+              {([["all", "All"], ["out", "Out"], ["in", "Repayments"]] as const).map(([k, l]) => (
+                <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}
+                  className={`min-h-9 rounded-full border px-3 text-[13px] font-medium ${kind === k ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:text-ink"}`}>{l}</button>
+              ))}
+            </div>
+          } />
+        {entries.length ? (
+          <ol className="m-0 list-none border-t border-line p-0">
+            {entries.map((a) => {
+              const sign = a.kind === "repayment" ? 1 : a.kind === "card_own" ? 0 : -1;
+              const body = (
+                <>
+                  <span className="w-14 flex-none text-[12.5px] text-slate-500">{dateShort(a.iso)}</span>
+                  <span className="min-w-0 flex-auto">
+                    <span className="flex flex-wrap items-center gap-x-2 text-[14px] font-medium">{a.name}<span className="text-[12px] font-normal text-slate-500">{KIND_LABEL[a.kind]}</span></span>
+                    <span className="block truncate text-[12.5px] text-slate-500">{a.source} · {a.detail}</span>
+                  </span>
+                  <Money value={sign * a.amount} signed={sign !== 0} tone={sign > 0 ? "good" : sign < 0 ? "owed" : "ink"} className="flex-none" />
+                </>
+              );
+              return <li key={a.id} className="border-b border-soft last:border-0">{a.personId ? <Link href={`/debtors/${a.personId}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-subtle sm:px-5">{body}</Link> : <div className="flex items-center gap-3 px-4 py-2.5 sm:px-5">{body}</div>}</li>;
+            })}
+          </ol>
+        ) : <div className="border-t border-line p-4"><EmptyState compact title="No entries">Nothing of this kind was recorded in {monthLabel(r.key)}.</EmptyState></div>}
+      </SectionCard>
+
+      <SectionCard labelledBy="all-h">
+        <SectionHead id="all-h" title="Every month" sub="Pick a month to see it above." />
         <div className="overflow-x-auto border-t border-line">
-          <table className="w-full min-w-[1100px] border-collapse text-[13px]">
-            <thead>
-              <tr className="bg-subtle text-left">
-                <th scope="col" className="sticky left-0 bg-subtle px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-slate-500">Period</th>
-                {COLS.map(([k, l, help]) => <th key={k} scope="col" title={help} className="px-3 py-2.5 text-right text-[11.5px] font-semibold uppercase tracking-[0.05em] text-slate-500">{l}</th>)}
-              </tr>
-            </thead>
+          <table className="w-full min-w-[460px] border-collapse text-[13.5px]">
+            <thead><tr className="bg-subtle text-left text-[11.5px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+              <th scope="col" className="px-4 py-2.5 sm:px-5">Month</th><th scope="col" className="px-4 py-2.5 text-right">Lent out</th>
+              <th scope="col" className="px-4 py-2.5 text-right">Paid back</th><th scope="col" className="px-4 py-2.5 text-right sm:pr-5">Owed at end</th>
+            </tr></thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.key} className="border-t border-soft">
-                  <th scope="row" className="sticky left-0 bg-surface px-4 py-2 text-left font-medium">{r.key.length === 4 ? r.key : monthLabel(r.key)}</th>
-                  {COLS.map(([k]) => <td key={k} className="px-3 py-2 text-right">{r[k] ? <Money value={r[k]} tone={k.startsWith("collected") || k === "creditedToBank" ? "good" : k === "receivablesEnd" ? "owed" : "ink"} /> : <span className="text-slate-400">—</span>}</td>)}
+              {rows.map((x) => (
+                <tr key={x.key} className={`border-t border-soft ${x.key === key ? "bg-good-tint" : ""}`}>
+                  <th scope="row" className="px-4 py-1.5 text-left font-medium sm:px-5">
+                    <button type="button" onClick={() => setKey(x.key)} aria-current={x.key === key || undefined} className="min-h-8 underline-offset-4 hover:underline">{monthLabel(x.key)}</button>
+                  </th>
+                  <td className="px-4 py-1.5 text-right"><Money value={sumBy([x.lentLoans, x.lentCard], (v) => v)} tone="muted" /></td>
+                  <td className="px-4 py-1.5 text-right"><Money value={sumBy([x.collectedLoans, x.collectedCard], (v) => v)} tone="good" /></td>
+                  <td className="px-4 py-1.5 text-right sm:pr-5"><Money value={x.receivablesEnd} tone="owed" /></td>
                 </tr>
               ))}
-              <tr className="border-t border-line-strong bg-subtle font-medium">
-                <th scope="row" className="sticky left-0 bg-subtle px-4 py-2 text-left">Total</th>
-                {COLS.map(([k]) => <td key={k} className="px-3 py-2 text-right">{(flows as readonly string[]).includes(k) || k.startsWith("research") || k === "creditedToBank" || k === "emiDue" ? <Money value={sumBy(rows, (r) => r[k])} /> : <span className="text-[11.5px] font-normal text-slate-500">balance</span>}</td>)}
-              </tr>
             </tbody>
           </table>
         </div>
-      ) : <div className="border-t border-line p-5"><EmptyState compact title="No activity yet" /></div>}
-      <dl className="m-0 grid gap-x-6 gap-y-1.5 border-t border-line p-4 text-[12px] sm:grid-cols-2 sm:p-5">
-        {COLS.map(([k, l, help]) => <div key={k}><dt className="inline font-semibold">{l}: </dt><dd className="m-0 inline text-slate-500">{help}</dd></div>)}
+      </SectionCard>
+    </>
+  );
+}
+
+function Block({ title, total, tone, lines }: { title: string; total: number; tone: "owed" | "good"; lines: [string, number, string?][] }) {
+  return (
+    <div className="surface-card flex flex-col gap-2 p-4">
+      <span className="eyebrow">{title}</span>
+      <Money value={total} tone={tone} className="text-figure" />
+      <dl className="m-0 flex flex-col gap-1 border-t border-soft pt-2 text-[13px]">
+        {lines.map(([k, v, help]) => (
+          <div key={k}>
+            <div className="flex justify-between gap-3"><dt className="text-slate-600">{k}</dt><dd className="m-0"><Money value={v} tone={v ? "ink" : "muted"} /></dd></div>
+            {help && <p className="m-0 text-[11.5px] text-slate-500">{help}</p>}
+          </div>
+        ))}
       </dl>
-    </SectionCard>
+    </div>
+  );
+}
+
+function Mini({ label, value, note }: { label: string; value: number | null; note: string }) {
+  return (
+    <div className="flex flex-col gap-0.5 rounded-xl border border-line px-4 py-3">
+      <span className="text-[12.5px] font-medium text-slate-600">{label}</span>
+      {value != null && <Money value={value} className="text-[17px]" />}
+      <span className="text-[12px] text-slate-500">{note}</span>
+    </div>
   );
 }
 

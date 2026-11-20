@@ -35,7 +35,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {/* Aurora: slow-drifting light behind every page (decorative; still under reduced motion). */}
+        <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,28 +1,37 @@
 "use client";
 
 import { useRef } from "react";
-import { taka } from "@/lib/format";
 import type { Card } from "@/lib/types";
 
-const FACES: Record<1 | 2, string> = {
-  1: "linear-gradient(135deg, #16705A 0%, #0E5A48 45%, #072E25 100%)",
-  2: "linear-gradient(135deg, #3A3833 0%, #24231F 50%, #121110 100%)",
+/**
+ * Card artwork (local SVGs in /public/cards — original illustrations in each bank's verified colours, see
+ * docs/CARD_ART.md) with the card's details set as real text on top: bank, product, masked number, cardholder.
+ * Balances and due dates are never part of the image; pages show them beside it as text.
+ * Only the last four digits are ever shown — the app has no field for a full card number or CVV.
+ *
+ * Motion (large size only): it floats gently, tilts toward the pointer and a holographic sheen follows it. Pointer
+ * position is written straight to CSS variables, so moving never re-renders React. Reduced motion: flat and still.
+ */
+const ART: Record<string, string> = {
+  "city bank": "/cards/city-bank.svg",
+  "community bank": "/cards/community-bank.svg",
 };
 
-/**
- * The card itself, drawn in CSS. It tilts toward the pointer and a sheen follows it; with reduced motion it stays flat.
- * Tilt is written straight to CSS variables, so moving the pointer never re-renders React.
- */
-export function CardVisual({ card, available }: { card: Card; available: number | null }) {
+export function cardArt(card: Pick<Card, "bank" | "slot">) {
+  return ART[card.bank.trim().toLowerCase()] ?? (card.slot === 1 ? ART["city bank"] : ART["community bank"]);
+}
+
+export function CardVisual({ card, size = "lg" }: { card: Card; size?: "sm" | "lg" }) {
+  const sm = size === "sm";
   const ref = useRef<HTMLDivElement>(null);
 
   const move = (e: React.PointerEvent) => {
     const el = ref.current;
-    if (!el || e.pointerType === "touch" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (sm || !el || e.pointerType === "touch" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const r = el.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-    el.style.setProperty("--rx", `${(0.5 - y) * 14}deg`);
-    el.style.setProperty("--ry", `${(x - 0.5) * 18}deg`);
+    el.style.setProperty("--rx", `${(0.5 - y) * 16}deg`);
+    el.style.setProperty("--ry", `${(x - 0.5) * 22}deg`);
     el.style.setProperty("--sx", `${x * 100}%`);
     el.style.setProperty("--sy", `${y * 100}%`);
     el.style.setProperty("--shine", "1");
@@ -36,43 +45,28 @@ export function CardVisual({ card, available }: { card: Card; available: number 
   };
 
   return (
-    <div className="[perspective:900px]" onPointerMove={move} onPointerLeave={leave}>
-      <div ref={ref} role="img" aria-label={`${card.bank} ${card.name}${card.last4 ? ` ending ${card.last4}` : ""}`}
-        style={{ background: FACES[card.slot] }}
-        className="relative aspect-[1.586] w-full max-w-[380px] animate-pop-in select-none overflow-hidden rounded-2xl p-[clamp(16px,5%,24px)] text-white shadow-[0_24px_48px_-20px_rgba(7,46,37,0.55),inset_0_1px_0_rgba(255,255,255,0.12)] transition-transform duration-300 ease-out [transform:rotateX(var(--rx,0deg))_rotateY(var(--ry,0deg))] [transform-style:preserve-3d]">
-        {/* Guilloché-style rings and a moving sheen. */}
-        <svg aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 size-[300px] opacity-[0.13]" viewBox="0 0 200 200" fill="none" stroke="white" strokeWidth="0.6">
-          {Array.from({ length: 14 }, (_, i) => <circle key={i} cx="100" cy="100" r={20 + i * 6} />)}
-        </svg>
-        <span aria-hidden="true" className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-          style={{ opacity: "var(--shine, 0)", background: "radial-gradient(circle at var(--sx,50%) var(--sy,50%), rgba(255,255,255,0.22), transparent 45%)" }} />
-
-        <div className="relative flex h-full flex-col justify-between [transform:translateZ(30px)]">
+    <figure className={`m-0 w-full ${sm ? "" : "card-float"}`} onPointerMove={move} onPointerLeave={leave}>
+      <div
+        ref={ref}
+        role="img"
+        aria-label={`${card.bank} ${card.network ?? "credit card"}${card.last4 ? `, card ending ${card.last4}` : ""}`}
+        className={`relative aspect-[1.586] w-full select-none overflow-hidden text-white ${sm ? "rounded-xl shadow-[0_14px_28px_-16px_rgba(10,13,19,0.7)]" : "card-3d rounded-[20px] shadow-[0_40px_70px_-30px_rgba(10,13,19,0.75),0_8px_20px_-12px_rgba(10,13,19,0.4)]"}`}
+        style={{ backgroundImage: `url(${cardArt(card)})`, backgroundSize: "cover" }}
+      >
+        {!sm && <span aria-hidden="true" className="card-holo" />}
+        <div aria-hidden="true" className={`absolute inset-0 flex flex-col justify-between ${sm ? "p-3" : "p-[clamp(16px,5.5%,26px)]"}`}>
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[clamp(13px,3.6vw,15px)] font-semibold tracking-[-0.01em]">{card.bank}</div>
-              <div className="text-[12px] text-white/60">{card.name}</div>
-            </div>
-            <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="rotate-90 text-white/70">
-              <path d="M8.5 16.5a6 6 0 0 1 0-9M12 19a10 10 0 0 0 0-14M15.5 21.5a14 14 0 0 0 0-19" />
-            </svg>
+            <span className={`min-w-0 truncate whitespace-nowrap font-semibold tracking-[-0.01em] drop-shadow-sm ${sm ? "text-[11px]" : "text-[clamp(14px,3.8vw,18px)]"}`}>{card.bank}</span>
+            {card.network && <span className={`flex-none whitespace-nowrap text-right font-medium text-white/85 ${sm ? "text-[9.5px]" : "text-[clamp(11px,3vw,13px)]"}`}>{card.network}</span>}
           </div>
-
-          <span aria-hidden="true" className="block h-[clamp(26px,8vw,34px)] w-[clamp(36px,11vw,46px)] rounded-md bg-gradient-to-br from-[#E9D8A6] via-[#C9A75A] to-[#9C7B36] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.15)]" />
-
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <div className="font-mono text-[clamp(13px,3.8vw,16px)] tracking-[0.18em] text-white/90">
-                •••• •••• •••• {card.last4 ?? "····"}
-              </div>
-              <div className="mt-1 text-[11px] uppercase tracking-[0.08em] text-white/50">
-                Available <span className="money ml-1 text-[13px] normal-case tracking-normal text-white">{available != null ? taka(available) : "—"}</span>
-              </div>
+          <div>
+            <div className={`font-mono tracking-[0.18em] text-white/95 drop-shadow-sm ${sm ? "text-[11px]" : "text-[clamp(13px,4vw,18px)]"}`}>
+              •••• •••• •••• {card.last4 ?? "····"}
             </div>
-            <div className="flex-none text-right text-[13px] font-semibold italic tracking-wide text-white/85">{card.network ?? "CARD"}</div>
+            {!sm && <div className="mt-1.5 text-[clamp(10px,2.6vw,12px)] uppercase tracking-[0.14em] text-white/65">{card.name}</div>}
           </div>
         </div>
       </div>
-    </div>
+    </figure>
   );
 }

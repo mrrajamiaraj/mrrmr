@@ -35,13 +35,12 @@ export function useViewer() {
  */
 export const TABS = [
   { href: "/account", label: "Overview", nav: "Overview", short: "Home", group: "Money", key: "b", icon: HomeIcon, primary: true },
-  { href: "/debtors", label: "Debtors & Loans", nav: "Debtors & Loans", short: "Debtors", group: "Lending", key: "d", icon: PeopleIcon, primary: true },
-  { href: "/repayments", label: "Repayment Center", nav: "Repayments", short: "Repay", group: "Lending", key: "p", icon: TrendIcon, primary: false },
-  { href: "/cards/1", label: CARD_NAMES[1], nav: "City Bank Card", short: "Card 1", group: "Credit cards", key: "1", icon: CardIcon, primary: true },
-  { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Card", short: "Card 2", group: "Credit cards", key: "2", icon: CardIcon, primary: true },
-  { href: "/reports", label: "Reports & Outlook", nav: "Reports & Outlook", short: "Reports", group: "Insight", key: "i", icon: HistoryIcon, primary: false },
-  { href: "/reconcile", label: "Reconcile & Audit", nav: "Reconcile & Audit", short: "Reconcile", group: "Insight", key: "c", icon: ShieldIcon, primary: false },
-  { href: "/research", label: "Research Finance", nav: "Research Ledger", short: "Research", group: "Ledgers", key: "r", icon: FlaskIcon, primary: true },
+  { href: "/debtors", label: "People", nav: "People & loans", short: "People", group: "Lending", key: "d", icon: PeopleIcon, primary: true },
+  { href: "/repayments", label: "Repayments", nav: "Repayments", short: "Repay", group: "Lending", key: "p", icon: TrendIcon, primary: false },
+  { href: "/cards/1", label: CARD_NAMES[1], nav: "City Bank card", short: "City", group: "Credit cards", key: "1", icon: CardIcon, primary: true },
+  { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Bank card", short: "Community", group: "Credit cards", key: "2", icon: CardIcon, primary: true },
+  { href: "/reports", label: "Monthly summary", nav: "Monthly summary", short: "Summary", group: "Records", key: "m", icon: HistoryIcon, primary: false },
+  { href: "/research", label: "Research ledger", nav: "Research ledger", short: "Research", group: "Records", key: "r", icon: FlaskIcon, primary: true },
   { href: "/settings", label: "Settings", nav: "Settings", short: "Settings", group: "Workspace", key: "s", icon: SettingsIcon, primary: false },
 ];
 type Tab = (typeof TABS)[number];
@@ -148,7 +147,7 @@ function Sidebar({ tabs, active, admin, onSearch, onHelp }: {
   const groups = [...new Set(tabs.map((t) => t.group))];
   return (
     <aside style={{ viewTransitionName: "site-rail" }} aria-label="App"
-      className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-w)] flex-col border-r border-line bg-rail lg:flex">
+      className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-w)] flex-col border-r border-line bg-rail/70 backdrop-blur-xl backdrop-saturate-150 lg:flex">
       <div className="px-5 pb-4 pt-6">
         <Link href={tabs[0].href} aria-label="MRRMR, home" className="group inline-flex rounded-lg text-[15px]">
           <Wordmark size={32} tagline />
