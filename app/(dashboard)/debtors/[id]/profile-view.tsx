@@ -11,14 +11,17 @@ import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
 import { OneSchedule } from "@/components/debtors/emi-schedule";
 import { EditPersonDialog, ExportPdfDialog, RepayDialog } from "@/components/debtors/person-dialogs";
 import { DeleteDialog } from "@/components/delete-dialog";
-import { Ring } from "@/components/viz";
+import { DateChip, Ring, TrendArea } from "@/components/viz";
+import { Donut, FlowChart, Mark, type FlowLabels } from "@/components/research-viz";
+import { CountUp, stagger } from "@/components/motion";
 import { Badge, Button, buttonClass, EmptyState, IconButton, Menu, Money } from "@/components/ui";
-import { ChevronDown, ChevronLeft, DownloadIcon, DueIcon, FileIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, CardIcon, TrendIcon } from "@/components/icons";
+import { ChevronDown, ChevronLeft, DownloadIcon, DueIcon, FileIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon, CardIcon, TrendIcon } from "@/components/icons";
 import { buildProfiles, cardLabel, cardPlanStatus, type PlanStatus } from "@/lib/ledger";
 import { computeDashboard } from "@/lib/dashboard";
 import { buildStatement, type StatementRow } from "@/lib/statement";
+import { personMonths } from "@/lib/people-stats";
 import { personItems, type DeleteItem } from "@/lib/deletion";
-import { dateLong, taka } from "@/lib/format";
+import { dateLong, monthLabel, taka } from "@/lib/format";
 import type { FinanceData } from "@/lib/types";
 
 type Show = "all" | "out" | "in";
@@ -45,8 +48,14 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [q, setQ] = useState("");
 
   const statement = useMemo(() => buildStatement(data, personId, today, { from: from || null, to: to || null }), [data, personId, today, from, to]);
+  // Month chart: always the full history (a date filter narrows the table, not the chart).
+  const months = useMemo(() => {
+    const s = buildStatement(data, personId, today, { from: null, to: null });
+    return s ? personMonths(s.rows) : [];
+  }, [data, personId, today]);
   const plans = useMemo(() => {
     const m = new Map<string, PlanStatus>();
     for (const c of data.cards) for (const [k, v] of cardPlanStatus(data, c.id)) if (v.personId === personId) m.set(k, v);
@@ -73,18 +82,36 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
   const cardName = (id: string | null) => cardLabel(data.cards.find((c) => c.id === id));
   const askDelete = (r: StatementRow) => setDeleting({ items: [{ kind: r.kind, id: r.id }], title: `Delete this ${r.type.toLowerCase()}?`, whole: false });
 
+  const ql = q.trim().toLowerCase();
+  const shownRows = ql ? rows.filter((r) => `${r.type} ${r.description} ${r.method ?? ""} ${dateLong(r.iso)} ${r.borrowed ?? ""} ${r.repaid ?? ""}`.toLowerCase().includes(ql)) : rows;
+  const maxBal = Math.max(1, ...statement.rows.map((r) => Math.abs(r.balance)));
+  const balancePoints = months.map((m) => ({ key: m.key, label: monthLabel(m.key), short: monthLabel(m.key).split(" ")[0], value: Math.max(m.running, 0) }));
+  const sources = [
+    ...(p.loanTotal > 0 ? [{ name: "Bank loans", value: p.loanOut, color: "var(--color-owed-bar)", sub: `${taka(p.loanTotal)} lent · ${taka(p.paidLoan)} repaid` }] : []),
+    ...data.cards.filter((c) => data.cardUses.some((u) => u.person_id === personId && u.card_id === c.id))
+      .map((c, i) => ({ name: cardLabel(c), value: p.cardOutByCard[c.id] ?? 0, color: i ? "#2F5583" : "#B98E81", sub: "their purchases on your card" })),
+  ];
+  const maxDue = Math.max(1, ...dues.map((o) => o.left));
+  const pickMonth = (key: string) => {
+    const [y, m] = key.split("-").map(Number);
+    const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    setFrom(`${key}-01`); setTo(`${key}-${String(last).padStart(2, "0")}`); setShow("all");
+    document.getElementById("hist-h")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const late = p.dueKind === "late" && p.owes > 0;
+
   return (
     <Shell subtitle="" hero={
-      <header className="flex flex-col gap-5 border-b border-line pb-6">
-        <Link href="/debtors" className="inline-flex min-h-8 w-fit items-center gap-1 rounded-md text-[13px] text-slate-500 hover:text-ink"><ChevronLeft size={15} />People</Link>
+      <header className="flex flex-col gap-5">
+        <Link href="/debtors" className="group inline-flex min-h-8 w-fit items-center gap-1 rounded-md text-[13px] text-slate-500 hover:text-ink"><ChevronLeft size={15} className="transition-transform group-hover:-translate-x-0.5" />People &amp; loans</Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
-            <span title={`${p.pct}% repaid`}><Ring pct={p.taken ? p.pct : 0} size={72} stroke={4}><Avatar text={p.initials} size={56} /></Ring></span>
+            <span title={`${p.pct}% repaid`} className="animate-pop-in"><Ring pct={p.taken ? p.pct : 0} size={72} stroke={4} color={late ? "var(--color-bad)" : "var(--color-brand-2)"}><Avatar text={p.initials} size={56} /></Ring></span>
             <div className="min-w-0">
               <h1 className="m-0 break-words font-display text-title font-normal">{p.name}</h1>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
                 <StatusPill status={p.status} />
-                {p.dueKind === "late" && p.owes > 0 && <Badge tone="bad"><DueIcon size={12} />Overdue</Badge>}
+                {late && <Badge tone="bad"><DueIcon size={12} />Overdue</Badge>}
                 <span>{[person.relation, person.phone].filter(Boolean).join(" · ") || "No contact details"}</span>
               </div>
             </div>
@@ -114,46 +141,90 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
           </div>
         </div>
 
-        <section aria-label="Totals" className="surface-card grid grid-cols-2 overflow-hidden md:grid-cols-4 [&>*]:border-line max-md:[&>*:nth-child(2n)]:border-l max-md:[&>*:nth-child(n+3)]:border-t md:[&>*+*]:border-l">
-          <Fig label="Total borrowed" value={<Money value={p.taken} className="text-figure" />} note={`${p.loanCount} ${p.loanCount === 1 ? "loan" : "loans"} · ${p.cardCount} card ${p.cardCount === 1 ? "purchase" : "purchases"}`} />
-          <Fig label="Total repaid" value={<Money value={p.paid} tone="good" className="text-figure" />} note={`${p.payCount} ${p.payCount === 1 ? "payment" : "payments"}`} />
-          <Fig label="Outstanding" value={<Money value={p.owes} tone={p.owes ? "owed" : "muted"} className="text-figure" />}
-            note={p.owes ? `${p.pct}% repaid` : "All paid back"} bar={p.taken ? Math.min(p.pct, 100) : null} />
-          <Fig label="Next due" value={<span className={`text-[20px] font-medium leading-tight ${p.dueKind === "late" && p.owes > 0 ? "text-bad" : ""}`}>{p.owes > 0 && p.due ? dateLong(p.due) : "—"}</span>}
-            note={p.owes <= 0 ? "Nothing owed" : !p.due ? "No due date set" : p.dueKind === "late" ? "Overdue" : p.dueKind === "soon" ? "Within 7 days" : "Upcoming"} />
+        <section aria-label={`${p.name} at a glance`} className="deck grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
+          <div className="flex min-w-0 flex-col gap-5">
+            <div className="flex flex-col gap-1">
+              <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/60">{p.owes ? "Owes you now" : "Balance"}</span>
+              <span className={`money text-[clamp(36px,5.5vw,56px)] font-medium leading-none tracking-[-0.03em] ${late ? "text-[#FFA08F]" : p.owes ? "text-[#F0C77E]" : "text-[#7DD4B8]"}`}>
+                <CountUp value={p.owes} format={taka} duration={1400} intro />
+              </span>
+              <span className="text-[12.5px] text-white/55">{p.owes ? `${p.pct}% of ${taka(p.taken)} paid back` : p.taken ? "Everything is paid back" : "Nothing borrowed yet"}</span>
+              {p.taken > 0 && (
+                <span aria-hidden="true" className="mt-2 flex h-2.5 max-w-[420px] gap-[2px] overflow-hidden rounded-full bg-white/10">
+                  <span className="bar-fill h-full rounded-l-full bg-gradient-to-r from-[#3DAA80] to-[#7DD4B8]" style={{ width: `${Math.min(p.pct, 100)}%` }} />
+                  {p.owes > 0 && <span className="bar-fill h-full rounded-r-full" style={{ width: `${100 - Math.min(p.pct, 100)}%`, background: late ? "#FFA08F" : "#E8C27A", animationDelay: "150ms" }} />}
+                </span>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="deck-tile flex flex-col gap-1 p-4">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Borrowed</span>
+                <span className="money text-[20px] leading-tight text-white"><CountUp value={p.taken} format={taka} duration={1300} intro /></span>
+                <span className="text-[12px] text-white/55">{p.loanCount} {p.loanCount === 1 ? "loan" : "loans"} · {p.cardCount} card</span>
+              </div>
+              <div className="deck-tile flex flex-col gap-1 p-4">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Repaid</span>
+                <span className="money text-[20px] leading-tight text-[#7DD4B8]"><CountUp value={p.paid} format={taka} duration={1300} intro /></span>
+                <span className="text-[12px] text-white/55">{p.payCount} {p.payCount === 1 ? "payment" : "payments"}</span>
+              </div>
+              <div className="deck-tile flex flex-col gap-1 p-4">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Next due</span>
+                <span className={`text-[17px] font-medium leading-tight ${late ? "text-[#FFA08F]" : "text-white"}`}>{p.owes > 0 && p.due ? dateLong(p.due) : "—"}</span>
+                <span className="text-[12px] text-white/55">{p.owes <= 0 ? "Nothing owed" : !p.due ? "No due date set" : late ? "Overdue" : p.dueKind === "soon" ? "Within 7 days" : "Upcoming"}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex min-w-0 flex-col justify-center">
+            {balancePoints.length > 1
+              ? <TrendArea dark color={late ? "#FFA08F" : "#E8C27A"} title="What they owed at each month end" points={balancePoints} />
+              : <p className="m-0 text-[13px] text-white/55">A balance chart appears once there are entries in more than one month.</p>}
+          </div>
         </section>
       </header>
     }>
       <Flash text={flash} />
+
+      {months.length > 0 && (
+        <SectionCard labelledBy="mon-h">
+          <SectionHead id="mon-h" title="Month by month" sub="Borrowed and repaid in each month, with what they owed at the month's end. Click a month to show only its entries below." />
+          <div className="border-t border-line px-4 py-4 sm:px-5">
+            <FlowChart months={months} onSelect={pickMonth} selected={from && from.slice(0, 7) === to.slice(0, 7) ? from.slice(0, 7) : undefined} labels={PERSON_LABELS} />
+          </div>
+        </SectionCard>
+      )}
 
       {(dues.length > 0 || p.owes > 0) && (
         <div className="grid items-start gap-5 lg:grid-cols-2">
           <SectionCard labelledBy="due-h">
             <SectionHead id="due-h" title="Coming up" sub="What's still to pay, earliest first. A repayment clears the earliest item first." />
             {dues.length ? (
-              <ul className="m-0 list-none border-t border-line p-0">
-                {dues.slice(0, 6).map((o) => (
-                  <li key={o.key} className="flex items-center justify-between gap-3 border-b border-soft px-4 py-2.5 last:border-0 sm:px-5">
-                    <span className="min-w-0 text-[13.5px]">
-                      <span className={`font-medium ${o.status === "overdue" ? "text-bad" : ""}`}>{o.iso ? dateLong(o.iso) : "No due date"}</span>
-                      <span className="block truncate text-[12.5px] text-slate-500">{o.source === "loan" ? "Bank loan" : cardName(o.cardId)}{o.emi ? " · EMI installment" : ""}{o.status === "overdue" ? " · overdue" : o.status === "week" ? " · due this week" : ""}</span>
+              <ol className="relative m-0 list-none border-t border-line px-4 py-2 sm:px-5">
+                <span aria-hidden="true" className="absolute bottom-5 left-[39px] top-5 w-px bg-gradient-to-b from-line-strong via-line to-transparent sm:left-[43px]" />
+                {dues.slice(0, 8).map((o, i) => (
+                  <li key={o.key} style={stagger(i, 60)} className="relative flex animate-fade-up items-center gap-3 py-2">
+                    <span className="relative z-10 rounded-xl bg-surface"><DateChip iso={o.iso} today={today} size="sm" /></span>
+                    <span className="min-w-0 flex-auto">
+                      <span className="flex items-baseline justify-between gap-3 text-[13.5px]">
+                        <span className={`truncate font-medium ${o.status === "overdue" ? "text-bad" : ""}`}>{o.source === "loan" ? "Bank loan" : cardName(o.cardId)}{o.emi ? " · EMI" : ""}</span>
+                        <Money value={o.left} tone={o.status === "overdue" ? "bad" : "owed"} />
+                      </span>
+                      <span aria-hidden="true" className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-soft">
+                        <span className={`bar-fill block h-full rounded-full ${o.status === "overdue" ? "bg-bad/80" : "bg-owed-bar"}`} style={{ width: `${(o.left / maxDue) * 100}%`, animationDelay: `${i * 60 + 150}ms` }} />
+                      </span>
                     </span>
-                    <Money value={o.left} tone={o.status === "overdue" ? "bad" : "owed"} />
                   </li>
                 ))}
-                {dues.length > 6 && <li className="px-4 py-2 text-[12.5px] text-slate-500 sm:px-5">+ {dues.length - 6} later</li>}
-              </ul>
+                {dues.length > 8 && <li className="py-2 pl-14 text-[12.5px] text-slate-500">+ {dues.length - 8} later</li>}
+              </ol>
             ) : <div className="border-t border-line p-4"><EmptyState compact title="No due dates">What they owe has no due dates set.</EmptyState></div>}
           </SectionCard>
           <SectionCard labelledBy="src-h">
             <SectionHead id="src-h" title="Where it's owed" sub="Bank loans and each card are kept apart. A repayment goes to the one you choose." />
-            <ul className="m-0 list-none border-t border-line p-0">
-              <Source label="Bank loans" note={`${taka(p.loanTotal)} lent · ${taka(p.paidLoan)} repaid`} value={p.loanOut} />
-              {data.cards.map((c) => {
-                const used = data.cardUses.some((u) => u.person_id === personId && u.card_id === c.id);
-                return used ? <Source key={c.id} label={cardLabel(c)} note="Their purchases on your card" value={p.cardOutByCard[c.id] ?? 0} /> : null;
-              })}
-            </ul>
+            <div className="border-t border-line px-4 py-4 sm:px-5">
+              {sources.some((s) => s.value > 0)
+                ? <Donut title="What they owe, by source" centerLabel="Owes" slices={sources} size={170} />
+                : <EmptyState compact title="Nothing owed">Every source is paid back.</EmptyState>}
+            </div>
           </SectionCard>
         </div>
       )}
@@ -169,6 +240,10 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
             </div>
           } />
         <div className="flex flex-wrap items-end gap-3 border-t border-line px-4 py-3 sm:px-5">
+          <label className="flex min-h-10 min-w-0 flex-[1_1_200px] items-center gap-2 self-end rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2">
+            <SearchIcon size={15} className="text-slate-500" /><span className="sr-only">Search history</span>
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search reason, method, amount" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
+          </label>
           <label className="flex flex-col gap-1 text-[12.5px] font-medium text-slate-600">From
             <input type="date" value={from} max={to || today} onChange={(e) => setFrom(e.target.value)} className="min-h-10 rounded-lg border border-line-strong bg-surface px-2.5 text-[14px] text-ink" />
           </label>
@@ -176,7 +251,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
             <input type="date" value={to} min={from || undefined} max={today} onChange={(e) => setTo(e.target.value)} className="min-h-10 rounded-lg border border-line-strong bg-surface px-2.5 text-[14px] text-ink" />
           </label>
           {filtered && <Button variant="quiet" size="sm" onClick={() => { setFrom(""); setTo(""); }}>Clear dates</Button>}
-          <span role="status" className="ml-auto text-[12.5px] text-slate-500">{rows.length} {rows.length === 1 ? "entry" : "entries"}{filtered ? " in range" : ""}</span>
+          <span role="status" className="ml-auto text-[12.5px] text-slate-500">{shownRows.length} {shownRows.length === 1 ? "entry" : "entries"}{filtered ? " in range" : ""}{ql ? " matching" : ""}</span>
         </div>
 
         <div className="overflow-x-auto border-t border-line">
@@ -192,17 +267,17 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
                 <th scope="col" className="w-12"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody key={`${show}|${from}|${to}|${ql}`}>
               {filtered && to && (
                 <tr className="border-b border-soft bg-subtle/60"><td className={`${TD} text-slate-500`} colSpan={5}>Balance at {dateLong(to)}</td><td data-label="Balance" className={`${TD} money text-right`}>{bal(statement.closing)}</td><td /></tr>
               )}
-              {rows.map((r) => {
+              {shownRows.map((r, k) => {
                 const plan = r.kind === "card_use" ? plans.get(r.id) : undefined;
                 const expandable = !!plan && plan.of > 0;
                 const isOpen = open === r.id;
                 return (
                   <Fragment key={r.id}>
-                    <tr className="border-b border-soft align-top">
+                    <tr style={stagger(k, 25, 450)} className="animate-fade-up border-b border-soft align-top">
                       <td className={`${TD} whitespace-nowrap text-slate-600`}>{dateLong(r.iso)}</td>
                       <td data-label="Entry" className={TD}>
                         <span className="flex flex-col items-end gap-0.5 text-right sm:items-start sm:text-left">
@@ -210,7 +285,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
                             <Badge tone={r.repaid != null ? "good" : r.kind === "loan" ? "neutral" : "info"} className="text-[11px]">{r.type}</Badge>
                             {plan?.plan === "emi" && <Badge tone="info" className="text-[11px]">EMI {plan.paidCount}/{plan.of}</Badge>}
                           </span>
-                          <span className="text-[13px] text-slate-600">{r.description}</span>
+                          <span className="text-[13px] text-slate-600"><Mark text={r.description} q={q} /></span>
                           {expandable && (
                             <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : r.id)}
                               className="inline-flex min-h-8 items-center gap-1 rounded-md text-[12.5px] font-medium text-brand-2 hover:underline">
@@ -222,7 +297,14 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
                       <td data-label="Method" className={`${TD} text-slate-600`}>{r.method ?? <span className="text-slate-400">—</span>}</td>
                       <td data-label="Borrowed" className={`${TD} money text-right`}>{r.borrowed != null ? taka(r.borrowed) : <span className="text-slate-400 max-sm:hidden">—</span>}</td>
                       <td data-label="Repaid" className={`${TD} money text-right text-brand-2`}>{r.repaid != null ? taka(r.repaid) : <span className="text-slate-400 max-sm:hidden">—</span>}</td>
-                      <td data-label="Balance" className={`${TD} money text-right`}>{bal(r.balance)}</td>
+                      <td data-label="Balance" className={`${TD} text-right`}>
+                        <span className="inline-flex flex-col items-end gap-1">
+                          <span className="money">{bal(r.balance)}</span>
+                          <span aria-hidden="true" className="block h-1 w-16 overflow-hidden rounded-full bg-soft max-sm:hidden">
+                            <span className={`bar-fill ml-auto block h-full rounded-full ${r.balance < 0 ? "bg-brand-2" : "bg-owed-bar"}`} style={{ width: `${Math.max((Math.abs(r.balance) / maxBal) * 100, 3)}%`, transformOrigin: "right", animationDelay: `${Math.min(k * 25, 450) + 120}ms` }} />
+                          </span>
+                        </span>
+                      </td>
                       <td className="stack-corner px-2 py-2 text-right">
                         {!viewer && <IconButton size={36} label={`Delete ${r.type.toLowerCase()} of ${taka(r.borrowed ?? r.repaid ?? 0)} on ${dateLong(r.iso)}`} onClick={() => askDelete(r)} className="text-slate-400 hover:bg-bad-tint hover:text-bad"><TrashIcon size={16} /></IconButton>}
                       </td>
@@ -236,8 +318,8 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
               {filtered && from && (
                 <tr className="border-b border-soft bg-subtle/60"><td className={`${TD} text-slate-500`} colSpan={5}>Opening balance, before {dateLong(from)}</td><td data-label="Opening balance" className={`${TD} money text-right`}>{bal(statement.opening)}</td><td /></tr>
               )}
-              {!rows.length && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">{statement.rows.length || !filtered ? (filtered || show !== "all" ? "No entries match." : "Nothing recorded for this person yet.") : "No entries in this date range."}</td></tr>
+              {!shownRows.length && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">{statement.rows.length || !filtered ? (filtered || show !== "all" || ql ? "No entries match." : "Nothing recorded for this person yet.") : "No entries in this date range."}</td></tr>
               )}
             </tbody>
           </table>
@@ -274,24 +356,8 @@ const TH = "px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] 
 const TD = "px-4 py-3";
 const bal = (n: number) => (n < 0 ? `${taka(n)} credit` : taka(n));
 
-function Fig({ label, value, note, bar }: { label: string; value: React.ReactNode; note: string; bar?: number | null }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1 px-4 py-4 sm:px-5">
-      <span className="eyebrow">{label}</span>
-      {value}
-      {bar != null && (
-        <span aria-hidden="true" className="mt-1 h-1.5 overflow-hidden rounded-full bg-soft"><span className="bar-fill block h-full rounded-full bg-brand-2" style={{ width: `${bar}%` }} /></span>
-      )}
-      <span className="text-[12px] text-slate-500">{note}</span>
-    </div>
-  );
-}
-
-function Source({ label, note, value }: { label: string; note: string; value: number }) {
-  return (
-    <li className="flex items-center justify-between gap-3 border-b border-soft px-4 py-3 last:border-0 sm:px-5">
-      <span className="min-w-0"><span className="block text-[14px] font-medium">{label}</span><span className="text-[12.5px] text-slate-500">{note}</span></span>
-      <Money value={value} tone={value ? "owed" : "muted"} className="text-[16px]" />
-    </li>
-  );
-}
+/** The month chart for one person: borrowed (brass), repaid (jade), balance owed at month end (blue line). */
+const PERSON_LABELS: FlowLabels = {
+  a: "Borrowed", b: "Repaid", line: "Owed at month end", lineNote: "What they owed at each month end", net: "Repaid − borrowed",
+  count: (n) => `${n} ${n === 1 ? "entry" : "entries"}`, colors: { a: "var(--color-owed-bar)", b: "var(--color-chart-in)", line: "var(--color-info)" },
+};

@@ -88,6 +88,25 @@ export function dailyTotals(expenses: ResearchExpense[]) {
   return map;
 }
 
+/** The exportable sections of the Research ledger (lib/research-pdf renders them; kept here so pages can name them
+ * without pulling the PDF library into the browser). */
+export const RESEARCH_SECTIONS = ["expenses", "contributions", "settlement", "facilities", "monthly", "all"] as const;
+export type ResearchSection = (typeof RESEARCH_SECTIONS)[number];
+export const SECTION_TITLE: Record<ResearchSection, string> = {
+  expenses: "Expenses", contributions: "Contributions", settlement: "Settlement",
+  facilities: "By facility & member", monthly: "By month", all: "Full report",
+};
+
+/** The Expenses list's filters. One definition, used by the page and by the PDF export, so both show the same rows. */
+export type ExpenseFilter = { q?: string; fac?: string; mem?: string; month?: string; day?: string };
+
+export function filterExpenses(expenses: ResearchExpense[], f: ExpenseFilter, dateText: (iso: string) => string = (x) => x) {
+  const ql = (f.q ?? "").trim().toLowerCase();
+  return expenses.filter((e) =>
+    (!f.fac || e.facility === f.fac) && (!f.mem || e.member === f.mem) && (!f.month || e.spent_on.startsWith(f.month)) && (!f.day || e.spent_on === f.day) &&
+    (!ql || `${e.facility} ${e.member} ${e.description} ${e.tag ?? ""} ${dateText(e.spent_on)} ${e.spent_on} ${e.amount}`.toLowerCase().includes(ql)));
+}
+
 export type MemberBalance = { name: string; contributed: number; spent: number; net: number; logs: number; share: number };
 
 /** Each member's contributions against what they paid for. Shares are of all contributions, % to 1 decimal. */

@@ -9,7 +9,7 @@ import { renderStatementPdf, renderEveryonePdf, balanceText } from "../lib/pdf.t
 
 const TODAY = "2026-11-19";
 const person = (id, name) => ({ id, name, relation: null, phone: null, notes: null });
-const card = { id: "c1", slot: 1, bank: "City Bank", name: "Demo", network: null, last4: "4242", credit_limit: 200000, balance: 0, pay_by: null, updated_at: "" };
+const card = { id: "c1", slot: 1, bank: "City Bank", name: "Test card", network: null, last4: "4242", credit_limit: 200000, balance: 0, pay_by: null, updated_at: "" };
 const loan = (o) => ({ id: "l1", person_id: "p1", account_id: "a1", amount: 1000, taken_on: "2026-01-01", reason: "Rent", method: "Bank transfer", due_on: null, created_at: "2026-01-01T00:00:00Z", ...o });
 const use = (o) => ({ id: "u1", card_id: "c1", person_id: "p1", amount: 1000, used_on: "2026-01-02", reason_or_place: "Phone", category: "Electronics", due_on: null, pay_plan: "full", emi_months: null, created_at: "2026-01-02T00:00:00Z", ...o });
 const rep = (o) => ({ id: "r1", person_id: "p1", amount: 100, paid_on: "2026-01-05", via: "Cash", applies_to: "loan", card_id: null, account_id: null, created_at: "2026-01-05T00:00:00Z", ...o });

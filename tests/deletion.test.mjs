@@ -7,7 +7,7 @@ import { deletionImpact, personItems } from "../lib/deletion.ts";
 const TODAY = "2026-11-19";
 const person = (id, name) => ({ id, name, relation: null, phone: null, notes: null });
 const account = { id: "a1", name: "City Bank", holder_name: null, balance: 50000, debit_used: 0, updated_at: "" };
-const card = { id: "c1", slot: 1, bank: "City Bank", name: "Demo", network: null, last4: null, credit_limit: 100000, balance: 20000, pay_by: null, updated_at: "" };
+const card = { id: "c1", slot: 1, bank: "City Bank", name: "Test card", network: null, last4: null, credit_limit: 100000, balance: 20000, pay_by: null, updated_at: "" };
 const loan = (o) => ({ id: "l1", person_id: "p1", account_id: "a1", amount: 5000, taken_on: "2026-01-01", reason: "Rent", method: "Bank transfer", due_on: null, created_at: "2026-01-01T00:00:00Z", ...o });
 const use = (o) => ({ id: "u1", card_id: "c1", person_id: "p1", amount: 3000, used_on: "2026-01-02", reason_or_place: "Phone", category: "Other", due_on: "2026-02-01", pay_plan: "full", emi_months: null, created_at: "2026-01-02T00:00:00Z", ...o });
 const rep = (o) => ({ id: "r1", person_id: "p1", amount: 1000, paid_on: "2026-01-05", via: "Bank transfer", applies_to: "loan", card_id: null, account_id: "a1", created_at: "2026-01-05T00:00:00Z", ...o });

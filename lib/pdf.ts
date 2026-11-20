@@ -44,13 +44,13 @@ export function periodText(s: Pick<Statement, "from" | "to" | "generatedOn" | "r
 }
 
 /** Characters the standard font can't encode (e.g. Bangla script) become "?" instead of failing the whole export. */
-function safeText(font: PDFFont) {
+export function safeText(font: PDFFont) {
   const ok = new Set(font.getCharacterSet());
   return (s: string) => [...s.replace(/−/g, "-").replace(/[–—]/g, "-")].map((ch) => (ok.has(ch.codePointAt(0)!) ? ch : "?")).join("");
 }
 
 /** Splits text into at most `max` lines that fit `width`; the last line gets an ellipsis when cut. */
-function wrap(text: string, font: PDFFont, size: number, width: number, max = 2): string[] {
+export function wrap(text: string, font: PDFFont, size: number, width: number, max = 2): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let cur = "";

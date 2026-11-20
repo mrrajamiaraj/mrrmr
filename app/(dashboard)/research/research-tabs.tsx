@@ -11,7 +11,7 @@ import { useViewer } from "@/components/shell";
 import { Badge } from "@/components/ui";
 import { CONTRIB, CalendarHeat, Diverging, Donut, FlowChart, Heatmap, Mark, SPENT } from "@/components/research-viz";
 import { facilityLook, memberLook, type ResearchContribution, type ResearchExpense } from "@/lib/research";
-import { breakdown, dailyTotals, matrix, memberBalances, monthlyFlow } from "@/lib/research-stats";
+import { breakdown, dailyTotals, filterExpenses, matrix, memberBalances, monthlyFlow } from "@/lib/research-stats";
 import { sumBy } from "@/lib/money";
 import { dateLong, initials, monthLabel, taka } from "@/lib/format";
 
@@ -142,10 +142,8 @@ export function LedgerTab({ expenses, facilities, members, setDialog, filter, se
   const months = [...new Set(expenses.map((e) => e.spent_on.slice(0, 7)))].sort().reverse();
   const byFacility = useMemo(() => breakdown(expenses, (e) => e.facility, (e) => e.amount, facilities), [expenses, facilities]);
   const days = useMemo(() => dailyTotals(expenses), [expenses]);
-  const ql = q.trim().toLowerCase();
-  const rows = expenses
-    .filter((e) => (!fac || e.facility === fac) && (!mem || e.member === mem) && (!month || e.spent_on.startsWith(month)) && (!day || e.spent_on === day))
-    .filter((e) => !ql || `${e.facility} ${e.member} ${e.description} ${e.tag ?? ""} ${dateLong(e.spent_on)} ${e.spent_on} ${e.amount}`.toLowerCase().includes(ql))
+  // The same filter function as the PDF export (lib/research-stats), so the list and its PDF always match.
+  const rows = filterExpenses(expenses, filter, dateLong)
     .sort((a, b) =>
       sort.key === "date"
         ? sort.dir * (a.spent_on.localeCompare(b.spent_on) || a.created_at.localeCompare(b.created_at))

@@ -40,17 +40,15 @@ pay-by passed → Needs attention + card page; possible duplicate people, overpa
 | `next build` | succeeds |
 | `npm audit --omit=dev` | 0 vulnerabilities (adds `pdf-lib@1.17.1`) |
 | PDF (unit) | empty, short, multi-page (header on every page, every row once, "Page i of n"), date-filtered (opening balance row), non-Latin names |
-| PDF (visual) | synthetic samples in `docs/portfolio/` rendered and read back |
 | `supabase/tests/delete_records_rollback.sql` on the live DB, rolled back | **10/10 true**: bank restored exactly when "yes", card untouched when "no", person removed, other person's purchase kept, repeat refused & changes nothing, a batch with one bad id deletes nothing, another person's record can't be slipped in. Afterwards: no test rows, no function left behind. |
 | Migration 0013 | applied with approval; `SECURITY INVOKER`, `anon` cannot execute, `authenticated` can |
 | Signed-out access | `/export/pdf`, `/debtors/[id]`, `/account` → 307 to sign-in; view mode can't open `/export/pdf` (unit test) |
 
 ## 4. Not done / limitations (stated plainly)
-* **No browser testing of the redesigned signed-in screens, and no screenshots.** It needed a separate demo user so
-  that no real records appear on screen; none was created, and testing was skipped by choice. So these are **not
-  verified in a browser**: the new layouts at 320–1440 px, keyboard paths through the new dialogs, contrast of new
-  combinations, the PDF download from the UI, and the delete dialog end-to-end. `supabase/seed/demo_seed.sql`
-  (synthetic data, refuses to touch the main account) is ready for when a demo user exists.
+* **No browser testing of the redesigned signed-in screens, and no screenshots.** Testing was skipped by choice so
+  that no real records appear on screen. So these are **not verified in a browser**: the new layouts at 320–1440 px,
+  keyboard paths through the new dialogs, contrast of new combinations, the PDF download from the UI, and the delete
+  dialog end-to-end. (The demo seed and sample PDFs were removed on 2026-11-21 at the owner's request.)
 * Whether a legacy entry changed a balance is still not stored; the delete dialog asks rather than guesses.
 * The PDF uses the standard Helvetica font: amounts are "BDT", and non-Latin letters (e.g. Bangla) print as "?".
 * Official card art isn't used (rights not confirmed) — see `docs/CARD_ART.md`.

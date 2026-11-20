@@ -2,8 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Shell, useViewer } from "@/components/shell";
-import { CheckIcon, DownloadIcon, EyeIcon, FlaskIcon, HistoryIcon, InIcon, OutIcon, PeopleIcon, PlusIcon, TrendIcon } from "@/components/icons";
-import { Badge, Button } from "@/components/ui";
+import { CheckIcon, ChevronDown, DownloadIcon, EyeIcon, FileIcon, FlaskIcon, HistoryIcon, InIcon, OutIcon, PeopleIcon, PlusIcon, TrendIcon } from "@/components/icons";
+import { Badge, Button, Menu } from "@/components/ui";
+import { SECTION_TITLE, type ResearchSection } from "@/lib/research-stats";
 import { subMoney, sumBy, toPaisa } from "@/lib/money";
 import { ErrorBox, Modal, btnDanger, btnGhost, btnPrimary } from "@/components/modal";
 import { CountUp, Spinner } from "@/components/motion";
@@ -19,6 +20,7 @@ import { addDays, addMonths, dateLong, taka, todayIso } from "@/lib/format";
 import { AnalyticsTab, ContributionsTab, LedgerTab, MonthlyTab, NO_FILTER, SettlementTab, takaDec, type DialogState, type LedgerFilter } from "./research-tabs";
 
 type Tab = "ledger" | "contributions" | "settlement" | "analytics" | "monthly";
+const TAB_SECTION: Record<Tab, ResearchSection> = { ledger: "expenses", contributions: "contributions", settlement: "settlement", analytics: "facilities", monthly: "monthly" };
 type Preset = "all" | "month" | "3m" | "6m" | "12m" | "year";
 
 const PRESETS: [Preset, string][] = [["all", "All time"], ["month", "This month"], ["3m", "3 months"], ["6m", "6 months"], ["12m", "12 months"], ["year", "This year"]];
@@ -60,6 +62,14 @@ export function ResearchView({ data }: { data: ResearchData }) {
   const rangeText = from || to ? `${from ? dateLong(from) : "the start"} – ${to ? dateLong(to) : "today"}` : "all time";
 
   const openLedger = (f: Partial<LedgerFilter>) => { setLedger({ ...NO_FILTER, ...f }); setTab("ledger"); };
+  /** One section as a PDF for the current date range (plus, for expenses, the list's filters). */
+  const pdfHref = (section: ResearchSection, extra: Partial<LedgerFilter> = {}) => {
+    const q = new URLSearchParams({ section });
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    for (const [k, v] of Object.entries(extra)) if (v) q.set(k, v);
+    return `/research/export/pdf?${q}`;
+  };
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode; count?: number | null }[] = [
     { key: "ledger", label: "Expenses", icon: <OutIcon size={15} />, count: expenses.length },
@@ -194,12 +204,31 @@ export function ResearchView({ data }: { data: ResearchData }) {
           <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">To
             <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
         </div>
-        <a href={exportHref} download className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-info-line bg-info-tint px-3 text-[13px] font-medium text-info transition-transform hover:-translate-y-0.5"><DownloadIcon size={14} />Export CSV</a>
+        <div className="ml-auto">
+          <Menu label="Export" align="end" triggerClass="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-info-line bg-info-tint px-3 text-[13px] font-medium text-info transition-transform hover:-translate-y-0.5"
+            trigger={<><DownloadIcon size={14} />Export<ChevronDown size={13} /></>}
+            items={[
+              ...(["expenses", "contributions", "settlement", "facilities", "monthly"] as const).map((s) => ({
+                kind: "link" as const, label: `${SECTION_TITLE[s]} (PDF)`, icon: <FileIcon size={16} />, href: pdfHref(s), download: true,
+              })),
+              { kind: "link" as const, label: "Full report (PDF)", icon: <FileIcon size={16} />, href: pdfHref("all"), download: true },
+              { kind: "separator" as const },
+              { kind: "link" as const, label: "All records (CSV)", icon: <DownloadIcon size={16} />, href: exportHref, download: true },
+            ]} />
+        </div>
       </div>
 
       <PillTabs label="Research views" tabs={tabs} value={tab} onChange={setTab} />
 
       <Flash text={flash} />
+
+      {/* The current view as a PDF — exactly what's shown (for Expenses, with the list's search and filters). */}
+      <div className="-mb-2 flex flex-wrap items-center justify-end gap-2 sm:-mb-3">
+        <a key={tab} href={tab === "ledger" ? pdfHref("expenses", ledger) : pdfHref(TAB_SECTION[tab])} download
+          className="inline-flex min-h-9 animate-pop-in items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-[13px] font-medium shadow-[var(--shadow-card)] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]">
+          <FileIcon size={14} className="text-bad" />Export {tab === "ledger" && (ledger.q || ledger.fac || ledger.mem || ledger.month || ledger.day) ? "these expenses" : SECTION_TITLE[TAB_SECTION[tab]].toLowerCase()} (PDF)
+        </a>
+      </div>
 
       <div key={`${tab}|${from}|${to}`} className="flex animate-fade-up flex-col gap-5 sm:gap-6">
         {tab === "ledger" && <LedgerTab expenses={expenses} facilities={facilities} members={members} setDialog={setDialog} filter={ledger} setFilter={setLedger} end={to && to < today ? to : today} />}
