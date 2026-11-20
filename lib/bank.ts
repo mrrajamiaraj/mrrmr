@@ -7,7 +7,7 @@
 //   • Loan made from the account — recorded, but whether it was deducted from the balance was never stored.
 // What it CANNOT tell us (so it is never shown as a movement): manual balance edits, individual debit-card entries
 // (only a running total exists), and any money moved outside the app.
-import { sumBy } from "./money.ts";
+import { subMoney, sumBy } from "./money.ts";
 import type { FinanceData } from "./types.ts";
 
 export type BankMovement = {
@@ -121,7 +121,7 @@ export function loanLedger(data: FinanceData, personId: string, accountId: strin
   ].sort((a, b) => a.iso.localeCompare(b.iso) || (a.kind === b.kind ? 0 : a.kind === "loan" ? -1 : 1) || a.created.localeCompare(b.created));
   let owes = 0;
   return rows.map(({ created: _c, ...r }) => {
-    owes = r.kind === "loan" ? sumBy([owes, r.amount], (x) => x) : sumBy([owes, -r.amount], (x) => x);
+    owes = r.kind === "loan" ? sumBy([owes, r.amount], (x) => x) : subMoney(owes, r.amount);
     return { ...r, owes };
   });
 }

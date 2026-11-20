@@ -31,6 +31,8 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
   const [adding, setAdding] = useState<{ mode: "loan" } | { mode: "card"; cardId: string } | null>(null);
   const [picking, setPicking] = useState(false);
   const [repaying, setRepaying] = useState<string | null>(null);
+  // Opened from the bank section: the repayment is for bank loans only (like a card page only takes that card's).
+  const [bankOnly, setBankOnly] = useState(false);
   const [flash, setFlash] = useState("");
 
   const d = useMemo(() => computeDashboard(data, today), [data, today]);
@@ -81,7 +83,10 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
         </div>
       </section>
 
-      <div className="reveal"><BankBorrowers data={data} accountId={account.id} accountName={account.name} profiles={profiles} today={today} /></div>
+      <div className="reveal">
+        <BankBorrowers data={data} accountId={account.id} accountName={account.name} balance={account.balance} open={d.open} profiles={profiles} today={today}
+          viewer={viewer} onRepay={(id) => { setBankOnly(true); setRepaying(id); }} onAdd={() => setAdding({ mode: "loan" })} />
+      </div>
 
       {adding?.mode === "loan" && (
         <AddDebtorDialog mode="loan" title={`Add loan — ${account.name}`} account={acct} knownNames={data.people.map((p) => p.name)}
@@ -94,10 +99,10 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
       )}
       {picking && (
         <RepayPicker people={profiles.filter((p) => p.owes > 0).map((p) => ({ id: p.id, name: p.name, owes: p.owes, status: p.status }))}
-          onClose={() => setPicking(false)} onPick={(id) => { setPicking(false); setRepaying(id); }} />
+          onClose={() => setPicking(false)} onPick={(id) => { setPicking(false); setBankOnly(false); setRepaying(id); }} />
       )}
       {rp && (
-        <RepayDialog p={rp} targets={repayTargets(rp, data.cards)} account={acct}
+        <RepayDialog p={rp} targets={repayTargets(rp, data.cards).filter((t) => !bankOnly || t.appliesTo === "loan")} account={acct}
           onClose={() => setRepaying(null)} onSaved={(t) => { setRepaying(null); setFlash(t); }} />
       )}
     </Shell>

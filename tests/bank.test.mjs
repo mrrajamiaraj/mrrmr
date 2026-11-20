@@ -44,3 +44,32 @@ test("bankBorrowers: who took money from this account, with each loan; other-sou
   assert.equal(b[0].loans[0].due, "2026-12-01");
   assert.ok(!b.some((x) => x.loans.some((l) => l.id === "l2")), "a loan not from this account is not listed");
 });
+
+test("bankOutlook: overdue first, then each due date, then undated; running balance exact; cards and others left out", async () => {
+  const { bankOutlook } = await import("../lib/bank.ts");
+  const T = "2026-11-21";
+  const open = [
+    { source: "loan", personId: "p1", name: "Rahim", iso: "2026-12-05", left: 0.2 },
+    { source: "loan", personId: "p2", name: "Karim", iso: "2026-11-01", left: 100 },
+    { source: "loan", personId: "p1", name: "Rahim", iso: "2026-10-01", left: 0.1 },
+    { source: "loan", personId: "p2", name: "Karim", iso: null, left: 50 },
+    { source: "loan", personId: "p2", name: "Karim", iso: "2026-12-05", left: 0.1 },
+    { source: "card", personId: "p1", name: "Rahim", iso: "2026-12-01", left: 999 },
+    { source: "loan", personId: "p9", name: "Not from this account", iso: "2026-12-01", left: 777 },
+  ];
+  const o = bankOutlook(1000, open, ["p1", "p2"], T);
+  assert.deepEqual(o.steps.map((s) => [s.kind, s.iso, s.amount, s.balance]), [
+    ["overdue", null, 100.1, 1100.1], ["dated", "2026-12-05", 0.3, 1100.4], ["undated", null, 50, 1150.4],
+  ]);
+  assert.deepEqual(o.steps[1].people.map((p) => [p.name, p.amount]), [["Rahim", 0.2], ["Karim", 0.1]]);
+  assert.deepEqual([o.now, o.expected, o.after], [1000, 150.4, 1150.4]);
+  assert.deepEqual(bankOutlook(5, [], [], T), { now: 5, expected: 0, after: 5, steps: [] });
+});
+
+test("loanLedger: loans and loan repayments in date order with a running total; card repayments left out", async () => {
+  const { loanLedger } = await import("../lib/bank.ts");
+  const lines = loanLedger({ ...d, repayments: [...d.repayments, { id: "rc", person_id: "p1", amount: 5, paid_on: "2026-11-03", via: "Cash", applies_to: "card", card_id: "c", account_id: null, created_at: "9" }] }, "p1", "a1");
+  assert.deepEqual(lines.map((l) => [l.id, l.kind, l.viaAccount, l.owes]), [
+    ["l1", "loan", true, 5000], ["l2", "loan", false, 5999], ["r1", "repayment", true, 3999], ["r2", "repayment", true, 3998.9], ["r3", "repayment", true, 3998.7], ["r4", "repayment", false, 3298.7],
+  ]);
+});
