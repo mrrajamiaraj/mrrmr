@@ -1,68 +1,73 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { HeaderButton, Shell } from "@/components/shell";
-import { Figure, Statement } from "@/components/balance-editor";
-import { DownloadIcon, PlusIcon } from "@/components/icons";
-import { Badge } from "@/components/ui";
+import { useMemo, useState, useTransition } from "react";
+import { Shell, useViewer } from "@/components/shell";
+import { CheckIcon, DownloadIcon, EyeIcon, FlaskIcon, HistoryIcon, InIcon, OutIcon, PeopleIcon, PlusIcon, TrendIcon } from "@/components/icons";
+import { Badge, Button } from "@/components/ui";
 import { subMoney, sumBy, toPaisa } from "@/lib/money";
 import { ErrorBox, Modal, btnDanger, btnGhost, btnPrimary } from "@/components/modal";
-import { Spinner, UnderlineTabs } from "@/components/motion";
+import { CountUp, Spinner } from "@/components/motion";
 import { Flash } from "@/components/debtors/bits";
+import { PillTabs, RaceChart, Sparkline } from "@/components/research-viz";
 import { deleteContribution, deleteExpense, saveContribution, saveExpense } from "@/lib/research-actions";
 import {
   CONTRIBUTION_NOTES, DEFAULT_FACILITIES, DEFAULT_MEMBERS, mergeNames,
   type ResearchContribution, type ResearchData, type ResearchExpense,
 } from "@/lib/research";
-import { dateLong, taka, todayIso } from "@/lib/format";
-import { AnalyticsTab, ContributionsTab, LedgerTab, MonthlyTab, SettlementTab, takaDec, type DialogState } from "./research-tabs";
+import { cumulative, monthlyFlow } from "@/lib/research-stats";
+import { addDays, addMonths, dateLong, taka, todayIso } from "@/lib/format";
+import { AnalyticsTab, ContributionsTab, LedgerTab, MonthlyTab, NO_FILTER, SettlementTab, takaDec, type DialogState, type LedgerFilter } from "./research-tabs";
 
 type Tab = "ledger" | "contributions" | "settlement" | "analytics" | "monthly";
+type Preset = "all" | "month" | "3m" | "6m" | "12m" | "year";
+
+const PRESETS: [Preset, string][] = [["all", "All time"], ["month", "This month"], ["3m", "3 months"], ["6m", "6 months"], ["12m", "12 months"], ["year", "This year"]];
+function presetRange(p: Preset, today: string): { from: string; to: string } {
+  if (p === "month") return { from: `${today.slice(0, 7)}-01`, to: "" };
+  if (p === "year") return { from: `${today.slice(0, 4)}-01-01`, to: "" };
+  if (p === "all") return { from: "", to: "" };
+  return { from: addDays(addMonths(today, -Number(p.replace("m", ""))), 1), to: "" };
+}
 
 export function ResearchView({ data }: { data: ResearchData }) {
+  const viewer = useViewer();
+  const today = todayIso();
   const [tab, setTab] = useState<Tab>("ledger");
   const [dialog, setDialog] = useState<DialogState>(null);
   const [flash, setFlash] = useState("");
+  const [ledger, setLedger] = useState<LedgerFilter>(NO_FILTER);
 
   // Date range applies to every view, the totals, the reconciliation and the export.
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const inRange = (iso: string) => (!from || iso >= from) && (!to || iso <= to);
-  const expenses = data.expenses.filter((e) => inRange(e.spent_on));
-  const contributions = data.contributions.filter((c) => inRange(c.paid_on));
-  const facilities = mergeNames(DEFAULT_FACILITIES, data.expenses.map((e) => e.facility));
-  const members = mergeNames(DEFAULT_MEMBERS, [...data.expenses.map((e) => e.member), ...data.contributions.map((c) => c.member)]);
+  const expenses = useMemo(() => data.expenses.filter((e) => (!from || e.spent_on >= from) && (!to || e.spent_on <= to)), [data.expenses, from, to]);
+  const contributions = useMemo(() => data.contributions.filter((c) => (!from || c.paid_on >= from) && (!to || c.paid_on <= to)), [data.contributions, from, to]);
+  const facilities = useMemo(() => mergeNames(DEFAULT_FACILITIES, data.expenses.map((e) => e.facility)), [data.expenses]);
+  const members = useMemo(() => mergeNames(DEFAULT_MEMBERS, [...data.expenses.map((e) => e.member), ...data.contributions.map((c) => c.member)]), [data.expenses, data.contributions]);
+  const flow = useMemo(() => monthlyFlow(expenses, contributions), [expenses, contributions]);
 
   const totalExp = sumBy(expenses, (e) => e.amount);
   const totalCon = sumBy(contributions, (c) => c.amount);
   const net = subMoney(totalCon, totalExp);
   // Reconciliation: every member's contributed and spent must add up to the ledger totals (to the paisa).
-  const perMember = members.map((m) => ({
-    m, con: sumBy(contributions.filter((c) => c.member === m), (c) => c.amount), exp: sumBy(expenses.filter((e) => e.member === m), (e) => e.amount),
-  }));
-  const reconciled = toPaisa(sumBy(perMember, (x) => x.con)) === toPaisa(totalCon) && toPaisa(sumBy(perMember, (x) => x.exp)) === toPaisa(totalExp);
+  const perCon = sumBy(members, (m) => sumBy(contributions.filter((c) => c.member === m), (c) => c.amount));
+  const perExp = sumBy(members, (m) => sumBy(expenses.filter((e) => e.member === m), (e) => e.amount));
+  const reconciled = toPaisa(perCon) === toPaisa(totalCon) && toPaisa(perExp) === toPaisa(totalExp);
   const exportHref = `/research/export${from || to ? `?${new URLSearchParams({ ...(from && { from }), ...(to && { to }) })}` : ""}`;
   const avg = expenses.length ? totalExp / expenses.length : 0;
   const peak = expenses.reduce((m, e) => Math.max(m, e.amount), 0);
+  const preset = PRESETS.find(([p]) => { const r = presetRange(p, today); return r.from === from && r.to === to; })?.[0];
+  const rangeText = from || to ? `${from ? dateLong(from) : "the start"} – ${to ? dateLong(to) : "today"}` : "all time";
 
-  const tabs: [Tab, string, number | null][] = [
-    ["ledger", "Expenses", expenses.length],
-    ["contributions", "Contributions", contributions.length],
-    ["settlement", "Settlement", null],
-    ["analytics", "By facility & member", null],
-    ["monthly", "By month", null],
+  const openLedger = (f: Partial<LedgerFilter>) => { setLedger({ ...NO_FILTER, ...f }); setTab("ledger"); };
+
+  const tabs: { key: Tab; label: string; icon: React.ReactNode; count?: number | null }[] = [
+    { key: "ledger", label: "Expenses", icon: <OutIcon size={15} />, count: expenses.length },
+    { key: "contributions", label: "Contributions", icon: <InIcon size={15} />, count: contributions.length },
+    { key: "settlement", label: "Settlement", icon: <PeopleIcon size={15} /> },
+    { key: "analytics", label: "By facility & member", icon: <TrendIcon size={15} /> },
+    { key: "monthly", label: "By month", icon: <HistoryIcon size={15} /> },
   ];
-
-  const actions = (
-    <>
-      <HeaderButton variant="outline" onClick={() => setDialog({ kind: "contribution", row: null })}>
-        <PlusIcon size={15} />Record contribution
-      </HeaderButton>
-      <HeaderButton onClick={() => setDialog({ kind: "expense", row: null })}>
-        <PlusIcon size={15} />Add expense
-      </HeaderButton>
-    </>
-  );
 
   const subtitle = "Clinical research spending, who paid for it, and how the team settles up.";
 
@@ -81,47 +86,129 @@ export function ResearchView({ data }: { data: ResearchData }) {
     );
   }
 
+  const cover = totalExp ? (totalCon / totalExp) * 100 : totalCon ? 100 : 0;
+  const spark = flow.slice(-12);
+
+  const hero = (
+    <header className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0 max-w-[720px]">
+          <div className="eyebrow flex items-center gap-2">
+            <FlaskIcon size={14} className="text-brand-2" />Records
+            {viewer && <Badge tone="info" className="ml-1 normal-case tracking-normal"><EyeIcon size={12} />View only</Badge>}
+          </div>
+          <h1 className="m-0 mt-2 font-display text-title font-normal text-ink">Research ledger</h1>
+          <p className="m-0 mt-2 text-[14.5px] text-slate-500">{subtitle}</p>
+        </div>
+        {!viewer && (
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <Button variant="secondary" onClick={() => setDialog({ kind: "contribution", row: null })} className="flex-auto sm:flex-none"><PlusIcon size={15} />Record contribution</Button>
+            <Button onClick={() => setDialog({ kind: "expense", row: null })} className="shine flex-auto sm:flex-none"><PlusIcon size={15} />Add expense</Button>
+          </div>
+        )}
+      </div>
+
+      <section aria-label="Research ledger at a glance" className="deck grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-5">
+          <div className="flex flex-wrap items-center gap-5">
+            {/* Coverage ring: how much of the spending the contributions cover. */}
+            <div className="relative grid size-[118px] flex-none place-items-center">
+              <span aria-hidden="true" className="viz-breathe absolute inset-2 rounded-full" style={{ background: `radial-gradient(closest-side, ${net < 0 ? "rgba(255,160,143,0.35)" : "rgba(125,212,184,0.35)"}, transparent)` }} />
+              <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden="true">
+                <defs>
+                  <linearGradient id="rs-cover" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#92B5E8" /><stop offset="1" stopColor={net < 0 ? "#FFA08F" : "#7DD4B8"} />
+                  </linearGradient>
+                </defs>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="9" />
+                <circle cx="60" cy="60" r="52" fill="none" stroke="url(#rs-cover)" strokeWidth="9" strokeLinecap="round"
+                  pathLength={100} strokeDasharray="100" className="viz-sweep" style={{ ["--to" as string]: 100 - Math.min(cover, 100) }} />
+              </svg>
+              <span className="relative flex flex-col items-center text-white">
+                <span className="money text-[24px] leading-none"><CountUp value={Math.round(cover)} format={(n) => `${Math.round(n)}%`} duration={1400} intro /></span>
+                <span className="mt-1 text-[10.5px] uppercase tracking-[0.1em] text-white/55">covered</span>
+              </span>
+            </div>
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/60">{net < 0 ? "Short by" : "Left over"} · {rangeText}</span>
+              <span className={`money text-[clamp(36px,5.5vw,56px)] font-medium leading-none tracking-[-0.03em] ${net < 0 ? "text-[#FFA08F]" : "text-white"}`}>
+                <CountUp value={Math.abs(net)} format={taka} duration={1400} intro />
+              </span>
+              <span className="text-[12.5px] text-white/55">{net < 0 ? "Contributions don't cover the spending yet." : net > 0 ? "Contributions cover all the spending." : "Contributions exactly match the spending."}</span>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <button type="button" onClick={() => setTab("ledger")} className="deck-tile group flex flex-col gap-1 p-4 text-left transition-colors">
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55"><OutIcon size={13} className="text-[#E8C27A]" />Spent</span>
+              <span className="money text-[22px] leading-tight text-[#F0C77E]"><CountUp value={totalExp} format={taka} duration={1300} intro /></span>
+              <span className="text-[12px] text-white/55">{expenses.length} expenses</span>
+              <Sparkline values={spark.map((m) => m.spent)} color="#E8C27A" width={140} height={28} className="mt-1 w-full max-w-[140px]" />
+            </button>
+            <button type="button" onClick={() => setTab("contributions")} className="deck-tile group flex flex-col gap-1 p-4 text-left transition-colors">
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55"><InIcon size={13} className="text-[#92B5E8]" />Contributed</span>
+              <span className="money text-[22px] leading-tight text-[#B9D0F2]"><CountUp value={totalCon} format={taka} duration={1300} intro /></span>
+              <span className="text-[12px] text-white/55">{contributions.length} member payments</span>
+              <Sparkline values={spark.map((m) => m.contributed)} color="#92B5E8" width={140} height={28} className="mt-1 w-full max-w-[140px]" />
+            </button>
+            <button type="button" onClick={() => setTab("analytics")} className="deck-tile group flex flex-col gap-1 p-4 text-left transition-colors">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Average expense</span>
+              <span className="money text-[22px] leading-tight text-white"><CountUp value={avg} format={(n) => takaDec(Math.round(n * 100) / 100)} duration={1300} intro /></span>
+              <span className="text-[12px] text-white/55">Largest {taka(peak)}</span>
+              <span aria-hidden="true" className="mt-2 block h-1.5 overflow-hidden rounded-full bg-white/10">
+                <span className="bar-fill block h-full rounded-full bg-gradient-to-r from-[#7DD4B8] to-[#E8C27A]" style={{ width: `${peak ? Math.max((avg / peak) * 100, 3) : 0}%` }} />
+              </span>
+              <span className="text-[10.5px] text-white/45">average as a share of the largest</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-center">
+          {flow.length ? <RaceChart points={cumulative(flow)} /> : <p className="m-0 text-[13px] text-white/55">Nothing recorded in this period yet.</p>}
+        </div>
+
+        <p role="status" className={`m-0 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/10 pt-4 text-[12.5px] lg:col-span-2 ${reconciled ? "text-white/65" : "font-medium text-[#FFA08F]"}`}>
+          <span className="rounded-full border border-[#92B5E8]/40 bg-[#92B5E8]/10 px-2 py-0.5 text-[11px] font-semibold text-[#B9D0F2]">Separate ledger</span>
+          {reconciled ? <CheckIcon size={14} className="text-[#7DD4B8]" /> : "⚠"}
+          {reconciled ? "Reconciled:" : "Doesn't reconcile:"} members&apos; contributions add up to {taka(perCon)} and their spending to {taka(perExp)}.
+          <span className="text-white/45">Team research money only — not part of your bank, cards or loans.</span>
+        </p>
+      </section>
+    </header>
+  );
+
   return (
-    <Shell subtitle={subtitle} actions={actions}>
-      {/* Its own ledger: never mixed with personal bank, loan or card figures. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-info-line bg-info-tint px-4 py-3">
-        <Badge tone="info">Separate ledger</Badge>
-        <span className="min-w-0 flex-auto text-[13px] text-slate-700">Team research money only — not part of your bank, cards or loans.</span>
-        <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">From
-          <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
-        <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">To
-          <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
-        {(from || to) && <button type="button" onClick={() => { setFrom(""); setTo(""); }} className="text-[13px] font-medium text-info underline underline-offset-2">All dates</button>}
-        <a href={exportHref} download className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-info-line bg-surface px-3 text-[13px] font-medium text-info hover:bg-subtle"><DownloadIcon size={14} />Export CSV</a>
+    <Shell subtitle={subtitle} hero={hero}>
+      <div className="surface-card flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+        <div role="group" aria-label="Quick date range" className="flex flex-wrap gap-1.5">
+          {PRESETS.map(([p, label]) => (
+            <button key={p} type="button" aria-pressed={preset === p} onClick={() => { const r = presetRange(p, today); setFrom(r.from); setTo(r.to); }}
+              className={`min-h-9 rounded-full border px-3 text-[13px] font-medium transition-[background-color,color,border-color,transform] duration-200 active:scale-95 ${preset === p ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:border-line-strong hover:text-ink"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">From
+            <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
+          <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">To
+            <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
+        </div>
+        <a href={exportHref} download className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-info-line bg-info-tint px-3 text-[13px] font-medium text-info transition-transform hover:-translate-y-0.5"><DownloadIcon size={14} />Export CSV</a>
       </div>
 
-      <Statement label="Key figures" cols={4}>
-        <Figure label="Spent" value={totalExp} note={`${expenses.length} expenses`} />
-        <Figure label="Contributed" value={totalCon} note={`${contributions.length} member payments`} />
-        <Figure label={net < 0 ? "Short by" : "Left over"} value={net} tone={net < 0 ? "owed" : "good"}
-          note={net < 0 ? "Contributions don't cover spending yet" : "Contributions cover all spending"} />
-        <Figure label="Average expense" value={takaDec(Math.round(avg * 100) / 100)} note={`Largest ${taka(peak)}`} />
-      </Statement>
-
-      <p role="status" className={`m-0 -mt-2 flex items-center gap-1.5 text-[12.5px] ${reconciled ? "text-slate-500" : "font-medium text-bad"}`}>
-        {reconciled ? "✓ Reconciled:" : "⚠ Doesn't reconcile:"} members' contributions add up to {taka(sumBy(perMember, (x) => x.con))} and their spending to {taka(sumBy(perMember, (x) => x.exp))}
-        {from || to ? ` (${from ? dateLong(from) : "start"} – ${to ? dateLong(to) : "today"})` : ""}.
-      </p>
-
-      <div className="border-b border-line">
-        <UnderlineTabs label="Research views" tabs={tabs} value={tab} onChange={setTab} />
-      </div>
+      <PillTabs label="Research views" tabs={tabs} value={tab} onChange={setTab} />
 
       <Flash text={flash} />
 
-      <div key={tab} className="flex animate-fade-in flex-col gap-5 sm:gap-6">
-        {tab === "ledger" && <LedgerTab expenses={expenses} facilities={facilities} members={members} setDialog={setDialog} />}
+      <div key={`${tab}|${from}|${to}`} className="flex animate-fade-up flex-col gap-5 sm:gap-6">
+        {tab === "ledger" && <LedgerTab expenses={expenses} facilities={facilities} members={members} setDialog={setDialog} filter={ledger} setFilter={setLedger} end={to && to < today ? to : today} />}
         {tab === "contributions" && <ContributionsTab contributions={contributions} members={members} setDialog={setDialog} />}
         {tab === "settlement" && (
           <SettlementTab expenses={expenses} contributions={contributions} members={members} totalExp={totalExp} totalCon={totalCon} setDialog={setDialog} />
         )}
-        {tab === "analytics" && <AnalyticsTab expenses={expenses} facilities={facilities} members={members} totalExp={totalExp} onSettlement={() => setTab("settlement")} />}
-        {tab === "monthly" && <MonthlyTab expenses={expenses} />}
+        {tab === "analytics" && <AnalyticsTab expenses={expenses} facilities={facilities} members={members} onSettlement={() => setTab("settlement")} onOpenLedger={openLedger} />}
+        {tab === "monthly" && <MonthlyTab expenses={expenses} contributions={contributions} facilities={facilities} members={members} onOpenLedger={openLedger} />}
       </div>
 
       {dialog?.kind === "expense" && (

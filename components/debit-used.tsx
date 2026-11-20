@@ -28,13 +28,13 @@ export function DebitUsed({ accountId, total }: { accountId: string; total: numb
 
   return (
     <section
-      aria-label="City Mastercard debit card"
+      aria-label="City Bank AMEX debit card"
       className="spot grid overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-card)] md:grid-cols-2 [&>*]:border-line [&>*+*]:border-t md:[&>*+*]:border-l md:[&>*+*]:border-t-0"
     >
       {!viewer && (
         <div className="flex flex-col gap-2 px-4 py-4 sm:px-5">
           <label className="flex flex-col gap-1.5">
-            <span className="caption">City Mastercard debit card — now used</span>
+            <span className="caption">City Bank AMEX debit card — now used</span>
             <span className="flex min-h-11 items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2 focus-within:shadow-[var(--shadow-focus)]">
               <span aria-hidden="true" className="money text-slate-500">৳</span>
               <input
@@ -55,7 +55,7 @@ export function DebitUsed({ accountId, total }: { accountId: string; total: numb
         </div>
       )}
       <BalanceEditor
-        label="City Mastercard debit card — total used"
+        label="City Bank AMEX debit card — total used"
         inputLabel="New total used (৳)"
         value={total}
         footnote="Every amount entered in now used, added up"

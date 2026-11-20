@@ -69,8 +69,8 @@ export const DUE_PILL: Record<DueKind, string> = {
 
 /** Display names for the two card slots (routes stay /cards/1 and /cards/2). */
 export const CARD_NAMES: Record<1 | 2, string> = {
-  1: "City Bank Credit Card",
-  2: "Community Bank Credit Card",
+  1: "City Bank American Express Gold Credit Card",
+  2: "Community Bank Visa Platinum Credit Card",
 };
 
 export function cardLabel(card: Card | undefined) {

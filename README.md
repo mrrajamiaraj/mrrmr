@@ -24,7 +24,6 @@ dates are Asia/Dhaka. Read-only **view mode** shows the Research ledger only.
 | `/debtors`, `/debtors/[id]` | People (search, status filters, sort by amount owed or due date) and each person's profile: totals, history with running balance and date range, Export PDF, Actions → Delete data |
 | `/repayments` | Repayments: overdue, due soon, recent collections, quick record, data checks |
 | `/cards/1`, `/cards/2` | Card artwork + what you owe, pay-by, your share vs others', upcoming payments, EMI plans, transactions (filters, detail drawer with EMI schedule) |
-| `/reports` | Monthly summary (one month at a time), Outlook, Past dates |
 | `/export/pdf?id=…[&from&to]` | A4 PDF statement for one person (admin only) |
 | `/research`, `/research/export` | Research ledger (separate from personal finance) and its CSV — the only pages view mode may open |
 | `/settings` | Landing page, density, paisa display, default chart range |

@@ -1,7 +1,7 @@
 "use client";
 
 // The City Bank section's two graphic panels: the account balance (a dark jade "deck" with the figure counting up and
-// an inline editor) and the City Mastercard debit tally (drawn as a debit card, with the quick "now used" entry).
+// an inline editor) and the City Bank AMEX debit card tally (drawn as the debit card, with the quick "now used" entry).
 // Same actions and rules as before: setAccountBalance, addDebitUse, setDebitUsed. Display only otherwise.
 
 import { useState, useTransition } from "react";
@@ -54,7 +54,7 @@ export function BankBalancePanel({ account }: { account: Account }) {
           <span aria-hidden="true" className="grid size-10 place-items-center rounded-xl border border-white/15 bg-white/10 text-[#7DD4B8]"><BankIcon size={20} /></span>
           <span className="leading-tight">
             <span className="block text-[15px] font-semibold">{account.name}</span>
-            <span className="block text-[12px] text-white/55">{account.holder_name ?? "Savings account"}</span>
+            <span className="block text-[12px] text-white/55">High Saving General Account{account.holder_name ? ` · ${account.holder_name}` : ""}</span>
           </span>
         </span>
         {!viewer && !editing && (
@@ -75,7 +75,18 @@ export function BankBalancePanel({ account }: { account: Account }) {
   );
 }
 
-/** The City Mastercard debit tally, drawn as the debit card itself; "now used" adds to the running total. */
+/** A many-pointed star outline (the debit card's line pattern), as polygon points around (cx, cy). */
+function starPoints(cx: number, cy: number, outer: number, inner: number, n: number) {
+  return Array.from({ length: n * 2 }, (_, i) => {
+    const r = i % 2 ? inner : outer;
+    const a = (Math.PI * i) / n - Math.PI / 2;
+    return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
+  }).join(" ");
+}
+const STAR_A = starPoints(40, 125, 300, 70, 7);
+const STAR_B = starPoints(40, 125, 230, 95, 7);
+
+/** The City Bank AMEX debit card tally, drawn as the debit card itself; "now used" adds to the running total. */
 export function DebitCardPanel({ account }: { account: Account }) {
   const viewer = useViewer();
   const [draft, setDraft] = useState("");
@@ -94,22 +105,34 @@ export function DebitCardPanel({ account }: { account: Account }) {
   };
 
   return (
-    <section aria-label="City Mastercard debit card"
-      className="relative isolate flex min-h-[220px] flex-col justify-between gap-5 overflow-hidden rounded-[18px] p-5 text-white shadow-[0_30px_60px_-30px_rgba(10,13,19,0.7)] sm:p-6"
-      style={{ background: "linear-gradient(135deg, #2E2A2B 0%, #231F20 55%, #121011 100%)" }}>
-      {/* City Bank red sweep, a card chip and contactless waves (card cues only — no network logo). */}
-      <span aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 -z-10 h-[260px] w-[420px] rotate-[-18deg] rounded-[50%] bg-[radial-gradient(closest-side,rgba(242,8,35,0.55),transparent)]" />
-      <svg aria-hidden="true" className="pointer-events-none absolute right-5 top-16 -z-10 opacity-90" width="76" height="34" viewBox="0 0 76 34" fill="none">
-        <defs><linearGradient id="dchip" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#EAD9A8" /><stop offset=".5" stopColor="#C8A65A" /><stop offset="1" stopColor="#9B7A36" /></linearGradient></defs>
-        <rect x="0" y="2" width="42" height="30" rx="6" fill="url(#dchip)" />
-        <path d="M0 13h16M26 13h16M0 21h16M26 21h16M21 2v30" stroke="#7E6128" strokeOpacity=".55" strokeWidth="1.2" />
-        <g stroke="#fff" strokeOpacity=".7" strokeWidth="2.4" strokeLinecap="round"><path d="M52 11a9 9 0 0 1 0 12" /><path d="M58 7a15 15 0 0 1 0 20" /><path d="M64 3a21 21 0 0 1 0 28" /></g>
+    <section aria-label="City Bank AMEX debit card"
+      className="relative isolate flex min-h-[220px] flex-col justify-between gap-5 overflow-hidden rounded-[18px] p-5 text-white shadow-[0_30px_60px_-30px_rgba(20,21,58,0.85)] sm:p-6"
+      style={{ background: "linear-gradient(135deg, #26296A 0%, #1F2157 55%, #15163F 100%)" }}>
+      {/* Original illustration in the style of the City Bank AMEX debit card: deep navy, a blue star-and-ring line
+          pattern that turns slowly, a silver chip, contactless waves and a red accent (card cues only — no logos). */}
+      <svg aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 h-full w-full" viewBox="0 0 400 250" preserveAspectRatio="xMinYMid slice" fill="none">
+        <circle cx="40" cy="125" r="190" stroke="#17184A" strokeWidth="16" />
+        <g className="debit-star">
+          <polygon points={STAR_A} stroke="#2B45A8" strokeWidth="9" strokeLinejoin="miter" opacity="0.85" />
+          <polygon points={STAR_B} stroke="#1E3A8F" strokeWidth="7" opacity="0.7" />
+        </g>
+        <circle cx="40" cy="125" r="62" stroke="#2B45A8" strokeWidth="8" opacity="0.85" />
+      </svg>
+      <span aria-hidden="true" className="pointer-events-none absolute -right-10 -top-16 -z-10 h-[180px] w-[260px] rounded-[50%] bg-[radial-gradient(closest-side,rgba(237,28,36,0.28),transparent)]" />
+      <svg aria-hidden="true" className="pointer-events-none absolute right-5 top-16 -z-10" width="80" height="36" viewBox="0 0 80 36" fill="none">
+        <defs><linearGradient id="dchip" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#F4F5F7" /><stop offset=".45" stopColor="#C9CDD4" /><stop offset=".7" stopColor="#EEF0F3" /><stop offset="1" stopColor="#9EA3AC" /></linearGradient></defs>
+        <rect x="0.5" y="2.5" width="42" height="31" rx="6" fill="url(#dchip)" stroke="#1B1C2E" strokeOpacity=".5" />
+        <path d="M0 13h14M28 13h14M0 23h14M28 23h14M14 3c3 4 3 26 0 30M28 3c-3 4-3 26 0 30" stroke="#3A3D4A" strokeOpacity=".55" strokeWidth="1.2" />
+        <g stroke="#C9CDD4" strokeWidth="2.6" strokeLinecap="round"><path d="M55 12a8 8 0 0 1 0 12" /><path d="M61 8a14 14 0 0 1 0 20" /><path d="M67 4a20 20 0 0 1 0 28" /></g>
       </svg>
 
       <div className="flex items-start justify-between gap-3">
-        <span className="leading-tight">
-          <span className="block text-[15px] font-semibold">City Mastercard</span>
-          <span className="block text-[12px] text-white/55">Debit card · spending tally</span>
+        <span className="flex items-start gap-2.5 leading-tight">
+          <span aria-hidden="true" className="mt-0.5 h-8 w-[5px] flex-none -skew-x-[18deg] rounded-sm bg-[#ED1C24]" />
+          <span>
+            <span className="block text-[15px] font-semibold">City Bank AMEX Debit Card</span>
+            <span className="block text-[12px] text-white/60">American Express debit card · spending tally</span>
+          </span>
         </span>
         {!viewer && !editing && (
           <button type="button" onClick={() => setEditing(true)} aria-label="Edit the debit card total used"

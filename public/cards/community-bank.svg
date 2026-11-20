@@ -1,50 +1,58 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540" role="img" aria-label="Community Bank credit card illustration">
-  <!-- MRRMR original illustration (not official card art). Colours from Community Bank Bangladesh's website:
-       blue #058ED0, navy #32327B (communitybankbd.com, read 2026-11-19). Platinum-tone lines for the product tier.
-       No logos or trademarks. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540" role="img" aria-label="Community Bank Visa Platinum credit card illustration">
+  <!-- MRRMR original illustration (not official card art) for the Community Bank Visa Platinum credit card: black
+       brushed metal with a fine diagonal texture, sweeping silver curves, a soft light sheen, a silver chip and
+       contactless waves, and a small Community Bank blue (#058ED0) accent. No logos, wordmarks or trademarks. -->
   <defs>
     <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#3A3A8C"/>
-      <stop offset="0.5" stop-color="#32327B"/>
-      <stop offset="1" stop-color="#1C1C4D"/>
+      <stop offset="0" stop-color="#3A3D42"/>
+      <stop offset="0.45" stop-color="#232528"/>
+      <stop offset="1" stop-color="#121315"/>
     </linearGradient>
-    <linearGradient id="wash" x1="0" y1="0" x2="1" y2="0.6">
-      <stop offset="0" stop-color="#058ED0" stop-opacity="0"/>
-      <stop offset="0.6" stop-color="#058ED0" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#20A6E6" stop-opacity="0.85"/>
-    </linearGradient>
-    <linearGradient id="plat" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#E9EDF2" stop-opacity="0"/>
-      <stop offset="0.5" stop-color="#E9EDF2" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#E9EDF2" stop-opacity="0.1"/>
+    <pattern id="brush" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+      <rect width="6" height="6" fill="none"/>
+      <path d="M0 0 V6" stroke="#FFFFFF" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="light" cx="0.62" cy="0.55" r="0.55">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E9ECF0" stop-opacity="0.05"/>
+      <stop offset="0.5" stop-color="#E9ECF0" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#E9ECF0" stop-opacity="0.08"/>
     </linearGradient>
     <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#F1F3F6"/>
-      <stop offset="0.5" stop-color="#C3C9D2"/>
-      <stop offset="1" stop-color="#8E96A3"/>
+      <stop offset="0.5" stop-color="#B9BEC7"/>
+      <stop offset="1" stop-color="#7E8591"/>
+    </linearGradient>
+    <linearGradient id="tab" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#058ED0" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#32327B" stop-opacity="0.9"/>
     </linearGradient>
     <clipPath id="r"><rect width="856" height="540" rx="38"/></clipPath>
   </defs>
   <g clip-path="url(#r)">
     <rect width="856" height="540" fill="url(#base)"/>
-    <path d="M380 -20 C 520 160, 640 260, 900 300 L 900 -20 Z" fill="url(#wash)"/>
-    <g fill="none" stroke="url(#plat)" stroke-width="1.6">
-      <path d="M-20 430 C 180 360, 420 470, 880 330"/>
-      <path d="M-20 450 C 180 380, 420 490, 880 350"/>
-      <path d="M-20 470 C 180 400, 420 510, 880 370"/>
-      <path d="M-20 490 C 180 420, 420 530, 880 390"/>
-      <path d="M-20 510 C 180 440, 420 550, 880 410"/>
+    <rect width="856" height="540" fill="url(#brush)"/>
+    <rect width="856" height="540" fill="url(#light)"/>
+    <!-- Sweeping silver curves -->
+    <g fill="none" stroke="url(#silver)">
+      <path d="M210 -20 C 120 160, 160 360, 520 560" stroke-width="2.4"/>
+      <path d="M250 -20 C 170 170, 220 380, 600 560" stroke-width="1.2"/>
+      <path d="M560 -20 C 420 120, 470 330, 900 440" stroke-width="1.6"/>
     </g>
-    <g fill="#FFFFFF" fill-opacity="0.06">
-      <circle cx="770" cy="470" r="150"/><circle cx="640" cy="470" r="150"/>
-    </g>
+    <!-- Community Bank blue accent where the issuer panel sits (no logo) -->
+    <path d="M560 0 H856 V36 L600 58 Z" fill="url(#tab)" opacity="0.85"/>
+    <!-- Chip -->
     <rect x="64" y="200" width="92" height="70" rx="12" fill="url(#chip)"/>
-    <g fill="none" stroke="#6E7685" stroke-opacity="0.55" stroke-width="2">
-      <path d="M64 224 H100 M120 224 H156 M64 246 H100 M120 246 H156 M110 200 V270"/>
+    <g fill="none" stroke="#5E6470" stroke-opacity="0.6" stroke-width="2">
+      <path d="M64 224 H96 M124 224 H156 M64 246 H96 M124 246 H156 M96 200 C 104 214, 104 256, 96 270 M124 200 C 116 214, 116 256, 124 270"/>
     </g>
-    <g fill="none" stroke="#FFFFFF" stroke-opacity="0.75" stroke-width="5" stroke-linecap="round" transform="translate(186 214)">
+    <!-- Contactless -->
+    <g fill="none" stroke="#FFFFFF" stroke-opacity="0.8" stroke-width="5" stroke-linecap="round" transform="translate(186 214)">
       <path d="M0 6 a 30 30 0 0 1 0 30"/><path d="M14 -4 a 46 46 0 0 1 0 50"/><path d="M28 -14 a 62 62 0 0 1 0 70"/>
     </g>
-    <rect x="0.5" y="0.5" width="855" height="539" rx="38" fill="none" stroke="#FFFFFF" stroke-opacity="0.1"/>
+    <rect x="0.5" y="0.5" width="855" height="539" rx="38" fill="none" stroke="#FFFFFF" stroke-opacity="0.12"/>
   </g>
 </svg>

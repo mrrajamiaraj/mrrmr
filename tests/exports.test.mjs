@@ -19,7 +19,7 @@ test("debtor statement: running balance ends at what they owe, totals per source
   assert.equal(events.at(-1)[5], 1000 + 630 - 210);
   const all = t.rows.find((r) => r[2] === "All sources");
   assert.deepEqual(all.slice(3), [1630, 210, 1420]);
-  assert.equal(t.rows.find((r) => r[2] === "City Bank Credit Card")[5], 420);
+  assert.equal(t.rows.find((r) => r[2] === "City Bank American Express Gold Credit Card")[5], 420);
   assert.equal(debtorStatement(data, "nobody", "2026-11-19"), null);
 });
 

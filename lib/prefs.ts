@@ -3,8 +3,8 @@
 // (A saved `chartRange` from before the redesign is simply ignored: the charts it controlled were removed.)
 
 export const LANDING_PAGES = [
-  ["/account", "Overview"], ["/debtors", "People"], ["/repayments", "Repayments"], ["/cards/1", "City Bank card"],
-  ["/cards/2", "Community Bank card"], ["/reports", "Monthly summary"], ["/research", "Research ledger"],
+  ["/account", "Overview"], ["/debtors", "People"], ["/repayments", "Repayments"], ["/cards/1", "City Bank Amex Gold"],
+  ["/cards/2", "Community Visa Platinum"], ["/research", "Research ledger"],
 ] as const;
 export type Landing = (typeof LANDING_PAGES)[number][0];
 export type Density = "comfortable" | "compact";

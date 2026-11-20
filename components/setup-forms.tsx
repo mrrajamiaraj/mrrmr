@@ -51,7 +51,7 @@ export function SetupAccount() {
 }
 
 const CARD_DEFAULTS: Record<1 | 2, { bank: string; name: string; network: string }> = {
-  1: { bank: "City Bank", name: "Amex Blue", network: "Amex Blue" },
+  1: { bank: "City Bank", name: "American Express Gold", network: "Amex Gold" },
   2: { bank: "Community Bank", name: "Visa Platinum", network: "Visa Platinum" },
 };
 

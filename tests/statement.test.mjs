@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { inflateSync } from "node:zlib";
 import { PDFDocument } from "pdf-lib";
 import { buildStatement, slug } from "../lib/statement.ts";
-import { renderStatementPdf, balanceText } from "../lib/pdf.ts";
+import { renderStatementPdf, renderEveryonePdf, balanceText } from "../lib/pdf.ts";
 
 const TODAY = "2026-11-19";
 const person = (id, name) => ({ id, name, relation: null, phone: null, notes: null });
@@ -130,4 +130,24 @@ test("PDF: names the standard font can't draw don't break the export", async () 
   const d = data({ people: [person("p1", "রহিম Uddin")], loans: [loan({ reason: "চিকিৎসা" })] });
   const r = await renderStatementPdf(buildStatement(d, "p1", TODAY));
   assert.equal(r.pageCount, 1);
+});
+
+test("everyone PDF: a summary page with totals, then each person's statement; people with no entries left out", async () => {
+  const d = data({
+    people: [person("p1", "Ayesha Rahman"), person("p2", "Other Person"), person("p3", "Nobody Yet")],
+    loans: [loan({ id: "l1", amount: 1000 }), loan({ id: "l2", person_id: "p2", amount: 500.5 })],
+    repayments: [rep({ id: "r1", amount: 100 })],
+  });
+  const items = ["p1", "p2", "p3"].map((id) => ({ s: buildStatement(d, id, TODAY, { from: null, to: null }), outstandingNow: undefined, nextDue: null }));
+  const out = await renderEveryonePdf(items, TODAY, { from: null, to: null });
+  const solo1 = await renderStatementPdf(items[0].s);
+  const solo2 = await renderStatementPdf(items[1].s);
+  assert.equal(out.pageCount, 1 + solo1.pageCount + solo2.pageCount, "summary page + both statements; Nobody Yet skipped");
+  const doc = await PDFDocument.load(out.bytes);
+  assert.equal(doc.getPageCount(), out.pageCount);
+  const text = (await pdfText(out.bytes)).join("|");
+  assert.match(text, /Everyone/);
+  assert.match(text, /Totals \(2 people\)/);
+  assert.match(text, /1,400\.50/, "closing balances add up exactly: 900 + 500.50");
+  assert.ok(!/Nobody Yet/.test(text), "a person with no entries is not listed");
 });
