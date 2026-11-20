@@ -72,7 +72,7 @@ export function AdminDialog({ email, lastChanged, onClose }: { email: string; la
           <button type="button" onClick={forgot} disabled={pending} className="min-h-11 px-1 text-[14.5px] font-semibold text-brand-2">
             Forgot password?
           </button>
-          <div className="flex gap-2.5">
+          <div className="ml-auto flex flex-wrap justify-end gap-2.5">
             <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
             <button type="button" onClick={submit} disabled={pending} className={btnPrimary}>
               {pending ? "Updating…" : "Update password"}
