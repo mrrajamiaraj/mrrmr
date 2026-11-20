@@ -678,7 +678,7 @@ export function MonthlyTab({ expenses, contributions, facilities, members, onOpe
 
       <section className={card}>
         <Head title="Every month" sub="Pick a month to open it above." />
-        <div className="flex gap-2 overflow-x-auto px-4 pb-4 [scrollbar-width:thin] sm:px-5">
+        <div className="snap-row flex gap-2 overflow-x-auto px-4 pb-4 [scrollbar-width:thin] sm:px-5">
           {[...flow].reverse().map((m, k) => {
             const on = m.key === cur.key;
             return (

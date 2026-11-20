@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AlertIcon, CheckIcon, CloseIcon, InfoIcon } from "@/components/icons";
+import { haptic } from "@/lib/haptics";
 
 export type ToastTone = "success" | "error" | "info";
 type Toast = { id: number; text: string; leaving: boolean; tone: ToastTone };
@@ -18,6 +19,7 @@ const EMPTY: Toast[] = [];
 export function toast(text: string, tone: ToastTone = "success") {
   toasts = [...toasts.slice(-2), { id: nextId++, text, leaving: false, tone }];
   emit();
+  haptic(tone === "error" ? "error" : tone === "success" ? "success" : "tap");
 }
 
 const TONE_ICON: Record<ToastTone, { bg: string; icon: React.ReactNode; label: string }> = {
@@ -46,6 +48,26 @@ export function Toaster() {
 
 function ToastItem({ t }: { t: Toast }) {
   const [paused, setPaused] = useState(false);
+  // Phones: swipe a toast sideways (or down) to dismiss it; holding it pauses the timer.
+  const [dx, setDx] = useState(0);
+  const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
+  const onDown = (e: React.PointerEvent) => {
+    if (e.pointerType !== "touch" || (e.target as Element).closest("button")) return;
+    swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setPaused(true);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const s = swipe.current;
+    if (!s || s.id !== e.pointerId) return;
+    setDx(Math.abs(e.clientX - s.x) >= Math.max(0, e.clientY - s.y) ? e.clientX - s.x : Math.max(0, e.clientY - s.y));
+  };
+  const onUp = () => {
+    if (!swipe.current) return;
+    swipe.current = null;
+    setPaused(false);
+    if (Math.abs(dx) > 80) dismiss(t.id); else setDx(0);
+  };
 
   useEffect(() => {
     if (paused || t.leaving) return;
@@ -56,7 +78,9 @@ function ToastItem({ t }: { t: Toast }) {
   return (
     <div role={t.tone === "error" ? "alert" : "status"} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}
-      className={`pointer-events-auto relative flex w-full max-w-[420px] items-start gap-3 overflow-hidden rounded-xl bg-ink py-3 pl-3.5 pr-2 text-[14px] text-on-ink shadow-[var(--shadow-pop)] ${
+      onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+      style={dx ? { transform: `translateX(${dx}px)`, opacity: Math.max(0.2, 1 - Math.abs(dx) / 220), transition: swipe.current ? "none" : undefined } : undefined}
+      className={`pointer-events-auto relative flex w-full touch-pan-y max-w-[420px] items-start gap-3 overflow-hidden rounded-xl bg-ink py-3 pl-3.5 pr-2 text-[14px] text-on-ink shadow-[var(--shadow-pop)] ${
         t.leaving ? "translate-y-2 opacity-0 transition-[translate,opacity] duration-200" : "animate-pop-in"
       }`}>
       <span aria-hidden="true" className={`mt-px grid size-5 flex-none place-items-center rounded-full text-white ${TONE_ICON[t.tone].bg}`}>

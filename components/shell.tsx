@@ -298,16 +298,43 @@ function MobileHeader({ admin, onSearch, onHelp, onAdmin }: {
 
 /** <1024px: the sections as a thumb-reach tab bar fixed to the bottom edge, clear of the home indicator. */
 function MobileNav({ tabs, active }: { tabs: Tab[]; active?: string }) {
+  // Like a native app: the bar slides away while you scroll down to read, and comes back as soon as you scroll up,
+  // reach the end, or stop near the top. Keyboard focus inside it always brings it back.
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const atEnd = window.innerHeight + y >= document.documentElement.scrollHeight - 24;
+        if (y < 80 || atEnd || y < last - 6) setHidden(false);
+        else if (y > last + 6) setHidden(true);
+        last = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  // Tapping the tab you're already on scrolls back to the top (as in iOS and Android apps).
+  const onTab = (e: React.MouseEvent, on: boolean) => {
+    if (!on) return;
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  };
   return (
-    <nav aria-label="Sections"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+    <nav aria-label="Sections" onFocus={() => setHidden(false)}
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-md transition-transform duration-300 ease-[var(--ease-out-expo)] lg:hidden ${hidden ? "translate-y-full" : ""}`}>
       <ul className="m-0 mx-auto flex max-w-[640px] list-none p-0">
         {tabs.filter((t) => t.primary).map((t) => {
           const on = t.href === active;
           const Icon = t.icon;
           return (
             <li key={t.href} className="flex flex-1">
-              <Link href={t.href} aria-current={on ? "page" : undefined}
+              <Link href={t.href} aria-current={on ? "page" : undefined} onClick={(e) => onTab(e, on)}
                 className={`relative flex min-h-[var(--bottom-nav-h)] flex-1 flex-col items-center justify-center gap-1 text-[11px] ${on ? "font-semibold text-ink" : "text-slate-500"}`}>
                 <span className={`grid h-7 w-14 place-items-center rounded-full transition-[background-color,scale] duration-300 ease-[var(--ease-spring)] ${on ? "scale-100 bg-good-tint-2 text-brand-ink" : "scale-90"}`}>
                   <Icon size={19} />

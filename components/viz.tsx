@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic } from "@/lib/haptics";
 // MRRMR data graphics: hand-built SVG, no chart library. Every chart
 //  - draws itself in (line strokes, bars grow, arcs sweep) and stays still for prefers-reduced-motion;
 //  - is readable without the picture: a one-line summary for screen readers and a hidden table of the values;
@@ -70,8 +71,9 @@ export function TrendArea({ points, title, height = 170, dark = false, color = "
 
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    const k = Math.round(((e.clientX - r.left - padX) / (r.width - 2 * padX)) * (n - 1));
-    setHover(Math.min(n - 1, Math.max(0, k)));
+    const k = Math.min(n - 1, Math.max(0, Math.round(((e.clientX - r.left - padX) / (r.width - 2 * padX)) * (n - 1))));
+    if (e.pointerType === "touch" && k !== hover) haptic("tick"); // a detent per month while scrubbing with a finger
+    setHover(k);
   };
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft") { e.preventDefault(); setHover(Math.max(0, i - 1)); }

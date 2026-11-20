@@ -65,6 +65,67 @@ export function bankBorrowers(data: FinanceData, accountId: string): BankBorrowe
   return [...out.values()].sort((a, b) => b.taken - a.taken || a.name.localeCompare(b.name));
 }
 
+export type OutlookStep = {
+  /** "overdue" (due before today: could come in any time), a due date, or "undated" (no pay-back date set) */
+  kind: "overdue" | "dated" | "undated";
+  iso: string | null;
+  /** what comes in at this step */
+  amount: number;
+  /** the account balance once this step (and every earlier one) has been paid back into it */
+  balance: number;
+  people: { personId: string; name: string; amount: number }[];
+};
+
+/**
+ * What the account balance becomes as people pay back their loans into it, step by step in due-date order:
+ * overdue money first, then each due date, then loans with no date. Assumes every repayment goes into the account
+ * (the projection is labelled as such). Inputs are the open loan items from lib/dashboard, so nothing is recomputed.
+ */
+export function bankOutlook(balance: number, open: { source: "loan" | "card"; personId: string; name: string; iso: string | null; left: number }[], personIds: Iterable<string>, today: string) {
+  const who = new Set(personIds);
+  const items = open.filter((o) => o.source === "loan" && who.has(o.personId) && o.left > 0);
+  const groups = new Map<string, OutlookStep>();
+  for (const o of items) {
+    const kind: OutlookStep["kind"] = !o.iso ? "undated" : o.iso < today ? "overdue" : "dated";
+    const key = kind === "dated" ? o.iso! : kind;
+    const g = groups.get(key) ?? { kind, iso: kind === "dated" ? o.iso : null, amount: 0, balance: 0, people: [] };
+    g.amount = sumBy([g.amount, o.left], (x) => x);
+    const p = g.people.find((x) => x.personId === o.personId);
+    if (p) p.amount = sumBy([p.amount, o.left], (x) => x);
+    else g.people.push({ personId: o.personId, name: o.name, amount: o.left });
+    groups.set(key, g);
+  }
+  const order = (s: OutlookStep) => (s.kind === "overdue" ? "0" : s.kind === "dated" ? `1${s.iso}` : "2");
+  let run = balance;
+  const steps = [...groups.values()].sort((a, b) => order(a).localeCompare(order(b))).map((s) => {
+    run = sumBy([run, s.amount], (x) => x);
+    return { ...s, balance: run, people: s.people.sort((a, b) => b.amount - a.amount) };
+  });
+  const expected = sumBy(steps, (s) => s.amount);
+  return { now: balance, expected, after: sumBy([balance, expected], (x) => x), steps };
+}
+
+export type LoanLine = {
+  id: string; iso: string; kind: "loan" | "repayment"; amount: number; detail: string;
+  /** loan: taken from this account · repayment: paid into this account */
+  viaAccount: boolean;
+  /** what the person owes on loans after this line */
+  owes: number;
+};
+
+/** One person's loans and loan repayments in date order with a running total of what they still owe on loans. */
+export function loanLedger(data: FinanceData, personId: string, accountId: string): LoanLine[] {
+  const rows = [
+    ...data.loans.filter((l) => l.person_id === personId).map((l) => ({ id: l.id, iso: l.taken_on, created: l.created_at, kind: "loan" as const, amount: l.amount, detail: `${l.reason} · ${l.method}`, viaAccount: l.account_id === accountId })),
+    ...data.repayments.filter((r) => r.person_id === personId && r.applies_to === "loan").map((r) => ({ id: r.id, iso: r.paid_on, created: r.created_at, kind: "repayment" as const, amount: r.amount, detail: `Paid back via ${r.via}`, viaAccount: r.account_id === accountId })),
+  ].sort((a, b) => a.iso.localeCompare(b.iso) || (a.kind === b.kind ? 0 : a.kind === "loan" ? -1 : 1) || a.created.localeCompare(b.created));
+  let owes = 0;
+  return rows.map(({ created: _c, ...r }) => {
+    owes = r.kind === "loan" ? sumBy([owes, r.amount], (x) => x) : sumBy([owes, -r.amount], (x) => x);
+    return { ...r, owes };
+  });
+}
+
 export function bankMovements(data: FinanceData, accountId: string): { rows: BankMovement[]; months: BankMonth[] } {
   const names = new Map(data.people.map((p) => [p.id, p.name]));
   const rows: BankMovement[] = [

@@ -105,7 +105,7 @@ export function UnderlineTabs<K extends string>({
 }) {
   const { ref, box } = useSlidingIndicator<HTMLDivElement>(value);
   return (
-    <div ref={ref} role="tablist" aria-label={label} className={`relative -mb-px flex gap-6 overflow-x-auto [scrollbar-width:none] ${className}`}>
+    <div ref={ref} role="tablist" aria-label={label} className={`snap-row relative -mb-px flex gap-6 overflow-x-auto [scrollbar-width:none] ${className}`}>
       {tabs.map(([key, text, count]) => (
         <button key={key} type="button" role="tab" aria-selected={value === key} onClick={() => onChange(key)}
           className={`whitespace-nowrap pb-3 pt-1 text-[14px] ${value === key ? "font-medium text-ink" : "text-slate-500 hover:text-ink"}`}>

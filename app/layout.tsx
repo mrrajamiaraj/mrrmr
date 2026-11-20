@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Instrument_Serif, Noto_Sans_Bengali } from "next/font/google";
 import { headers } from "next/headers";
 import { themeScript } from "@/lib/theme-script";
+import { TouchLayer } from "@/components/touch-layer";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-plex-sans" });
@@ -27,6 +28,9 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#0A0D13" },
   ],
   viewportFit: "cover",
+  // Android Chrome/Samsung: the on-screen keyboard shrinks the layout, so bottom sheets and fixed bars stay above it
+  // instead of being covered (iOS ignores this; the dialog follows window.visualViewport there instead).
+  interactiveWidget: "resizes-content",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -42,6 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Aurora: slow-drifting light behind every page (decorative; still under reduced motion). */}
         <div className="aurora" aria-hidden="true"><span /><span /><span /></div>
         {children}
+        <TouchLayer />
       </body>
     </html>
   );

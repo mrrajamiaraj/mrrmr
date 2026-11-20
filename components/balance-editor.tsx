@@ -95,7 +95,7 @@ export function BalanceEditor({
         <span className="flex min-h-11 items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2 focus-within:shadow-[var(--shadow-focus)]">
           <span aria-hidden="true" className="money text-slate-500">৳</span>
           <input
-            type="number" min="0" step="1" autoFocus value={draft}
+            type="number" inputMode="decimal" enterKeyHint="done" min="0" step="1" autoFocus value={draft}
             onChange={(e) => { setDraft(e.target.value); setError(""); }}
             onKeyDown={(e) => { if (e.key === "Enter") save(); else if (e.key === "Escape") setEditing(false); }}
             className="money min-w-0 flex-auto bg-transparent text-[20px] outline-none"

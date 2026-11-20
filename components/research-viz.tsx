@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic } from "@/lib/haptics";
 // Research ledger graphics: hand-built SVG/HTML, no chart library (same rules as components/viz.tsx).
 //  - Everything animates in (arcs sweep, bars grow, lines draw, cells pop) and is still under prefers-reduced-motion.
 //  - Every chart can be read without the picture: names and amounts are real text, and each chart has a label or a
@@ -71,7 +72,7 @@ export function PillTabs<K extends string>({ tabs, value, onChange, label }: {
   return (
     <div ref={ref} role="tablist" aria-label={label}
       onKeyDown={(e) => { if (e.key === "ArrowRight") move(e, 1); else if (e.key === "ArrowLeft") move(e, -1); }}
-      className="relative flex gap-1 overflow-x-auto rounded-2xl border border-line bg-subtle p-1 [scrollbar-width:none]">
+      className="snap-row relative flex gap-1 overflow-x-auto rounded-2xl border border-line bg-subtle p-1 [scrollbar-width:none]">
       {box && (
         <span aria-hidden="true" className="pointer-events-none absolute bottom-1 top-1 rounded-xl border border-line bg-surface shadow-[var(--shadow-lift)] transition-[transform,width] duration-500 ease-[var(--ease-spring)]"
           style={{ width: box.width, left: 0, transform: `translateX(${box.left}px)` }} />
@@ -230,7 +231,9 @@ export function FlowChart({ months, selected, onSelect, height = 260, labels = R
 
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    setHover(Math.min(n - 1, Math.max(0, Math.floor((e.clientX - r.left - padX) / band))));
+    const k = Math.min(n - 1, Math.max(0, Math.floor((e.clientX - r.left - padX) / band)));
+    if (e.pointerType === "touch" && k !== hover) haptic("tick");
+    setHover(k);
   };
   const onKey = (e: React.KeyboardEvent) => {
     const go = (k: number) => { e.preventDefault(); const j = Math.min(n - 1, Math.max(0, k)); if (onSelect) onSelect(months[j].key); else setHover(j); };
@@ -355,7 +358,9 @@ export function RaceChart({ points, height = 190, labels = RESEARCH_RACE }: { po
 
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    setHover(Math.min(n - 1, Math.max(0, Math.round(((e.clientX - r.left - padX) / (r.width - 2 * padX)) * (n - 1)))));
+    const k = Math.min(n - 1, Math.max(0, Math.round(((e.clientX - r.left - padX) / (r.width - 2 * padX)) * (n - 1))));
+    if (e.pointerType === "touch" && k !== hover) haptic("tick");
+    setHover(k);
   };
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft") { e.preventDefault(); setHover(Math.max(0, i - 1)); }

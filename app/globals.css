@@ -286,6 +286,17 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   }
   :where(button:not(:disabled), a[class*="rounded"]):active { transform: scale(0.98); }
 
+  /* Phones and tablets (every browser): */
+  @media (pointer: coarse) {
+    /* Long-pressing a control shows its tip (components/touch-layer), not a text selection or iOS's link preview. */
+    :where(button, [role="tab"], [role="switch"], nav a, [title]) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    /* Cards and rows answer a press the way buttons do. */
+    :where(a.surface-card, a[class*="lift"], button[class*="lift"], .stack-table tbody tr:has(a, button)):active { scale: 0.985; transition: scale 90ms ease-out; }
+  }
+  /* Sideways sliders (tables, chip rows, tab strips) keep a sideways swipe to themselves instead of triggering the
+     browser's back/forward gesture, and scroll with momentum on older iOS. */
+  :where(.overflow-x-auto) { overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+
   :where(.field-input, select):focus { border-color: var(--color-brand-2); box-shadow: var(--shadow-focus); outline: none; }
   :where(.field-input, select):focus-visible { outline: 2px solid var(--color-brand-2); outline-offset: 1px; }
   :where(.field-input)[aria-invalid="true"] { border-color: var(--color-bad); }
@@ -586,6 +597,13 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   border-radius: var(--radius-xl);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
+}
+
+/* A sideways row of chips or tabs that settles on an item after a swipe instead of stopping half-way. */
+@utility snap-row {
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 16px;
+  & > * { scroll-snap-align: start; }
 }
 
 /* Content padding that respects the phone notch in landscape. */
