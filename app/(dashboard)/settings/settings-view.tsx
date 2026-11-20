@@ -13,7 +13,7 @@ import { LANDING_PAGES, type Prefs } from "@/lib/prefs";
 import { taka, takaExact } from "@/lib/format";
 
 /** Personal preferences. Saved to your account (not to any financial record), so they follow you across devices. */
-export function SettingsView() {
+export function SettingsView({ security }: { security?: React.ReactNode }) {
   const saved = usePrefs();
   const router = useRouter();
   const [p, setP] = useState<Prefs>(saved);
@@ -64,6 +64,7 @@ export function SettingsView() {
         })}>Save preferences</Button>
         {dirty && <Button variant="ghost" onClick={() => setP(saved)}>Discard changes</Button>}
       </div>
+      {security}
     </Shell>
   );
 }

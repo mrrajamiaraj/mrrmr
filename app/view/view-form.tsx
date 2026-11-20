@@ -1,15 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { EyeIcon } from "@/components/icons";
 import { Spinner } from "@/components/motion";
+import { Turnstile } from "@/components/turnstile";
 import { buttonClass } from "@/components/ui";
 import type { AuthState } from "@/app/login/actions";
 import { enterViewMode } from "./actions";
 
 /** One button: no key is needed. View mode shows the Research ledger only and can't change anything. */
-export function ViewForm() {
+export function ViewForm({ siteKey, nonce }: { siteKey: string | null; nonce?: string }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(enterViewMode, {});
+  const [token, setToken] = useState("");
 
   return (
     <form className="flex flex-col gap-4" action={action}>
@@ -17,12 +19,14 @@ export function ViewForm() {
         Read-only: you&apos;ll see the Research ledger. Nothing can be added, changed or deleted.
       </p>
 
+      <Turnstile siteKey={siteKey} action="view" token={token} onToken={setToken} resetSignal={state} nonce={nonce} />
+
       {state.error && <div className="animate-pop-in rounded-lg border border-bad-line bg-bad-tint px-3 py-2.5 text-sm text-bad" role="alert">{state.error}</div>}
 
-      <button type="submit" disabled={pending} autoFocus
+      <button type="submit" disabled={pending || !token} autoFocus
         aria-busy={pending || undefined} className={buttonClass("primary", "lg", "mt-1")}>
-        {pending ? <Spinner size={16} /> : <EyeIcon size={16} />}
-        {pending ? "Opening…" : "Open read-only view"}
+        {pending || (!token && siteKey) ? <Spinner size={16} /> : <EyeIcon size={16} />}
+        {pending ? "Opening…" : !token && siteKey ? "Checking your browser…" : "Open read-only view"}
       </button>
     </form>
   );

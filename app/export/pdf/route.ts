@@ -3,8 +3,8 @@ import { todayIso } from "@/lib/format";
 import { buildProfiles } from "@/lib/ledger";
 import { buildStatement } from "@/lib/statement";
 import { renderEveryonePdf, renderStatementPdf } from "@/lib/pdf";
-import { writer } from "@/lib/viewer";
 import { isIsoDate, isUuid } from "@/lib/validate";
+import { exportGuard, pdfRangeTooLong, pdfTooBig } from "@/lib/export-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,9 @@ export const dynamic = "force-dynamic";
  * RLS-scoped to the signed-in owner. Only the requested person's rows are put in the file.
  */
 export async function GET(request: Request) {
-  try { await writer(); } catch { return new Response("Statements are available to the admin only.", { status: 403 }); }
+  // Admin only (view mode and signed-out callers refused here, not only in the proxy), aal2 if MFA is on, rate limited.
+  const refused = await exportGuard("admin");
+  if (refused) return refused;
 
   const q = new URL(request.url).searchParams;
   const id = q.get("id") ?? "";
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
   if (!all && !isUuid(id)) return new Response("Unknown person.", { status: 400 });
   if ((from && !isIsoDate(from)) || (to && !isIsoDate(to))) return new Response("Dates must be real dates (YYYY-MM-DD).", { status: 400 });
   if (from && to && from > to) return new Response("The start date is after the end date.", { status: 400 });
+  if (pdfRangeTooLong(from, to)) return new Response("Pick a date range of 10 years or less.", { status: 400 });
 
   const today = todayIso();
   const data = await loadFinance();
@@ -41,6 +44,8 @@ export async function GET(request: Request) {
       })
       .filter((x): x is NonNullable<typeof x> => x != null);
     const pdf = await renderEveryonePdf(items, today, { from, to });
+    const big = pdfTooBig(pdf.bytes, pdf.pageCount);
+    if (big) return big;
     const file = `MRRMR-statements-everyone-${from ?? "start"}-to-${to ?? today}.pdf`;
     return new Response(Buffer.from(pdf.bytes), {
       headers: {
@@ -56,6 +61,8 @@ export async function GET(request: Request) {
   if (!s) return new Response("Unknown person.", { status: 404 });
   const p = buildProfiles(data, today).find((x) => x.id === id);
   const pdf = await renderStatementPdf(s, { outstandingNow: p?.owes, nextDue: p?.due ?? null });
+  const big = pdfTooBig(pdf.bytes, pdf.pageCount);
+  if (big) return big;
 
   return new Response(Buffer.from(pdf.bytes), {
     headers: {

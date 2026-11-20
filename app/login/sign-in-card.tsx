@@ -24,7 +24,9 @@ function parallax(e: React.PointerEvent<HTMLElement>) {
 }
 
 /** Shared by /login and /view: one card, Viewer (read-only key) or Admin (email + password). */
-export function SignInCard({ next, error, initialMode, adminSignedIn = false }: { next: string; error?: string; initialMode: Mode; adminSignedIn?: boolean }) {
+export function SignInCard({ next, error, initialMode, adminSignedIn = false, siteKey, nonce }: {
+  next: string; error?: string; initialMode: Mode; adminSignedIn?: boolean; siteKey: string | null; nonce?: string;
+}) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const tab = (m: Mode) =>
     `relative z-10 inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-md text-[14px] font-medium ${
@@ -132,7 +134,7 @@ export function SignInCard({ next, error, initialMode, adminSignedIn = false }: 
             </div>
           )}
           <div key={mode} className="animate-fade-up">
-            {mode === "viewer" ? <ViewForm /> : <LoginForm next={next} />}
+            {mode === "viewer" ? <ViewForm siteKey={siteKey} nonce={nonce} /> : <LoginForm next={next} siteKey={siteKey} nonce={nonce} />}
           </div>
         </div>
       </div>

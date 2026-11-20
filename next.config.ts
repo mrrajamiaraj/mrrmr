@@ -2,12 +2,19 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 
+/** SITE_URL's host (e.g. "mrrmr.example.com"), or null when unset/invalid. */
+const siteHost = (() => {
+  try { return process.env.SITE_URL ? new URL(process.env.SITE_URL).host : null; } catch { return null; }
+})();
+
 // Everything the app loads is its own: fonts are self-hosted by next/font and Supabase is only called from the
 // server, so the browser never needs another origin. 'unsafe-inline' scripts are needed for Next's inline payloads
 // and the pre-paint theme script (a nonce-based CSP would remove it, at the cost of making every page dynamic).
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  // Cloudflare Turnstile (bot check on sign-in, view mode and reset): its loader script and its challenge iframe.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
+  "frame-src https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
@@ -39,6 +46,15 @@ const nextConfig: NextConfig = {
   logging: { serverFunctions: false },
   // Don't advertise the framework in every response.
   poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      // Same-origin is always allowed; this list adds only our own public host (from SITE_URL), never a wildcard,
+      // for the case where a proxy in front reports a different Host.
+      allowedOrigins: siteHost ? [siteHost] : [],
+      // No form here sends more than a few KB (the biggest is a 10-payer card purchase); 1 MB default → 100 KB.
+      bodySizeLimit: "100kb",
+    },
+  },
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },

@@ -27,8 +27,18 @@ function friendly(error: NonNullable<DbError>): string {
   if (/balance_check/.test(m)) return "That would make the balance go below ৳0.";
   if (/people_owner_name_uniq/.test(m)) return "Someone with that name already exists.";
   if (/violates foreign key constraint/.test(m)) return "This person still has loans, card uses or repayments, so they can't be deleted.";
-  return m;
+  // Our own functions' RAISE EXCEPTION messages (SQLSTATE P0001) are written for people; show them as they are.
+  if (error.code === "P0001") return m;
+  // Row-level security said no (view mode, or — after migration 0014 — a session without the authenticator code).
+  if (error.code === "42501") return "This session isn't allowed to change records. Sign in again (with your authenticator code if it's on).";
+  // Anything else could expose internals (table, constraint or column names): log the code only, say something generic.
+  console.error(JSON.stringify({ event: "db_error", code: error.code ?? "unknown" }));
+  return "Could not save that right now. Try again.";
 }
+
+/** Ids from the client must at least look like ids; RLS decides whether they're yours. */
+const badId = (...ids: unknown[]) => ids.some((id) => id != null && id !== "" && !isUuid(id));
+const UNKNOWN = { error: "Unknown record." };
 
 function done(error: DbError, extra: ActionResult = {}): ActionResult {
   if (error) return { error: friendly(error) };
@@ -63,6 +73,7 @@ const req = (s: string | null | undefined, max = TEXT) => cleanText(s, max);
 // ---- balances ---------------------------------------------------------------
 
 export async function setAccountBalance(accountId: string, balance: number): Promise<ActionResult> {
+  if (!isUuid(accountId)) return UNKNOWN;
   const b = money(balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
   const supabase = await writer();
@@ -71,6 +82,7 @@ export async function setAccountBalance(accountId: string, balance: number): Pro
 }
 
 export async function addDebitUse(accountId: string, amount: number): Promise<ActionResult> {
+  if (!isUuid(accountId)) return UNKNOWN;
   const a = money(amount);
   if (!(a > 0)) return { error: "Enter an amount above 0." };
   const supabase = await writer();
@@ -79,6 +91,7 @@ export async function addDebitUse(accountId: string, amount: number): Promise<Ac
 }
 
 export async function setDebitUsed(accountId: string, total: number): Promise<ActionResult> {
+  if (!isUuid(accountId)) return UNKNOWN;
   const t = money(total);
   if (!(t >= 0)) return { error: "Enter a total of 0 or more." };
   const supabase = await writer();
@@ -87,6 +100,7 @@ export async function setDebitUsed(accountId: string, total: number): Promise<Ac
 }
 
 export async function setCardBalance(cardId: string, balance: number): Promise<ActionResult> {
+  if (!isUuid(cardId)) return UNKNOWN;
   const b = money(balance);
   if (!(b >= 0)) return { error: "Enter a balance of 0 or more." };
   const supabase = await writer();
@@ -141,6 +155,7 @@ export async function updateCardDetails(
   cardId: string,
   input: { credit_limit: number | null; pay_by: string }
 ): Promise<ActionResult> {
+  if (!isUuid(cardId)) return UNKNOWN;
   if (dateError(input.pay_by)) return { error: dateError(input.pay_by) };
   if (input.credit_limit != null && !(money(input.credit_limit) >= 0)) return { error: "Enter a credit limit of 0 or more." };
   const supabase = await writer();
@@ -166,6 +181,7 @@ export async function addLoan(input: {
   notes?: string;
 }): Promise<ActionResult> {
   const amount = money(input.amount);
+  if (badId(input.accountId)) return UNKNOWN;
   if (dateError(input.takenOn, input.dueOn)) return { error: dateError(input.takenOn, input.dueOn) };
   if (!req(input.name, NAME)) return { error: "Enter who took the money." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
@@ -176,10 +192,10 @@ export async function addLoan(input: {
     p_amount: amount,
     p_reason: req(input.reason),
     p_taken_on: orNull(input.takenOn),
-    p_method: input.method,
+    p_method: req(input.method, 40),
     p_due_on: orNull(input.dueOn),
     p_account_id: input.accountId,
-    p_deduct: input.deduct && !!input.accountId,
+    p_deduct: input.deduct === true && !!input.accountId,
     p_initial_repaid: money(input.initialRepaid ?? 0) || 0,
     p_notes: orNull(input.notes),
   });
@@ -199,6 +215,7 @@ export async function addCardUse(input: {
   emiMonths?: number;
 }): Promise<ActionResult> {
   const amount = money(input.amount);
+  if (!isUuid(input.cardId)) return UNKNOWN;
   if (dateError(input.usedOn, input.dueOn)) return { error: dateError(input.usedOn, input.dueOn) };
   if (!req(input.name, NAME)) return { error: "Enter who used the card (or “Me” for your own spending)." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
@@ -216,7 +233,7 @@ export async function addCardUse(input: {
     p_used_on: orNull(input.usedOn),
     p_category: req(input.category, 40),
     p_due_on: orNull(input.dueOn),
-    p_add_to_balance: input.addToBalance,
+    p_add_to_balance: input.addToBalance === true,
     // Only sent for EMI, so full-payment uses keep working before migration 0008 is run.
     ...(emi ? { p_pay_plan: "emi", p_emi_months: Number(input.emiMonths) } : {}),
   });
@@ -233,6 +250,7 @@ export type PurchasePart = { name: string; amount: number; plan: PayPlan; emiMon
 export async function addCardPurchase(input: {
   cardId: string; reason: string; usedOn: string; category: string; addToBalance: boolean; parts: PurchasePart[];
 }): Promise<ActionResult & { groupId?: string | null }> {
+  if (!isUuid(input.cardId)) return UNKNOWN;
   if (!req(input.reason)) return { error: "Enter why or where the card was used." };
   if (!Array.isArray(input.parts) || input.parts.length < 1 || input.parts.length > 10) return { error: "A purchase can have 1 to 10 payers." };
   if (dateError(input.usedOn, ...input.parts.map((p) => p.dueOn))) return { error: dateError(input.usedOn, ...input.parts.map((p) => p.dueOn)) };
@@ -261,7 +279,7 @@ export async function addCardPurchase(input: {
   const supabase = await writer();
   const { data, error } = await supabase.rpc("add_card_purchase", {
     p_card_id: input.cardId, p_reason: req(input.reason), p_used_on: orNull(input.usedOn),
-    p_category: req(input.category, 40), p_add_to_balance: input.addToBalance, p_parts: parts,
+    p_category: req(input.category, 40), p_add_to_balance: input.addToBalance === true, p_parts: parts,
   });
   const missing = error && (error.code === "PGRST202" || /could not find the function/i.test(error.message));
   if (!missing) return done(error, { groupId: (data as string | null) ?? null });
@@ -292,6 +310,8 @@ export async function recordRepayment(input: {
   requestId?: string;
 }): Promise<ActionResult & { duplicate?: boolean }> {
   const amount = money(input.amount);
+  if (!isUuid(input.personId) || badId(input.cardId, input.accountId)) return UNKNOWN;
+  if (typeof input.addToAccount !== "boolean" || typeof input.lowerCard !== "boolean") return { error: "Inconsistent request." };
   if (!(amount > 0)) return { error: "Enter an amount above 0." };
   if (dateError(input.paidOn)) return { error: dateError(input.paidOn) };
   if (input.appliesTo !== "loan" && input.appliesTo !== "card") return { error: "Pick what this repayment is for." };
@@ -331,7 +351,7 @@ export async function recordRepayment(input: {
     p_person_id: input.personId,
     p_amount: amount,
     p_applies_to: input.appliesTo,
-    p_via: input.via,
+    p_via: req(input.via, 40),
     p_paid_on: orNull(input.paidOn),
     p_card_id: input.cardId,
     p_account_id: input.accountId,
@@ -372,6 +392,7 @@ export async function updatePerson(
   personId: string,
   input: { name: string; relation: string; phone: string; notes: string }
 ): Promise<ActionResult> {
+  if (!isUuid(personId)) return UNKNOWN;
   if (!req(input.name, NAME)) return { error: "Enter a name." };
   const supabase = await writer();
   const { error } = await supabase
@@ -383,6 +404,7 @@ export async function updatePerson(
 
 /** Only succeeds for people with no records: the foreign keys are ON DELETE RESTRICT. */
 export async function deletePerson(personId: string): Promise<ActionResult> {
+  if (!isUuid(personId)) return UNKNOWN;
   const supabase = await writer();
   const { error } = await supabase.from("people").delete().eq("id", personId);
   return done(error);
@@ -444,7 +466,7 @@ export async function savePrefs(prefs: unknown): Promise<ActionResult> {
   const clean = normalizePrefs(prefs);
   const supabase = await writer();
   const { error } = await supabase.auth.updateUser({ data: { prefs: clean } });
-  if (error) return { error: error.message };
+  if (error) return { error: "Could not save your preferences. Try again." };
   revalidatePath("/", "layout");
   return {};
 }
@@ -470,7 +492,7 @@ export async function changePassword(current: string, next: string, confirm: str
     password: next,
     data: { password_changed_at: new Date().toISOString() },
   });
-  if (error) return { error: error.message };
+  if (error) return { error: error.code === "same_password" ? "The new password must be different from the current one." : "Could not change the password. Try again." };
   return {};
 }
 
@@ -485,5 +507,6 @@ export async function sendPasswordReset(): Promise<ActionResult> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?next=/auth/reset`,
   });
-  return error ? { error: error.message } : {};
+  // Same generic answer as the sign-in page (no detail about why Supabase refused).
+  return error ? { error: error.status === 429 ? "Too many reset emails. Try again later." : "Could not send the reset link. Try again later." } : {};
 }

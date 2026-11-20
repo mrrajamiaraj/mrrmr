@@ -4,14 +4,16 @@ import { revalidatePath } from "next/cache";
 import { writer } from "@/lib/viewer";
 import { cleanText } from "@/lib/security";
 import { roundMoney } from "@/lib/money";
-import { amountInRange, optionalDate } from "@/lib/validate";
+import { amountInRange, isUuid, optionalDate } from "@/lib/validate";
 
 export type Result = { error?: string };
 
 function friendly(e: { code?: string; message: string }) {
   if (e.code === "42P01" || e.code === "PGRST205" || /could not find the table/i.test(e.message))
     return "The research tables are missing. Run supabase/migrations/0003_research_ledger.sql in the Supabase SQL Editor, then try again.";
-  return e.message;
+  if (e.code === "42501") return "This session isn't allowed to change records. Sign in again (with your authenticator code if it's on).";
+  console.error(JSON.stringify({ event: "db_error", code: e.code ?? "unknown" }));
+  return "Could not save that right now. Try again.";
 }
 
 function done(error: { code?: string; message: string } | null): Result {
@@ -29,6 +31,7 @@ export async function saveExpense(
   id: string | null,
   input: { spent_on: string; facility: string; member: string; description: string; tag: string; amount: number }
 ): Promise<Result> {
+  if (id != null && !isUuid(id)) return { error: "Unknown record." };
   if (!dateOk(input.spent_on)) return { error: "Enter a real date." };
   if (!clean(input.facility)) return { error: "Enter the facility / center." };
   if (!clean(input.member)) return { error: "Enter who paid." };
@@ -49,6 +52,7 @@ export async function saveExpense(
 }
 
 export async function deleteExpense(id: string): Promise<Result> {
+  if (!isUuid(id)) return { error: "Unknown record." };
   const supabase = await writer();
   const { error } = await supabase.from("research_expenses").delete().eq("id", id);
   return done(error);
@@ -58,6 +62,7 @@ export async function saveContribution(
   id: string | null,
   input: { paid_on: string; member: string; note: string; amount: number }
 ): Promise<Result> {
+  if (id != null && !isUuid(id)) return { error: "Unknown record." };
   if (!dateOk(input.paid_on)) return { error: "Enter a real date." };
   if (!clean(input.member)) return { error: "Enter who contributed." };
   if (!amountOk(input.amount)) return { error: "Enter an amount above 0." };
@@ -75,6 +80,7 @@ export async function saveContribution(
 }
 
 export async function deleteContribution(id: string): Promise<Result> {
+  if (!isUuid(id)) return { error: "Unknown record." };
   const supabase = await writer();
   const { error } = await supabase.from("research_contributions").delete().eq("id", id);
   return done(error);
