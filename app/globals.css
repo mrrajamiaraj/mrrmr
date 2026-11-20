@@ -388,6 +388,15 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
 @keyframes card-sweep { 0% { transform: translateX(-200px); } 45%, 100% { transform: translateX(1300px); } }
 .card-glint { stroke-dasharray: 7 93; animation: card-glint 6.6s linear infinite; }
 @keyframes card-glint { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+/* MRRMR logo (components/brand): the M draws in, a glint crosses the tile now and then, a mint glow breathes, and
+   the word's letters rise in. Lengths in the 32×32 mark frame. */
+.brand-draw { stroke-dasharray: 1; animation: viz-draw 900ms var(--ease-out-expo) both; }
+.brand-glint { animation: brand-glint 6s ease-in-out 1.2s infinite; }
+@keyframes brand-glint { 0% { transform: translateX(0); } 30%, 100% { transform: translateX(56px); } }
+.brand-glow { transform-box: fill-box; transform-origin: center; animation: brand-glow 4.5s ease-in-out infinite; }
+@keyframes brand-glow { 50% { opacity: 0.35; transform: scale(0.8); } }
+.brand-letter { animation: brand-letter 600ms var(--ease-spring) both; }
+@keyframes brand-letter { from { opacity: 0; transform: translateY(0.45em) rotate(-6deg); } }
 /* Research hero: the coverage ring's glow breathes slowly. */
 .viz-breathe { animation: viz-breathe 4s ease-in-out infinite; }
 @keyframes viz-breathe { 50% { opacity: 0.55; transform: scale(1.06); } }
@@ -428,7 +437,7 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
     scroll-behavior: auto !important;
   }
   /* Endless decorative loops would flicker at 1ms; stop them outright, and show revealed sections as they are. */
-  .aurora > span, .deck::before, .viz-pulse, .viz-breathe, .debit-star, .card-spin, .card-sweep, .card-glint, .card-float, .reveal { animation: none !important; }
+  .aurora > span, .deck::before, .viz-pulse, .viz-breathe, .debit-star, .card-spin, .card-sweep, .card-glint, .brand-glint, .brand-glow, .card-float, .reveal { animation: none !important; }
   .card-3d { transform: none !important; }
 }
 
