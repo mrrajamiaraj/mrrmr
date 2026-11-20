@@ -314,6 +314,9 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
 .page-enter > :nth-child(3):not([data-float]) { animation-delay: 80ms; }
 .page-enter > :nth-child(4):not([data-float]) { animation-delay: 120ms; }
 .page-enter > :nth-child(n + 5):not([data-float]) { animation-delay: 150ms; }
+/* The entrance animation gives every section its own layer, so a later section would paint over an open menu or
+   popover from an earlier one. Lift whichever section holds an open menu above its siblings. */
+.page-enter > :has([role="menu"], [role="listbox"], [data-popover]) { position: relative; z-index: 30; }
 
 /* Route-level page transitions use the View Transitions API where available; the header and rail stay put. */
 ::view-transition { pointer-events: none; }

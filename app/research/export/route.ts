@@ -1,6 +1,7 @@
 import { loadResearch } from "@/lib/research-data";
 import { todayIso } from "@/lib/format";
 import { csvCell as cell } from "@/lib/security";
+import { exportGuard } from "@/lib/export-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,9 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
  * nothing but the two research tables, which the database already lets the viewer read (and nothing else).
  */
 export async function GET(request: Request) {
+  // Admin or view mode, checked in the route itself, plus a per-user rate limit.
+  const refused = await exportGuard("research");
+  if (refused) return refused;
   const url = new URL(request.url);
   const from = url.searchParams.get("from") ?? "";
   const to = url.searchParams.get("to") ?? "";

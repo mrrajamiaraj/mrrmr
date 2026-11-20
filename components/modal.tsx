@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { CloseIcon } from "@/components/icons";
 import { buttonClass } from "@/components/ui";
 
@@ -60,7 +61,9 @@ export function Modal({
     };
   }, []);
 
-  return (
+  // Rendered into <body>: an opener inside a transformed or blurred container (the sidebar, an animating section)
+  // would otherwise become the box that "fixed" is measured against, squeezing the dialog to that container's width.
+  const dialog = (
     <div
       data-float
       className={`fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-[rgba(10,13,19,0.45)] pt-4 ${
@@ -96,6 +99,7 @@ export function Modal({
       </div>
     </div>
   );
+  return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
 }
 
 export function CloseButton({ onClick, label = "Close" }: { onClick: () => void; label?: string }) {

@@ -4,6 +4,7 @@ import { todayIso } from "@/lib/format";
 import { cardLabel } from "@/lib/ledger";
 import { cardTransactions, debtorStatement, emiSchedules, type Table } from "@/lib/exports";
 import { csvCell as cell } from "@/lib/security";
+import { exportGuard } from "@/lib/export-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +28,17 @@ function file(t: Table) {
 }
 
 /**
- * Admin exports. The proxy keeps view mode out of /export entirely, and the data loaders are RLS-scoped, so a viewer
- * session could never read finance rows here anyway.
+ * Admin exports. exportGuard() refuses view mode and signed-out callers in the route itself (the proxy does too), and
+ * the data loaders are RLS-scoped, so a viewer session could never read finance rows here anyway.
  *   /export                         full backup (every record, finance + research)
  *   /export?type=debtor&id=<uuid>   one debtor's statement with running balance
  *   /export?type=card&slot=1|2[&from&to]  one card's purchases and repayments
  *   /export?type=emi                every EMI installment on every card
  */
 export async function GET(request: Request) {
+  // Admin only, checked here (not only in the proxy), plus a per-user rate limit.
+  const refused = await exportGuard("admin");
+  if (refused) return refused;
   const q = new URL(request.url).searchParams;
   const type = q.get("type") ?? "full";
   const from = q.get("from") ?? "", to = q.get("to") ?? "";
