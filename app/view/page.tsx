@@ -1,6 +1,7 @@
 import { SignInCard } from "@/app/login/sign-in-card";
 import { createClient } from "@/lib/supabase/server";
 import { isViewerEmail } from "@/lib/viewer";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 /**
  * The view-mode entrance. If the ADMIN is signed in on this browser it says so (the proxy doesn't forward them to the
@@ -10,5 +11,5 @@ export default async function ViewPage() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const adminHere = Boolean(data?.claims && !isViewerEmail(data.claims.email as string | undefined));
-  return <SignInCard next="/" initialMode="viewer" adminSignedIn={adminHere} />;
+  return <SignInCard next="/" initialMode="viewer" adminSignedIn={adminHere} siteKey={turnstileSiteKey()} />;
 }

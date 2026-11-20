@@ -1,5 +1,9 @@
 import { ShieldIcon } from "@/components/icons";
+import { turnstileSiteKey } from "@/lib/turnstile";
 import { ResetForm } from "./reset-form";
+
+// Reads TURNSTILE_SITE_KEY at request time (not baked in at build time).
+export const dynamic = "force-dynamic";
 
 export default function ResetPage() {
   return (
@@ -12,7 +16,7 @@ export default function ResetPage() {
           <h1 className="m-0 text-[24px] font-semibold tracking-[-0.02em]">Set a new password</h1>
           <div className="mt-1 text-sm text-slate-500">You opened a reset link, so you don&apos;t need the old password.</div>
         </div>
-        <ResetForm />
+        <ResetForm siteKey={turnstileSiteKey()} />
       </div>
     </main>
   );

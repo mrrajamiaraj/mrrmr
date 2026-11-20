@@ -7,7 +7,9 @@ const isDev = process.env.NODE_ENV === "development";
 // and the pre-paint theme script (a nonce-based CSP would remove it, at the cost of making every page dynamic).
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  // Cloudflare Turnstile (bot check on sign-in, view mode and reset): its loader script and its challenge iframe.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
+  "frame-src https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

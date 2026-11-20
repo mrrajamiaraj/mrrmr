@@ -1,16 +1,20 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { signIn, forgotPassword, type AuthState } from "./actions";
 import { ArrowRightIcon } from "@/components/icons";
 import { Spinner } from "@/components/motion";
 import { PasswordInput } from "@/components/password-input";
+import { Turnstile } from "@/components/turnstile";
 import { buttonClass } from "@/components/ui";
 
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({ next, siteKey, nonce }: { next: string; siteKey: string | null; nonce?: string }) {
   const [signInState, signInAction, signingIn] = useActionState<AuthState, FormData>(signIn, {});
   const [resetState, resetAction, resetting] = useActionState<AuthState, FormData>(forgotPassword, {});
+  const [token, setToken] = useState("");
   const state = resetState.error || resetState.message ? resetState : signInState;
+  // Each result object is new, so either submit (which used up the single-use token) resets the widget.
+  const used = useMemo(() => [signInState, resetState], [signInState, resetState]);
 
   return (
     <form className="flex flex-col gap-4" action={signInAction}>
@@ -24,20 +28,22 @@ export function LoginForm({ next }: { next: string }) {
         <PasswordInput name="password" autoComplete="current-password" required />
       </label>
 
+      <Turnstile siteKey={siteKey} action="login" token={token} onToken={setToken} resetSignal={used} nonce={nonce} />
+
       {state.error && <div className="animate-pop-in rounded-lg border border-bad-line bg-bad-tint px-3 py-2.5 text-sm text-bad" role="alert">{state.error}</div>}
       {state.message && <div className="animate-pop-in rounded-lg border border-good-line bg-good-tint-2 px-3 py-2.5 text-sm text-brand-ink" role="status">{state.message}</div>}
 
-      <button type="submit" disabled={signingIn}
+      <button type="submit" disabled={signingIn || !token}
         aria-busy={signingIn || undefined} className={buttonClass("primary", "lg", "group mt-1")}>
-        {signingIn ? <><Spinner />Signing in…</> : <>Sign in<ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-0.5" /></>}
+        {signingIn ? <><Spinner />Signing in…</> : !token && siteKey ? <><Spinner />Checking your browser…</> : <>Sign in<ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-0.5" /></>}
       </button>
       {/* Stays after "Sign in": pressing Enter submits with the first submit button in the form. */}
       <button
         type="submit"
         formAction={resetAction}
         formNoValidate
-        disabled={resetting}
-        className="inline-flex min-h-9 items-center gap-2 self-center rounded-md px-2 text-[13.5px] font-medium text-brand-2 hover:bg-good-tint hover:text-brand-ink"
+        disabled={resetting || !token}
+        className="inline-flex min-h-9 items-center gap-2 self-center rounded-md px-2 text-[13.5px] font-medium text-brand-2 hover:bg-good-tint hover:text-brand-ink disabled:opacity-60"
       >
         {resetting && <Spinner size={12} />}
         {resetting ? "Sending reset link…" : "Forgot password?"}

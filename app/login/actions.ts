@@ -4,12 +4,15 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { RateLimiter, clientIp, safeNextPath, siteOrigin, waitText } from "@/lib/security";
+import { TURNSTILE_FAILED, TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
 
 export type AuthState = { error?: string; message?: string };
 
 // Per-IP brakes in front of Supabase's own limits: 10 sign-in tries per 15 minutes, 5 reset emails per hour.
 const signInLimit = new RateLimiter(10, 15 * 60_000);
 const resetLimit = new RateLimiter(5, 60 * 60_000);
+
+// Order in every unauthenticated action: rate limit → Turnstile → Supabase. A failed bot check never reaches Supabase.
 
 export async function signIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().slice(0, 254);
@@ -20,6 +23,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const ip = clientIp((n) => h.get(n));
   const wait = signInLimit.hit(ip);
   if (wait) return { error: waitText(wait) };
+  if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "login"))) return { error: TURNSTILE_FAILED };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -30,13 +34,16 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   redirect(safeNextPath(formData.get("next")));
 }
 
+/** Sent from the sign-in form's "Forgot password?" button, so it carries that form's ("login") Turnstile token. */
 export async function forgotPassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().slice(0, 254);
   if (!email) return { error: "Type your email above first, then press “Forgot password?”." };
 
   const h = await headers();
-  const wait = resetLimit.hit(clientIp((n) => h.get(n)));
+  const ip = clientIp((n) => h.get(n));
+  const wait = resetLimit.hit(ip);
   if (wait) return { error: waitText(wait) };
+  if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "login"))) return { error: TURNSTILE_FAILED };
 
   const origin = siteOrigin((n) => h.get(n));
   if (!origin) return { error: "Could not work out this site's address. Set SITE_URL and try again." };

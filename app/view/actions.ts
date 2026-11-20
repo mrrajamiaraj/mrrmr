@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isViewerEmail, viewModeConfig } from "@/lib/viewer";
 import { RateLimiter, clientIp, waitText } from "@/lib/security";
+import { TURNSTILE_FAILED, TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
 import type { AuthState } from "@/app/login/actions";
 
 // No key is needed (owner decision 2026-11-19), but each button press signs in to Supabase, so it is still throttled:
@@ -12,11 +13,13 @@ import type { AuthState } from "@/app/login/actions";
 const viewLimit = new RateLimiter(8, 15 * 60_000);
 
 /** Opens the read-only view: signs this browser in as the shared viewer account, which can read the Research ledger only. */
-export async function enterViewMode(_prev: AuthState, _formData: FormData): Promise<AuthState> {
+export async function enterViewMode(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const h = await headers();
   const ip = clientIp((n) => h.get(n));
   const wait = viewLimit.hit(ip);
   if (wait) return { error: waitText(wait) };
+  // Bot check before anything touches Supabase (sign-out of an admin here included).
+  if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "view"))) return { error: TURNSTILE_FAILED };
 
   // Fails closed: without the viewer account's password configured on the server there is no view mode.
   const cfg = viewModeConfig();
