@@ -87,7 +87,10 @@ export function waitText(ms: number) {
   return `Too many attempts. Try again in ${min} minute${min === 1 ? "" : "s"}.`;
 }
 
-/** The caller's IP as the hosting proxy reports it (first x-forwarded-for hop), or "unknown". */
+/**
+ * The caller's IP as the first x-forwarded-for hop, or "unknown".
+ * @deprecated A client can send its own x-forwarded-for; use trustedClientIp() / requestIp() (lib/rate-limit*).
+ */
 export function clientIp(get: (name: string) => string | null): string {
   const fwd = get("x-forwarded-for")?.split(",")[0]?.trim();
   return fwd || get("x-real-ip")?.trim() || "unknown";

@@ -92,7 +92,7 @@ test("every unauthenticated action checks Turnstile after the rate limit and bef
     const src = readFileSync(new URL(file, import.meta.url), "utf8");
     for (const fn of fns) {
       const body = src.slice(src.indexOf(`export async function ${fn}(`)).split(/\nexport /)[0];
-      const limit = body.search(/Limit\.hit\(/), check = body.indexOf("verifyTurnstile("), supa = body.indexOf("createClient(");
+      const limit = body.search(/hitAll\(/), check = body.indexOf("verifyTurnstile("), supa = body.indexOf("createClient(");
       assert.ok(limit > 0 && check > limit && supa > check, `${fn}: rate limit → Turnstile → Supabase`);
     }
   }

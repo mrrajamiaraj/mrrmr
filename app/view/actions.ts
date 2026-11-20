@@ -1,22 +1,20 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isViewerEmail, viewModeConfig } from "@/lib/viewer";
-import { RateLimiter, clientIp, waitText } from "@/lib/security";
+import { waitText } from "@/lib/security";
+import { hitAll, ipKey, requestIp } from "@/lib/rate-limit";
 import { TURNSTILE_FAILED, TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
 import type { AuthState } from "@/app/login/actions";
 
 // No key is needed (owner decision 2026-11-19), but each button press signs in to Supabase, so it is still throttled:
-// 8 per IP every 15 minutes.
-const viewLimit = new RateLimiter(8, 15 * 60_000);
+// 8 per IP every 15 minutes (global when Upstash is configured).
 
 /** Opens the read-only view: signs this browser in as the shared viewer account, which can read the Research ledger only. */
 export async function enterViewMode(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  const h = await headers();
-  const ip = clientIp((n) => h.get(n));
-  const wait = viewLimit.hit(ip);
+  const ip = await requestIp();
+  const wait = await hitAll([["viewIp", ipKey(ip)]]);
   if (wait) return { error: waitText(wait) };
   // Bot check before anything touches Supabase (sign-out of an admin here included).
   if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "view"))) return { error: TURNSTILE_FAILED };

@@ -1,14 +1,13 @@
 "use server";
 
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { passwordProblems } from "@/lib/password";
 import { isViewerEmail } from "@/lib/viewer";
-import { RateLimiter, clientIp, isRecoverySession, waitText } from "@/lib/security";
+import { isRecoverySession, waitText } from "@/lib/security";
+import { hitAll, ipKey, requestIp } from "@/lib/rate-limit";
 import { TURNSTILE_FAILED, verifyTurnstile } from "@/lib/turnstile";
 
 // Per-IP brake on setting a password from a reset link: 10 tries per 15 minutes.
-const resetFormLimit = new RateLimiter(10, 15 * 60_000);
 
 /**
  * Sets a new password without asking for the old one, so it is only allowed for a session that was just opened
@@ -19,9 +18,8 @@ export async function resetPassword(password: string, turnstileToken: string): P
   if (typeof password !== "string" || password.length > 256 || passwordProblems(password).length)
     return { error: "The new password does not meet all four requirements." };
 
-  const h = await headers();
-  const ip = clientIp((n) => h.get(n));
-  const wait = resetFormLimit.hit(ip);
+  const ip = await requestIp();
+  const wait = await hitAll([["resetForm", ipKey(ip)]]);
   if (wait) return { error: waitText(wait) };
   if (!(await verifyTurnstile(turnstileToken, ip, "reset"))) return { error: TURNSTILE_FAILED };
 

@@ -64,7 +64,7 @@ export async function verifyTurnstileToken(
   if (token.length > MAX_TOKEN_LENGTH) return fail("oversized-token");
 
   const body = new URLSearchParams({ secret, response: token });
-  if (ip && ip !== "unknown") body.set("remoteip", ip);
+  if (ip && ip !== "unknown" && ip !== "local") body.set("remoteip", ip);
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? VERIFY_TIMEOUT_MS);
