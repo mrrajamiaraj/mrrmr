@@ -23,3 +23,27 @@ select json_build_object(
   'accounts_updated', (select count(*) from a), 'cards_updated', (select count(*) from c)
 ) as viewer_probe;
 rollback;
+
+-- ---- After 0014: the viewer still reads research (aal1 is fine for view mode) --------------------------------------
+-- Same probe as above: research_*_visible must still be the real numbers, finance counts 0.
+
+-- ---- After 0014: an OWNER session WITHOUT two-step sign-in (aal1) must read 0 rows and write nothing --------------
+-- Expected: every value is 0. The same probe with 'aal' = 'aal2' must return the real counts.
+begin;
+select set_config('request.jwt.claims', json_build_object(
+  'sub', (select owner_id from public.viewers limit 1)::text, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+set local role authenticated;
+with a as (update public.accounts set balance = balance returning 1),
+     r as (update public.research_expenses set amount = amount returning 1)
+select json_build_object(
+  'accounts', (select count(*) from public.accounts), 'cards', (select count(*) from public.cards),
+  'people', (select count(*) from public.people), 'loans', (select count(*) from public.loans),
+  'card_uses', (select count(*) from public.card_uses), 'repayments', (select count(*) from public.repayments),
+  'debtor_summary', (select count(*) from public.debtor_summary),
+  'research_expenses', (select count(*) from public.research_expenses),
+  'research_contributions', (select count(*) from public.research_contributions),
+  'audit_log', (select count(*) from public.audit_log), 'balance_adjustments', (select count(*) from public.balance_adjustments),
+  'accounts_updated', (select count(*) from a), 'research_updated', (select count(*) from r)
+) as aal1_owner_probe;
+rollback;
+-- (An aal1 owner INSERT, e.g. select public.add_loan('probe', 1, 'probe'); → ERROR 42501 … policy "require aal2".)

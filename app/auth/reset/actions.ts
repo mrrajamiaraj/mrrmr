@@ -38,5 +38,6 @@ export async function resetPassword(password: string, turnstileToken: string): P
   // Generic: Supabase's own message could reveal internals (e.g. password policy details are already shown above).
   if (!error) return {};
   if (error.code === "same_password") return { error: "Choose a password you haven't used for this account." };
+  if (error.code === "insufficient_aal") return { error: "Two-step sign-in is on: enter your authenticator code at /auth/mfa?next=/auth/reset first, then set the password." };
   return { error: "Could not set the new password. Request a new reset link and try again." };
 }

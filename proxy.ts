@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { hardenCookie } from "@/lib/supabase/cookies";
 import { isViewerEmail } from "@/lib/viewer";
 import { isPublicPath, viewerMayOpen } from "@/lib/security";
+import { hasVerifiedFactor, mfaExempt } from "@/lib/mfa-core";
 
 // Path rules live in lib/security.ts (unit-tested): public paths, and the viewer's allow-list.
 
@@ -57,7 +58,32 @@ export async function proxy(request: NextRequest) {
     url.search = "";
     return NextResponse.redirect(url);
   }
+  // Admin MFA: with a verified authenticator, an aal1 session may open only /auth/* (the code step, sign-out there)
+  // and /view until the code is entered. aal comes from the verified JWT; whether a factor exists comes from
+  // getUser() (verified by Supabase, cached briefly per instance), never from the factor list in the cookie.
+  if (signedIn && !viewer && data?.claims?.aal !== "aal2" && !mfaExempt(path)) {
+    const sub = String(data?.claims?.sub ?? "");
+    if (await adminHasFactor(supabase, sub)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/mfa";
+      url.search = path === "/" || path === "/login" ? "" : `?next=${encodeURIComponent(path)}`;
+      return NextResponse.redirect(url);
+    }
+  }
   return response;
+}
+
+// sub → whether a verified factor exists, for 60 s. Keyed by the verified user id, so a client can't influence it.
+const factorCache = new Map<string, { has: boolean; until: number }>();
+async function adminHasFactor(supabase: { auth: { getUser: () => Promise<{ data: { user: { factors?: { status?: string }[] } | null } }> } }, sub: string) {
+  const now = Date.now();
+  const hit = factorCache.get(sub);
+  if (hit && hit.until > now) return hit.has;
+  const { data } = await supabase.auth.getUser();
+  const has = hasVerifiedFactor(data.user?.factors);
+  if (factorCache.size > 100) factorCache.clear();
+  factorCache.set(sub, { has, until: now + 60_000 });
+  return has;
 }
 
 export const config = {
