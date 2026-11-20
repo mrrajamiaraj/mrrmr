@@ -79,6 +79,117 @@ type Line = { kind: "opening" | "row" | "empty" | "total"; cells: Record<string,
 
 export type RenderedStatement = { bytes: Uint8Array; pageCount: number; rowsPerPage: number[] };
 
+export type EveryoneItem = { s: Statement; outstandingNow?: number; nextDue?: string | null };
+
+/**
+ * Everyone's loans in one PDF: a summary page (one line per person — borrowed, repaid and balance for the period,
+ * owed today across all sources, next due — with totals), then each person's full statement exactly as the single
+ * export renders it. People with no entries in the period are left out of both.
+ */
+export async function renderEveryonePdf(items: EveryoneItem[], generatedOn: string, range: { from: string | null; to: string | null }): Promise<RenderedStatement> {
+  const doc = await PDFDocument.create();
+  const period = !range.from && !range.to ? "Full history" : `${range.from ? dateLong(range.from) : "First entry"} to ${dateLong(range.to ?? generatedOn)}`;
+  doc.setTitle("Statements - everyone");
+  doc.setAuthor("MRRMR");
+  doc.setSubject(`Statements of account for everyone, ${period}`);
+  doc.setCreator("MRRMR");
+  doc.setProducer("MRRMR (pdf-lib)");
+  doc.setCreationDate(new Date(`${generatedOn}T00:00:00Z`));
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const t = safeText(font);
+  const people = items.filter((x) => x.s.rows.length || (range.from && x.s.opening));
+
+  // ---- summary pages -------------------------------------------------------------------------------------------
+  const cols: Col[] = [
+    { key: "name", label: "Person", w: 0 },
+    { key: "borrowed", label: "Borrowed", w: 78, right: true },
+    { key: "repaid", label: "Repaid", w: 78, right: true },
+    { key: "closing", label: range.from || range.to ? "Closing" : "Balance", w: 84, right: true },
+    { key: "now", label: "Owed today", w: 84, right: true },
+    { key: "due", label: "Next due", w: 66 },
+  ];
+  cols[0].w = A4[0] - 2 * M - cols.reduce((s, c) => s + c.w, 0);
+  const rowH = LINE_H + 2 * PAD;
+  const tot = { borrowed: 0, repaid: 0, closing: 0, now: 0 };
+  const lines = people.map((x) => {
+    tot.borrowed += x.s.borrowed; tot.repaid += x.s.repaid; tot.closing += x.s.closing; tot.now += x.outstandingNow ?? 0;
+    return { strong: false, cells: { name: x.s.name, borrowed: bdt(x.s.borrowed), repaid: bdt(x.s.repaid), closing: balanceText(x.s.closing), now: x.outstandingNow != null ? bdt(x.outstandingNow) : "", due: x.nextDue ? dateLong(x.nextDue) : "" } };
+  });
+  lines.push({ strong: true, cells: { name: `Totals (${people.length} ${people.length === 1 ? "person" : "people"})`, borrowed: bdt(tot.borrowed), repaid: bdt(tot.repaid), closing: balanceText(tot.closing), now: bdt(tot.now), due: "" } });
+
+  let page = doc.addPage(A4);
+  let y = A4[1] - M;
+  page.drawText("MRRMR", { x: M, y: y - 10, size: 11, font: bold, color: BRAND });
+  const st = "Statements of account";
+  page.drawText(st, { x: A4[0] - M - font.widthOfTextAtSize(st, 10), y: y - 10, size: 10, font, color: MUTED });
+  y -= 40;
+  page.drawText("Everyone", { x: M, y, size: 20, font: bold, color: INK });
+  y -= 18;
+  page.drawText(t(`Period: ${period}`), { x: M, y, size: 9.5, font, color: INK });
+  y -= 13;
+  page.drawText(t(`Exported: ${dateLong(generatedOn)}  ·  Amounts in Bangladeshi Taka (BDT)  ·  Each person's statement follows this summary`), { x: M, y, size: 9.5, font, color: MUTED });
+  y -= 24;
+  const head = (p: PDFPage, yy: number) => {
+    p.drawRectangle({ x: M, y: yy - rowH, width: A4[0] - 2 * M, height: rowH, color: BAND });
+    let x = M;
+    for (const c of cols) {
+      const w = bold.widthOfTextAtSize(c.label, 7.5);
+      p.drawText(c.label, { x: c.right ? x + c.w - PAD - w : x + PAD, y: yy - PAD - 9, size: 7.5, font: bold, color: MUTED });
+      x += c.w;
+    }
+    return yy - rowH;
+  };
+  y = head(page, y);
+  if (!people.length) {
+    page.drawText(t("No one has entries in this period."), { x: M + PAD, y: y - PAD - 9, size: SIZE, font, color: MUTED });
+  }
+  for (const l of people.length ? lines : []) {
+    if (y - rowH < M + 34) {
+      page = doc.addPage(A4);
+      y = head(page, A4[1] - M - 10);
+    }
+    if (l.strong) page.drawRectangle({ x: M, y: y - rowH, width: A4[0] - 2 * M, height: rowH, color: BAND });
+    const f = l.strong ? bold : font;
+    let x = M;
+    for (const c of cols) {
+      let v = t((l.cells as Record<string, string>)[c.key] ?? "");
+      if (v) {
+        const avail = c.w - 2 * PAD;
+        if (!c.right) while (v.length > 1 && f.widthOfTextAtSize(v, SIZE) > avail) v = v.slice(0, -1);
+        const size = c.right ? Math.min(SIZE, (SIZE * avail) / f.widthOfTextAtSize(v, SIZE)) : SIZE;
+        const w = f.widthOfTextAtSize(v, size);
+        const color = c.key === "repaid" ? BRAND : c.key === "now" || (c.key === "closing" && l.strong) ? OWED : INK;
+        page.drawText(v, { x: c.right ? x + c.w - PAD - w : x + PAD, y: y - PAD - 9, size, font: f, color });
+      }
+      x += c.w;
+    }
+    page.drawLine({ start: { x: M, y: y - rowH }, end: { x: A4[0] - M, y: y - rowH }, thickness: 0.4, color: LINE });
+    y -= rowH;
+  }
+  const summaryPages = doc.getPageCount();
+  for (let i = 0; i < summaryPages; i++) {
+    const p = doc.getPage(i);
+    p.drawLine({ start: { x: M, y: M + 18 }, end: { x: A4[0] - M, y: M + 18 }, thickness: 0.5, color: LINE });
+    p.drawText(t(`Generated by MRRMR on ${dateLong(generatedOn)}. Owed today counts every source, whatever the period.`), { x: M, y: M + 6, size: 7.5, font, color: MUTED });
+    const label = `Summary ${i + 1} of ${summaryPages}`;
+    p.drawText(label, { x: A4[0] - M - font.widthOfTextAtSize(label, 7.5), y: M + 6, size: 7.5, font, color: MUTED });
+  }
+
+  // ---- each person's statement, rendered by the single-person exporter and appended -----------------------------
+  const rowsPerPage: number[] = Array(summaryPages).fill(0);
+  for (const x of people) {
+    const one = await renderStatementPdf(x.s, { outstandingNow: x.outstandingNow, nextDue: x.nextDue });
+    const src = await PDFDocument.load(one.bytes);
+    const copied = await doc.copyPages(src, src.getPageIndices());
+    copied.forEach((p) => doc.addPage(p));
+    rowsPerPage.push(...one.rowsPerPage);
+  }
+
+  const bytes = await doc.save();
+  return { bytes, pageCount: doc.getPageCount(), rowsPerPage };
+}
+
 export async function renderStatementPdf(s: Statement, extra: { nextDue?: string | null; outstandingNow?: number } = {}): Promise<RenderedStatement> {
   const doc = await PDFDocument.create();
   doc.setTitle(`Statement - ${s.name}`);

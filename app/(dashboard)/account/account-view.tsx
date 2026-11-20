@@ -14,7 +14,6 @@ import { CardsStrip, Hero, RepayPicker } from "@/components/dashboard";
 import { Button, buttonClass, Menu, type MenuItem } from "@/components/ui";
 import { CardIcon, PlusIcon, TrendIcon } from "@/components/icons";
 import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
-import { BankMovements } from "@/components/bank-movements";
 import { buildProfiles, byOwesThenName, cardLabel } from "@/lib/ledger";
 import { computeDashboard } from "@/lib/dashboard";
 import { monthlySeries } from "@/lib/trends";
@@ -73,13 +72,12 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
       <section id="bank" aria-labelledby="bank-h" className="reveal flex scroll-mt-20 flex-col gap-4 border-t border-line pt-6">
         <div>
           <h2 id="bank-h" className="m-0 font-display text-[26px] font-normal">{account.name}</h2>
-          <p className="m-0 mt-1 text-small text-slate-500">The balance you keep up to date, your debit-card tally, and the money in and out the app recorded.</p>
+          <p className="m-0 mt-1 text-small text-slate-500">The balance you keep up to date and your debit-card tally.</p>
         </div>
         <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
           <BankBalancePanel account={account} />
           <DebitCardPanel account={account} />
         </div>
-        <BankMovements data={data} accountId={account.id} accountName={account.name} onOpen={(id) => router.push(`/debtors/${id}`)} />
       </section>
 
       {adding?.mode === "loan" && (

@@ -3,7 +3,7 @@
 ## Products (from the app's card configuration)
 | Slot | Bank | Product (as configured) | Verified against |
 | --- | --- | --- | --- |
-| 1 | City Bank PLC (Bangladesh) | American Express "Blue" credit card | City Bank is the sole issuer of American Express cards in Bangladesh; the card list on American Express's City Bank page names "The City Bank Blue American Express® Card" — https://www.americanexpress.com/en-bd/network/credit-cards/city-bank/ |
+| 1 | City Bank PLC (Bangladesh) | American Express Gold credit card (owner decision 2026-11-21; was "Blue") | City Bank is the sole issuer of American Express cards in Bangladesh — https://www.americanexpress.com/en-bd/network/credit-cards/city-bank/ |
 | 2 | Community Bank Bangladesh PLC | Visa Platinum credit card | The bank's credit card page lists "VISA Gold and Platinum Credit Cards" — https://www.communitybankbd.com/credit-card/ |
 
 ## Official artwork: not used
@@ -13,8 +13,8 @@ drawn in each bank's verified brand colours, with the bank name set as plain tex
 
 | File | Colours | Source of the colours (read 2026-11-19) |
 | --- | --- | --- |
-| `public/cards/city-bank.svg` | red `#F20823`, near-black `#231F20` | City Bank website stylesheet — https://www.thecitybank.com/ (most-used colours in its CSS) |
-| `public/cards/community-bank.svg` | blue `#058ED0`, navy `#32327B`, platinum-grey lines | Community Bank website — https://www.communitybankbd.com/ (most-used colours in its markup) |
+| `public/cards/city-bank.svg` | rose gold `#F1DDD3` → `#B0857A`, silver chip; dark text `#2E201C` on top | Owner's reference photo of the Gold card's rose-gold finish (2026-11-21). Engraved medallion is generic rings and rays — no portrait, wordmark or "Member Since" |
+| `public/cards/community-bank.svg` | black brushed metal `#3A3D42` → `#121315`, silver curves, blue `#058ED0` → navy `#32327B` accent | Owner's reference photo of the Visa Platinum card (2026-11-21); accent colours from the Community Bank website — https://www.communitybankbd.com/ |
 
 ## Rules followed
 * Only the last four digits the app already stores are shown. There is no field for a full card number or CVV.

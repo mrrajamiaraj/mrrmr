@@ -58,24 +58,28 @@ export function RepayDialog({ p, targets, account, onClose, onSaved }: {
 }
 
 /**
- * Export a person's statement as a PDF. Full history by default; a date range is optional (prefilled from the
- * history filter). The file comes from /export/pdf, which checks the admin session on the server.
+ * Export a person's statement as a PDF — or, with `personId: null`, everyone's in one file (a summary page, then each
+ * person's statement). Full history by default; a date range is optional (prefilled from the history filter). The
+ * file comes from /export/pdf, which checks the admin session on the server.
  */
 export function ExportPdfDialog({ personId, name, today, initial, onClose }: {
-  personId: string; name: string; today: string; initial: { from: string; to: string }; onClose: () => void;
+  personId: string | null; name: string; today: string; initial: { from: string; to: string }; onClose: () => void;
 }) {
   const [mode, setMode] = useState<"all" | "range">(initial.from || initial.to ? "range" : "all");
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
+  const everyone = personId == null;
   const bad = mode === "range" && ((from && !isIsoDate(from)) || (to && !isIsoDate(to)) || (!!from && !!to && from > to) || (!from && !to));
-  const q = new URLSearchParams({ id: personId });
+  const q = new URLSearchParams(everyone ? { all: "1" } : { id: personId });
   if (mode === "range" && from) q.set("from", from);
   if (mode === "range" && to) q.set("to", to);
-  const file = `MRRMR-statement-${slug(name)}-${mode === "range" && from ? from : "start"}-to-${mode === "range" && to ? to : today}.pdf`;
+  const file = everyone
+    ? `MRRMR-statements-everyone-${mode === "range" && from ? from : "start"}-to-${mode === "range" && to ? to : today}.pdf`
+    : `MRRMR-statement-${slug(name)}-${mode === "range" && from ? from : "start"}-to-${mode === "range" && to ? to : today}.pdf`;
   const opt = "flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-3 text-[14px]";
 
   return (
-    <Modal title="Export PDF statement" onClose={onClose} maxWidth={500}
+    <Modal title={everyone ? "Export everyone's statements (PDF)" : "Export PDF statement"} onClose={onClose} maxWidth={500}
       footer={<>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <a href={bad ? undefined : `/export/pdf?${q}`} download={bad ? undefined : file} aria-disabled={bad || undefined}
@@ -85,7 +89,9 @@ export function ExportPdfDialog({ personId, name, today, initial, onClose }: {
         </a>
       </>}>
       <div className="flex flex-col gap-3 p-5">
-        <p className="m-0 text-[13.5px] text-slate-600">An A4 statement for <b className="text-ink">{name}</b> only: summary totals and every entry with dates, amounts, repayments and the running balance.</p>
+        {everyone
+          ? <p className="m-0 text-[13.5px] text-slate-600">One A4 file for <b className="text-ink">everyone</b>: a summary page (each person&apos;s borrowed, repaid, balance, owed today and next due, with totals), then each person&apos;s full statement with every loan, card purchase and repayment and the running balance.</p>
+          : <p className="m-0 text-[13.5px] text-slate-600">An A4 statement for <b className="text-ink">{name}</b> only: summary totals and every entry with dates, amounts, repayments and the running balance.</p>}
         <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
           <legend className="sr-only">What to include</legend>
           <label className={`${opt} ${mode === "all" ? "border-brand-2 bg-good-tint" : "border-line"}`}>

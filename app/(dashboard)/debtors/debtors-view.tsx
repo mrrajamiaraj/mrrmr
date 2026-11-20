@@ -4,9 +4,9 @@ import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Shell, HeaderButton, useViewer } from "@/components/shell";
-import { PersonIcon, SearchIcon, ChevronRight, DueIcon, TrendIcon, WalletIcon } from "@/components/icons";
+import { DownloadIcon, PersonIcon, SearchIcon, ChevronRight, DueIcon, TrendIcon, WalletIcon } from "@/components/icons";
 import { AddDebtorDialog } from "@/components/debtors/add-debtor-dialog";
-import { RepayDialog } from "@/components/debtors/person-dialogs";
+import { ExportPdfDialog, RepayDialog } from "@/components/debtors/person-dialogs";
 import { repayTargets } from "@/components/debtors/repay-form";
 import { Avatar, Flash } from "@/components/debtors/bits";
 import { Button, EmptyState, Money } from "@/components/ui";
@@ -41,6 +41,7 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
   const [adding, setAdding] = useState(false);
   const [repaying, setRepaying] = useState<Profile | null>(null);
   const [flash, setFlash] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const all = useMemo(() => buildProfiles(data, today), [data, today]);
   usePalettePeople(all, (id) => id && router.push(`/debtors/${id}`));
@@ -64,7 +65,10 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
 
   return (
     <Shell subtitle="Everyone who owes you money — bank loans and purchases on your cards — and what they've paid back."
-      actions={<HeaderButton onClick={() => setAdding(true)}><PersonIcon size={15} />Add loan</HeaderButton>}>
+      actions={<>
+        <HeaderButton variant="outline" onClick={() => setExporting(true)}><DownloadIcon size={15} />Export all (PDF)</HeaderButton>
+        <HeaderButton onClick={() => setAdding(true)}><PersonIcon size={15} />Add loan</HeaderButton>
+      </>}>
 
       {/* Each figure is also a filter. */}
       <section aria-label="Totals" className="grid gap-3 sm:grid-cols-3">
@@ -191,6 +195,7 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
         <AddDebtorDialog mode="loan" extended title="Add a loan" submitLabel="Add loan" account={account} knownNames={data.people.map((p) => p.name)}
           onClose={() => setAdding(false)} onAdded={(personId, text) => { setAdding(false); setFlash(text); if (personId) router.push(`/debtors/${personId}`); }} />
       )}
+      {exporting && <ExportPdfDialog personId={null} name="Everyone" today={today} initial={{ from: "", to: "" }} onClose={() => setExporting(false)} />}
       {repaying && (
         <RepayDialog p={repaying} targets={repayTargets(all.find((x) => x.id === repaying.id) ?? repaying, data.cards)} account={account}
           onClose={() => setRepaying(null)} onSaved={(t) => { setRepaying(null); setFlash(t); }} />

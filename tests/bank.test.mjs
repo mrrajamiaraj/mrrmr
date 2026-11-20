@@ -30,3 +30,17 @@ test("monthly totals are exact and kept separate (never netted)", () => {
   const { months } = bankMovements(d, "a1");
   assert.deepEqual(months, [{ ym: "2026-11", credited: 2000.3, loansMade: 0 }, { ym: "2026-10", credited: 0, loansMade: 5000 }]);
 });
+
+test("bankBorrowers: who took money from this account, with each loan; other-source loans left out", async () => {
+  const { bankBorrowers } = await import("../lib/bank.ts");
+  const d2 = { ...d, people: [{ id: "p1", name: "Rahim" }, { id: "p2", name: "Karim" }],
+    loans: [...d.loans, { id: "l3", person_id: "p1", account_id: "a1", amount: 0.1, taken_on: "2026-11-01", reason: "Bus", method: "Cash withdrawal", created_at: "3" },
+      { id: "l4", person_id: "p2", account_id: "a1", amount: 9000, taken_on: "2026-09-01", reason: "Fees", method: "Bank transfer", due_on: "2026-12-01", created_at: "4" }] };
+  const b = bankBorrowers(d2, "a1");
+  assert.deepEqual(b.map((x) => [x.name, x.taken, x.loans.length]), [["Karim", 9000, 1], ["Rahim", 5000.1, 2]]);
+  assert.deepEqual(b[1].loans.map((l) => l.id), ["l3", "l1"], "newest loan first");
+  assert.equal(b[1].first, "2026-10-03");
+  assert.equal(b[1].creditedBack, 2000.3, "only repayments credited to this account: 2000 + 0.1 + 0.2");
+  assert.equal(b[0].loans[0].due, "2026-12-01");
+  assert.ok(!b.some((x) => x.loans.some((l) => l.id === "l2")), "a loan not from this account is not listed");
+});

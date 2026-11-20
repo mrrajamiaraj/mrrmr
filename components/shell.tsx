@@ -10,7 +10,7 @@ import { Wordmark } from "@/components/brand";
 import { setTheme, ThemeSegment, ThemeToggle, THEME_NAMES, useTheme } from "@/components/theme";
 import { Badge, buttonClass, Kbd, Menu, type MenuItem } from "@/components/ui";
 import {
-  ArrowUpIcon, CardIcon, CommandIcon, DownloadIcon, EyeIcon, FlaskIcon, HistoryIcon, HomeIcon, LockIcon, LogoutIcon, MoonIcon,
+  ArrowUpIcon, CardIcon, CommandIcon, DownloadIcon, EyeIcon, FlaskIcon, HomeIcon, LockIcon, LogoutIcon, MoonIcon,
   MoreIcon, PeopleIcon, SearchIcon, SettingsIcon, ShieldIcon, SunIcon, TrendIcon,
 } from "@/components/icons";
 import { exitViewMode } from "@/app/view/actions";
@@ -37,9 +37,8 @@ export const TABS = [
   { href: "/account", label: "Overview", nav: "Overview", short: "Home", group: "Money", key: "b", icon: HomeIcon, primary: true },
   { href: "/debtors", label: "People", nav: "People & loans", short: "People", group: "Lending", key: "d", icon: PeopleIcon, primary: true },
   { href: "/repayments", label: "Repayments", nav: "Repayments", short: "Repay", group: "Lending", key: "p", icon: TrendIcon, primary: false },
-  { href: "/cards/1", label: CARD_NAMES[1], nav: "City Bank card", short: "City", group: "Credit cards", key: "1", icon: CardIcon, primary: true },
-  { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Bank card", short: "Community", group: "Credit cards", key: "2", icon: CardIcon, primary: true },
-  { href: "/reports", label: "Monthly summary", nav: "Monthly summary", short: "Summary", group: "Records", key: "m", icon: HistoryIcon, primary: false },
+  { href: "/cards/1", label: CARD_NAMES[1], nav: "City Bank Amex Gold", short: "Amex Gold", group: "Credit cards", key: "1", icon: CardIcon, primary: true },
+  { href: "/cards/2", label: CARD_NAMES[2], nav: "Community Visa Platinum", short: "Platinum", group: "Credit cards", key: "2", icon: CardIcon, primary: true },
   { href: "/research", label: "Research ledger", nav: "Research ledger", short: "Research", group: "Records", key: "r", icon: FlaskIcon, primary: true },
   { href: "/settings", label: "Settings", nav: "Settings", short: "Settings", group: "Workspace", key: "s", icon: SettingsIcon, primary: false },
 ];

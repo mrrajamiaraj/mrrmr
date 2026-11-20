@@ -376,6 +376,21 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
 @keyframes viz-grow { from { transform: scaleY(0); } }
 .viz-sweep { stroke-dashoffset: var(--to); animation: viz-sweep 1.4s var(--ease-out-expo) both; }
 @keyframes viz-sweep { from { stroke-dashoffset: 100; } }
+/* SVG bars grow up from their own base (fill-box makes "bottom" the bar's bottom, not the chart's). */
+.viz-bar { transform-box: fill-box; transform-origin: bottom; animation: viz-grow 900ms var(--ease-out-expo) both; }
+/* City Bank AMEX debit card: its star pattern turns very slowly around the ring's centre (viewBox units). */
+.debit-star { transform-origin: 40px 125px; animation: debit-star 90s linear infinite; }
+@keyframes debit-star { to { transform: rotate(360deg); } }
+/* Credit cards (components/card-visual CardMotion): Amex Gold's medallion rays turn, a light band glides across both
+   cards now and then, and glints run along the Visa Platinum's silver curves. Lengths are in the 856×540 art frame. */
+.card-spin { animation: debit-star 120s linear infinite; }
+.card-sweep { animation: card-sweep 7s ease-in-out infinite; }
+@keyframes card-sweep { 0% { transform: translateX(-200px); } 45%, 100% { transform: translateX(1300px); } }
+.card-glint { stroke-dasharray: 7 93; animation: card-glint 6.6s linear infinite; }
+@keyframes card-glint { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+/* Research hero: the coverage ring's glow breathes slowly. */
+.viz-breathe { animation: viz-breathe 4s ease-in-out infinite; }
+@keyframes viz-breathe { 50% { opacity: 0.55; transform: scale(1.06); } }
 .viz-pulse { transform-box: fill-box; transform-origin: center; animation: viz-pulse 2.4s ease-out infinite; }
 @keyframes viz-pulse { 0% { opacity: 0.45; transform: scale(0.6); } 100% { opacity: 0; transform: scale(2.2); } }
 
@@ -413,7 +428,7 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
     scroll-behavior: auto !important;
   }
   /* Endless decorative loops would flicker at 1ms; stop them outright, and show revealed sections as they are. */
-  .aurora > span, .deck::before, .viz-pulse, .card-float, .reveal { animation: none !important; }
+  .aurora > span, .deck::before, .viz-pulse, .viz-breathe, .debit-star, .card-spin, .card-sweep, .card-glint, .card-float, .reveal { animation: none !important; }
   .card-3d { transform: none !important; }
 }
 
