@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { safeNextPath, siteOrigin, waitText } from "@/lib/security";
 import { emailKey, hitAll, ipKey, limiter, requestIp } from "@/lib/rate-limit";
 import { TURNSTILE_FAILED, TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
+import { logSecurityEvent } from "@/lib/security-log";
 
 export type AuthState = { error?: string; message?: string };
 
@@ -20,14 +21,18 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 
   const ip = await requestIp();
   const ipK = ipKey(ip), emailK = emailKey(email);
-  const wait = await hitAll([["loginIp", ipK], ["loginEmail", emailK]]);
+  const wait = await hitAll([["loginIp", ipK], ["loginEmail", emailK]], ip);
   if (wait) return { error: waitText(wait) };
   if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "login"))) return { error: TURNSTILE_FAILED };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   // One message for every failure, so the form can't be used to test which emails have accounts.
-  if (error) return { error: error.status === 429 ? "Too many attempts. Try again later." : "Wrong email or password." };
+  if (error) {
+    logSecurityEvent("signin_fail", { ip, status: error.status ?? "none" });
+    return { error: error.status === 429 ? "Too many attempts. Try again later." : "Wrong email or password." };
+  }
+  logSecurityEvent("signin_success", { ip });
 
   await Promise.all([limiter("loginIp").clear(ipK), limiter("loginEmail").clear(emailK)]);
   redirect(safeNextPath(formData.get("next")));
@@ -39,7 +44,7 @@ export async function forgotPassword(_prev: AuthState, formData: FormData): Prom
   if (!email) return { error: "Type your email above first, then press “Forgot password?”." };
 
   const ip = await requestIp();
-  const wait = await hitAll([["resetIp", ipKey(ip)], ["resetEmail", emailKey(email)]]);
+  const wait = await hitAll([["resetIp", ipKey(ip)], ["resetEmail", emailKey(email)]], ip);
   if (wait) return { error: waitText(wait) };
   if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "login"))) return { error: TURNSTILE_FAILED };
 

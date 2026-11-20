@@ -6,6 +6,7 @@ import { isViewerEmail, viewModeConfig } from "@/lib/viewer";
 import { waitText } from "@/lib/security";
 import { hitAll, ipKey, requestIp } from "@/lib/rate-limit";
 import { TURNSTILE_FAILED, TURNSTILE_FIELD, verifyTurnstile } from "@/lib/turnstile";
+import { logSecurityEvent } from "@/lib/security-log";
 import type { AuthState } from "@/app/login/actions";
 
 // No key is needed (owner decision 2026-11-19), but each button press signs in to Supabase, so it is still throttled:
@@ -14,7 +15,7 @@ import type { AuthState } from "@/app/login/actions";
 /** Opens the read-only view: signs this browser in as the shared viewer account, which can read the Research ledger only. */
 export async function enterViewMode(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const ip = await requestIp();
-  const wait = await hitAll([["viewIp", ipKey(ip)]]);
+  const wait = await hitAll([["viewIp", ipKey(ip)]], ip);
   if (wait) return { error: waitText(wait) };
   // Bot check before anything touches Supabase (sign-out of an admin here included).
   if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "view"))) return { error: TURNSTILE_FAILED };
@@ -33,10 +34,11 @@ export async function enterViewMode(_prev: AuthState, formData: FormData): Promi
   const { error } = await supabase.auth.signInWithPassword({ email: cfg.email, password: cfg.password });
   if (error) {
     // Server log only, without credentials or personal data.
-    console.error("[view] viewer sign-in failed:", error.status ?? "", error.code ?? "");
+    logSecurityEvent("view_fail", { ip, status: error.status ?? "none", reason: error.code ?? "unknown" });
     return { error: "View mode is unavailable right now. Try again later." };
   }
 
+  logSecurityEvent("view_entry", { ip });
   redirect("/research");
 }
 

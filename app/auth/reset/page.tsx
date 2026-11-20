@@ -1,11 +1,13 @@
 import { ShieldIcon } from "@/components/icons";
+import { headers } from "next/headers";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { ResetForm } from "./reset-form";
 
 // Reads TURNSTILE_SITE_KEY at request time (not baked in at build time).
 export const dynamic = "force-dynamic";
 
-export default function ResetPage() {
+export default async function ResetPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <main className="grid min-h-dvh place-items-center bg-page px-4 py-8">
       <div className="flex w-full max-w-[420px] animate-pop-in flex-col gap-5 rounded-2xl border border-line bg-surface px-5 py-7 shadow-[0_24px_60px_-30px_rgba(28,27,24,0.35)] sm:px-8 sm:py-9">
@@ -16,7 +18,7 @@ export default function ResetPage() {
           <h1 className="m-0 text-[24px] font-semibold tracking-[-0.02em]">Set a new password</h1>
           <div className="mt-1 text-sm text-slate-500">You opened a reset link, so you don&apos;t need the old password.</div>
         </div>
-        <ResetForm siteKey={turnstileSiteKey()} />
+        <ResetForm siteKey={turnstileSiteKey()} nonce={nonce} />
       </div>
     </main>
   );

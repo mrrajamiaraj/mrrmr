@@ -1,5 +1,6 @@
 import "server-only";
 import { turnstileHosts, verifyTurnstileToken, type TurnstileAction } from "@/lib/turnstile-core";
+import { logSecurityEvent } from "@/lib/security-log";
 
 export { TURNSTILE_FAILED, type TurnstileAction } from "@/lib/turnstile-core";
 
@@ -13,7 +14,8 @@ export function turnstileSiteKey(): string | null {
 
 /**
  * True only when Cloudflare confirms the token for this action on our host. Fails closed without
- * TURNSTILE_SECRET_KEY (and, in production, without SITE_URL). Logs Cloudflare's error codes only.
+ * TURNSTILE_SECRET_KEY (and, in production, without SITE_URL). Logs a security event with the reason and a hashed IP
+ * only — never the token, the IP itself or the email.
  */
 export async function verifyTurnstile(token: unknown, ip: string | null, expectedAction: TurnstileAction): Promise<boolean> {
   const production = process.env.NODE_ENV === "production";
@@ -21,7 +23,7 @@ export async function verifyTurnstile(token: unknown, ip: string | null, expecte
     secret: process.env.TURNSTILE_SECRET_KEY,
     allowedHosts: turnstileHosts(process.env.SITE_URL, production),
     production,
-    log: (reason, codes) => console.warn(JSON.stringify({ event: "turnstile_reject", action: expectedAction, reason, codes })),
   });
+  if (!r.ok) logSecurityEvent("turnstile_fail", { action: expectedAction, reason: r.reason, ip: ip ?? undefined });
   return r.ok;
 }

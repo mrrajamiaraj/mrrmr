@@ -19,7 +19,7 @@ export async function resetPassword(password: string, turnstileToken: string): P
     return { error: "The new password does not meet all four requirements." };
 
   const ip = await requestIp();
-  const wait = await hitAll([["resetForm", ipKey(ip)]]);
+  const wait = await hitAll([["resetForm", ipKey(ip)]], ip);
   if (wait) return { error: waitText(wait) };
   if (!(await verifyTurnstile(turnstileToken, ip, "reset"))) return { error: TURNSTILE_FAILED };
 

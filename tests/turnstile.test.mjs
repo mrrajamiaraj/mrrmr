@@ -99,8 +99,9 @@ test("every unauthenticated action checks Turnstile after the rate limit and bef
 });
 
 test("CSP allows Turnstile's script and frame origin and nothing new elsewhere", () => {
-  const cfg = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
-  assert.match(cfg, /script-src[^\n]*https:\/\/challenges\.cloudflare\.com/);
-  assert.match(cfg, /"frame-src https:\/\/challenges\.cloudflare\.com"/);
+  const cfg = readFileSync(new URL("../lib/csp.ts", import.meta.url), "utf8");
+  assert.match(cfg, /script-src[^\n]*\$\{TURNSTILE_ORIGIN\}/);
+  assert.match(cfg, /`frame-src \$\{TURNSTILE_ORIGIN\}`/);
+  assert.match(cfg, /TURNSTILE_ORIGIN = "https:\/\/challenges\.cloudflare\.com"/);
   assert.match(cfg, /connect-src 'self'\$\{isDev/);
 });

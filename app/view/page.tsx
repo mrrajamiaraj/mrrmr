@@ -1,6 +1,7 @@
 import { SignInCard } from "@/app/login/sign-in-card";
 import { createClient } from "@/lib/supabase/server";
 import { isViewerEmail } from "@/lib/viewer";
+import { headers } from "next/headers";
 import { turnstileSiteKey } from "@/lib/turnstile";
 
 /**
@@ -11,5 +12,5 @@ export default async function ViewPage() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const adminHere = Boolean(data?.claims && !isViewerEmail(data.claims.email as string | undefined));
-  return <SignInCard next="/" initialMode="viewer" adminSignedIn={adminHere} siteKey={turnstileSiteKey()} />;
+  return <SignInCard next="/" initialMode="viewer" adminSignedIn={adminHere} siteKey={turnstileSiteKey()} nonce={(await headers()).get("x-nonce") ?? undefined} />;
 }
