@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ShieldIcon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
@@ -33,7 +34,7 @@ export default async function MfaPage({ searchParams }: { searchParams: Promise<
           <h1 className="m-0 text-[24px] font-semibold tracking-[-0.02em]">Enter your code</h1>
           <div className="mt-1 text-sm text-slate-500">Open your authenticator app and type the 6-digit code for MRRMR.</div>
         </div>
-        <MfaForm next={next} siteKey={turnstileSiteKey()} />
+        <MfaForm next={next} siteKey={turnstileSiteKey()} nonce={(await headers()).get("x-nonce") ?? undefined} />
         <form action={signOut} className="self-center">
           <button type="submit" className="min-h-9 rounded-md px-2 text-[13.5px] font-medium text-slate-600 hover:bg-subtle hover:text-ink">Sign out</button>
         </form>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Instrument_Serif, Noto_Sans_Bengali } from "next/font/google";
+import { headers } from "next/headers";
 import { themeScript } from "@/lib/theme-script";
 import "./globals.css";
 
@@ -28,12 +29,14 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Per-request nonce from proxy.ts: the CSP only runs inline scripts that carry it.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     // The theme script sets data-theme before React hydrates, so <html> differs from the server render on purpose.
     <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable} ${display.variable} ${bangla.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body suppressHydrationWarning>
         {/* Aurora: slow-drifting light behind every page (decorative; still under reduced motion). */}

@@ -44,7 +44,7 @@ test("TOTP codes: exactly 6 digits", () => {
 test("proxy gates admins at aal1 with a factor, using getUser (not the cookie's factor list)", () => {
   const src = read("../proxy.ts");
   assert.match(src, /signedIn && !viewer && data\?\.claims\?\.aal !== "aal2" && !mfaExempt\(path\)/);
-  assert.match(src, /url\.pathname = "\/auth\/mfa"/);
+  assert.match(src, /url\.pathname = "\/auth\/mfa"|go\("\/auth\/mfa"/);
   assert.match(src, /supabase\.auth\.getUser\(\)/);
   assert.ok(!/getSession\(|getAuthenticatorAssuranceLevel\(\)/.test(src), "no cookie-only factor checks");
 });
