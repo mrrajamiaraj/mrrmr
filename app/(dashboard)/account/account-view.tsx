@@ -14,6 +14,7 @@ import { CardsStrip, Hero, RepayPicker } from "@/components/dashboard";
 import { Button, buttonClass, Menu, type MenuItem } from "@/components/ui";
 import { CardIcon, PlusIcon, TrendIcon } from "@/components/icons";
 import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
+import { BankBorrowers } from "@/components/bank-borrowers";
 import { buildProfiles, byOwesThenName, cardLabel } from "@/lib/ledger";
 import { computeDashboard } from "@/lib/dashboard";
 import { monthlySeries } from "@/lib/trends";
@@ -79,6 +80,8 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
           <DebitCardPanel account={account} />
         </div>
       </section>
+
+      <div className="reveal"><BankBorrowers data={data} accountId={account.id} accountName={account.name} profiles={profiles} today={today} /></div>
 
       {adding?.mode === "loan" && (
         <AddDebtorDialog mode="loan" title={`Add loan — ${account.name}`} account={acct} knownNames={data.people.map((p) => p.name)}
