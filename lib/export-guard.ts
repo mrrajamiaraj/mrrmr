@@ -29,7 +29,7 @@ export async function exportGuard(kind: "admin" | "research"): Promise<Response 
   const key = hashKey(viewer ? `user:${claims.sub}:ip:${ip}` : `user:${claims.sub}`);
   const wait = await limiter("exportUser").hit(key);
   if (wait) {
-    logSecurityEvent("rate_limit_hit", { limiter: "exportUser", ip });
+    logSecurityEvent("rate_limit_hit", { limiter: "exportUser", ip }); // limiter() directly, so logged here
     return plain("Too many downloads. Try again in a few minutes.", 429, { "Retry-After": String(Math.ceil(wait / 1000)) });
   }
   return null;

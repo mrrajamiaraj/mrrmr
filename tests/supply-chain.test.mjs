@@ -7,7 +7,7 @@ const read = (f) => readFileSync(new URL(f, import.meta.url), "utf8");
 
 test("CI: read-only token, runs npm ci, tests, build, audit and a full-history gitleaks scan", () => {
   const ci = read("../.github/workflows/ci.yml");
-  assert.match(ci, /^permissions:\n  contents: read$/m);
+  assert.match(ci, /^permissions:\r?\n  contents: read\r?$/m);
   for (const step of ["npm ci", "npm test", "npm run build", "npm audit --omit=dev"]) assert.ok(ci.includes(`run: ${step}`), step);
   assert.match(ci, /fetch-depth: 0/);
   assert.match(ci, /gitleaks git --log-opts="--all"/);

@@ -18,7 +18,7 @@ const WRONG_CODE = "That code didn't work. Check the time on your phone and try 
 /** 5 code attempts per 15 minutes, per account AND per IP: a stolen password can't be used to brute-force the code. */
 async function codeLimit(userId: string): Promise<number> {
   const ip = await requestIp();
-  return hitAll([["mfa", hashKey(`user:${userId}`)], ["mfa", ipKey(ip)]]);
+  return hitAll([["mfa", hashKey(`user:${userId}`)], ["mfa", ipKey(ip)]], ip);
 }
 
 /**
@@ -32,12 +32,9 @@ export async function verifyMfa(_prev: MfaState, formData: FormData): Promise<Mf
   if (isViewerEmail(claims.email as string | undefined)) redirect("/research");
 
   const wait = await codeLimit(claims.sub);
-  if (wait) { logSecurityEvent("rate_limit_hit", { limiter: "mfa" }); return { error: waitText(wait) }; }
+  if (wait) return { error: waitText(wait) };
   const ip = await requestIp();
-  if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "mfa"))) {
-    logSecurityEvent("turnstile_fail", { action: "mfa", ip });
-    return { error: TURNSTILE_FAILED };
-  }
+  if (!(await verifyTurnstile(formData.get(TURNSTILE_FIELD), ip, "mfa"))) return { error: TURNSTILE_FAILED };
   const code = cleanTotp(formData.get("code"));
   if (!code) return { error: "Enter the 6-digit code from your authenticator app." };
 

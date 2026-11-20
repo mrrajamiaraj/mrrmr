@@ -4,6 +4,7 @@ import {
   LIMITS, MemoryLimiter, UpstashLimiter, emailKey, hashKey, trustedClientIp, upstashConfig,
   type LimitName, type Limiter,
 } from "@/lib/rate-limit-core";
+import { logSecurityEvent } from "@/lib/security-log";
 
 export { emailKey } from "@/lib/rate-limit-core";
 
@@ -40,8 +41,9 @@ export async function requestIp(): Promise<string> {
 /** Hashed IP: the form used for rate-limit keys and security logs. */
 export const ipKey = (ip: string) => hashKey(`ip:${ip}`);
 
-/** Checks several limits; returns the longest wait (0 = allowed). Every limit is counted. */
-export async function hitAll(checks: [LimitName, string][]): Promise<number> {
+/** Checks several limits; returns the longest wait (0 = allowed). Every limit is counted; each refusal is logged. */
+export async function hitAll(checks: [LimitName, string][], ip?: string): Promise<number> {
   const waits = await Promise.all(checks.map(([n, k]) => limiter(n).hit(k)));
+  waits.forEach((w, i) => { if (w) logSecurityEvent("rate_limit_hit", { limiter: checks[i][0], ip }); });
   return Math.max(0, ...waits);
 }
