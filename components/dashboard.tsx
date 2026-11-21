@@ -42,10 +42,11 @@ export function Hero({ d, hour, actions, trend }: { d: Dashboard; hour: number; 
           <div className="eyebrow">{longDate(d.today)}</div>
           <h1 className="m-0 mt-2 font-display text-title font-normal">{greeting(hour)}.</h1>
         </div>
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto">{actions}</div>
+        {/* Phones: three equal app-style buttons, icon above label, in one row. */}
+        <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:flex-wrap [&>*]:max-sm:h-[60px] [&>*]:max-sm:flex-col [&>*]:max-sm:gap-1 [&>*]:max-sm:px-1 [&>*]:max-sm:text-[12.5px] [&>*]:max-sm:leading-tight">{actions}</div>
       </div>
 
-      <section aria-label="Your position" className="deck grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
+      <section aria-label="Your position" className="deck grid gap-5 p-4 sm:gap-6 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-5">
           <Link href="#bank" className="group flex w-fit flex-col gap-1 rounded-xl">
             <span className="flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/60">
@@ -60,7 +61,7 @@ export function Hero({ d, hour, actions, trend }: { d: Dashboard; hour: number; 
             <span className="text-[12.5px] text-white/55">{bank ? `The balance you last entered · ${timestampLong(bank.updatedAt)}` : "Add your bank account to start."}</span>
           </Link>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             <Link href="/debtors?show=owing" className="deck-tile group flex flex-col gap-1 p-4 transition-colors">
               <span className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Owed to you<ArrowRightIcon size={13} className="transition-transform group-hover:translate-x-0.5" /></span>
               <span className="money text-[26px] leading-tight text-[#F0C77E]"><CountUp value={d.receivables.total} format={taka} duration={1300} intro /></span>

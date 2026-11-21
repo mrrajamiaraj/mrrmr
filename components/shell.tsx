@@ -396,7 +396,7 @@ function BackToTop() {
   return (
     <button type="button" aria-label="Back to top" tabIndex={show ? 0 : -1} aria-hidden={!show}
       onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}
-      className={`fixed bottom-[calc(var(--bottom-nav-h)+12px+env(safe-area-inset-bottom))] right-4 z-30 grid size-11 place-items-center rounded-full border border-line bg-surface text-slate-600 shadow-[var(--shadow-lift)] hover:text-ink lg:bottom-6 lg:right-6 ${
+      className={`fixed bottom-[calc(var(--bottom-nav-h)+12px+env(safe-area-inset-bottom))] right-4 z-30 hidden size-11 lg:grid place-items-center rounded-full border border-line bg-surface text-slate-600 shadow-[var(--shadow-lift)] hover:text-ink lg:bottom-6 lg:right-6 ${
         show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
       } duration-300`}>
       <ArrowUpIcon size={18} />
@@ -427,17 +427,18 @@ export function Shell({
       className="page-gutter pb-[calc(var(--bottom-nav-h)+40px+env(safe-area-inset-bottom))] pt-5 outline-none sm:pt-7 lg:pb-20 lg:pt-10">
       {/* Keyed by route so each page plays its entrance, including Card 1 → Card 2 which reuses the same component. */}
       <div key={path} className="page-enter mx-auto flex max-w-[1180px] flex-col gap-5 sm:gap-6">
-        {hero ?? <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-line pb-5 sm:pb-6">
+        {hero ?? <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-line pb-4 sm:pb-6">
           <div className="min-w-0 max-w-[720px]">
             <div className="eyebrow flex items-center gap-2">
               {Icon && <Icon size={14} className="text-brand-2" />}
               {tab?.group ?? "MRRMR"}
               {admin.viewer && <Badge tone="info" className="ml-1 normal-case tracking-normal"><EyeIcon size={12} />View only</Badge>}
             </div>
-            <h1 className="m-0 mt-2 font-display text-title font-normal text-ink">{tab?.label ?? "Finance"}</h1>
-            <p className="m-0 mt-2 text-[14.5px] text-slate-500">{subtitle}</p>
+            <h1 className="m-0 mt-1.5 font-display text-title font-normal text-ink sm:mt-2">{tab?.label ?? "Finance"}</h1>
+            <p className="m-0 mt-1.5 line-clamp-2 text-[13px] text-slate-500 sm:mt-2 sm:line-clamp-none sm:text-[14.5px]">{subtitle}</p>
           </div>
-          {!admin.viewer && actions && <div className="flex w-full flex-wrap gap-2 sm:w-auto">{actions}</div>}
+          {/* Phones: the actions share one row in equal columns, like an app toolbar. */}
+          {!admin.viewer && actions && <div className="grid w-full auto-cols-fr grid-flow-col gap-2 sm:flex sm:w-auto sm:flex-wrap [&>*]:min-w-0">{actions}</div>}
         </header>}
         {children}
       </div>

@@ -172,7 +172,7 @@ export function LedgerTab({ expenses, facilities, members, setDialog, filter, se
     <>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <section className={card}>
-          <Head title="Where it went" sub="Click a facility to show only its expenses." />
+          <Head title="Where it went" sub="Tap a facility to show only its expenses." />
           <div className="px-2 pb-3 sm:px-3"><BarPicker label="Spending by facility" rows={byFacility} picked={fac} onPick={(n) => set({ fac: n })} colorOf={(n) => facilityLook(n).color} /></div>
         </section>
         <section className={card}>
@@ -308,14 +308,14 @@ export function ContributionsTab({ contributions, members, setDialog }: {
     <>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section className={card}>
-          <Head title="Who put money in" sub="Hover a slice to read it; click to show only that member." />
+          <Head title="Who put money in" sub="Tap a slice to show only that member." />
           <div className="px-4 pb-4 sm:px-5">
             <Donut title="Contributions by member" centerLabel="Contributed" picked={mem || undefined} onPick={(n) => setMem(mem === n ? "" : n)}
               slices={byMember.map((s) => ({ name: s.name, value: s.total, color: memberLook(s.name).dot, sub: `${s.count} payments · avg ${takaDec(s.avg)}` }))} />
           </div>
         </section>
         <section className={card}>
-          <Head title="How it was paid" sub="Click a method to filter." />
+          <Head title="How it was paid" sub="Tap a method to filter." />
           <div className="px-2 pb-3 sm:px-3"><BarPicker label="Contributions by payment method" rows={byNote} picked={note} onPick={setNote} colorOf={noteColor} /></div>
         </section>
       </div>
@@ -507,14 +507,14 @@ export function AnalyticsTab({ expenses, facilities, members, onSettlement, onOp
     <>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className={card}>
-          <Head title="By facility" sub="Where the research money was spent. Click to highlight it in the grid below." />
+          <Head title="By facility" sub="Where the research money was spent. Tap to highlight it in the grid below." />
           <div className="px-4 pb-4 sm:px-5">
             <Donut title="Spending by facility" centerLabel="Spent" picked={fac || undefined} onPick={(n) => setFac(fac === n ? "" : n)}
               slices={byFac.map((s) => ({ name: s.name, value: s.total, color: facilityLook(s.name).color, sub: `${s.count} entries · avg ${takaDec(s.avg)}` }))} />
           </div>
         </section>
         <section className={card}>
-          <Head title="By member" sub="Who paid for the expenses. Click to highlight." />
+          <Head title="By member" sub="Who paid for the expenses. Tap to highlight." />
           <div className="px-4 pb-4 sm:px-5">
             <Donut title="Spending by member" centerLabel="Paid for" picked={mem || undefined} onPick={(n) => setMem(mem === n ? "" : n)}
               slices={byMem.map((s) => ({ name: s.name, value: s.total, color: memberLook(s.name).dot, sub: `${s.count} entries · avg ${takaDec(s.avg)}` }))} />
@@ -523,7 +523,7 @@ export function AnalyticsTab({ expenses, facilities, members, onSettlement, onOp
       </div>
 
       <section className={card}>
-        <Head title="Facility × member" sub="Who paid for what, where. Click a cell to open those expenses."
+        <Head title="Facility × member" sub="Who paid for what, where. Tap a cell to open those expenses."
           action={(fac || mem) && <button type="button" onClick={() => { setFac(""); setMem(""); }} className="animate-pop-in text-[13px] font-medium text-brand-2 underline underline-offset-2">Clear highlight</button>} />
         <div className="px-3 pb-4 sm:px-4">
           <Heatmap rows={rowsF} cols={colsM} max={m.max} focus={{ row: fac || undefined, col: mem || undefined }}
@@ -535,7 +535,7 @@ export function AnalyticsTab({ expenses, facilities, members, onSettlement, onOp
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className={card}>
-          <Head title="Top tags" sub={tags.length ? "Click a tag to see its expenses." : undefined} />
+          <Head title="Top tags" sub={tags.length ? "Tap a tag to see its expenses." : undefined} />
           {tags.length ? (
             <ul className="m-0 flex list-none flex-col gap-1 px-2 pb-3 sm:px-3">
               {tags.map((t, i) => (
@@ -605,7 +605,7 @@ export function MonthlyTab({ expenses, contributions, facilities, members, onOpe
       <section className={`${card} p-4 sm:p-5`}>
         <div className="mb-3">
           <h2 className="m-0 text-[16px] font-semibold">Money in and out, month by month</h2>
-          <div className="mt-0.5 text-[13px] text-slate-500">{monthLabel(flow[0].key)} to {monthLabel(flow[flow.length - 1].key)}. Hover to read a month; click (or use ←/→) to open it below.</div>
+          <div className="mt-0.5 text-[13px] text-slate-500">{monthLabel(flow[0].key)} to {monthLabel(flow[flow.length - 1].key)}. Tap a month (or use ←/→) to open it below.</div>
         </div>
         <FlowChart months={flow} selected={cur.key} onSelect={setKey} />
       </section>

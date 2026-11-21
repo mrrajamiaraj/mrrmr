@@ -60,11 +60,11 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
   return (
     <Shell subtitle="" hero={
       <Hero d={d} hour={hour} trend={trend} actions={!viewer && <>
-        <Button onClick={() => setPicking(true)} className="shine flex-auto sm:flex-none"><TrendIcon size={15} />Record repayment</Button>
+        <Button onClick={() => setPicking(true)} className="shine flex-auto sm:flex-none"><TrendIcon size={15} /><span className="sm:hidden">Repayment</span><span className="max-sm:hidden">Record repayment</span></Button>
         <Button variant="secondary" onClick={() => setAdding({ mode: "loan" })} className="flex-auto sm:flex-none"><PlusIcon size={15} />Add loan</Button>
         {data.cards.length > 0 && (
           <Menu label="Add a card purchase" align="end" items={cardItems}
-            triggerClass={buttonClass("secondary", "md", "flex-auto sm:flex-none")} trigger={<><CardIcon size={15} />Card purchase</>} />
+            triggerClass={buttonClass("secondary", "md", "flex-auto sm:flex-none max-sm:h-[60px] max-sm:w-full max-sm:min-w-0 max-sm:flex-col max-sm:gap-1 max-sm:px-1 max-sm:text-[12.5px] max-sm:leading-tight")} trigger={<><CardIcon size={15} />Card purchase</>} />
         )}
       </>} />
     }>

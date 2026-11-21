@@ -137,7 +137,7 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
             placeholder={people.length ? "Search pages, people and actions…" : "Search pages and actions…"} aria-label="Search pages, people and actions"
             role="combobox" aria-expanded="true" aria-controls={listId} aria-activedescendant={shown[active] ? `${listId}-${active}` : undefined}
             className="min-h-14 min-w-0 flex-auto bg-transparent text-[15px] outline-none placeholder:text-slate-400" />
-          <kbd className="rounded border border-line bg-soft px-1.5 py-0.5 text-[11px] text-slate-500">Esc</kbd>
+          <kbd className="rounded border border-line bg-soft px-1.5 py-0.5 text-[11px] text-slate-500 pointer-coarse:hidden">Esc</kbd>
         </div>
         <ul ref={listRef} id={listId} role="listbox" className="m-0 max-h-[min(380px,60vh)] list-none overflow-y-auto p-2">
           {shown.map((i, n) => {
@@ -151,7 +151,7 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
                   className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2.5 text-[14px] ${on ? "bg-soft text-ink" : "text-slate-700"}`}>
                   <span className={`grid size-8 flex-none place-items-center rounded-md border ${on ? "border-good-line bg-good-tint text-brand-ink" : "border-line bg-surface text-slate-500"}`}>{i.icon}</span>
                   <span className="min-w-0 flex-auto truncate">{i.label}</span>
-                  {i.hint && <span className="text-[12px] text-slate-400">{i.hint}</span>}
+                  {i.hint && <span className={`text-[12px] text-slate-400 ${/^G /.test(i.hint) ? "pointer-coarse:hidden" : ""}`}>{i.hint}</span>}
                   <ArrowRightIcon size={14} className={`text-slate-400 transition-[opacity,translate] ${on ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"}`} />
                 </div>
               </li>
@@ -159,7 +159,7 @@ export function CommandPalette({ viewer, onClose, onShortcuts }: { viewer: boole
           })}
           {shown.length === 0 && <li className="px-3 py-8 text-center text-[14px] text-slate-500">Nothing matches “{q.trim()}”.</li>}
         </ul>
-        <div className="flex items-center gap-4 border-t border-line bg-subtle px-4 py-2 text-[12px] text-slate-500">
+        <div className="flex items-center gap-4 border-t border-line bg-subtle px-4 py-2 text-[12px] text-slate-500 pointer-coarse:hidden">
           <span><kbd className="font-sans">↑↓</kbd> to move</span>
           <span><kbd className="font-sans">Enter</kbd> to open</span>
           <span className="ml-auto hidden sm:inline">Press <kbd className="font-sans">?</kbd> for all shortcuts</span>

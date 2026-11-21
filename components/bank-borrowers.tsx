@@ -101,7 +101,7 @@ export function BankBorrowers({ data, accountId, accountName, balance, open, pro
           <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-3 sm:px-5">
             <label className="flex min-h-10 min-w-0 flex-[1_1_220px] items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2">
               <SearchIcon size={15} className="text-slate-500" /><span className="sr-only">Search people who took money</span>
-              <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, reason, phone" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
+              <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
             </label>
             <button type="button" aria-pressed={owingOnly} onClick={() => setOwingOnly((v) => !v)}
               className={`min-h-10 rounded-full border px-3.5 text-[13px] font-medium transition-colors ${owingOnly ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:text-ink"}`}>Still owe</button>
@@ -138,7 +138,7 @@ export function BankBorrowers({ data, accountId, accountName, balance, open, pro
                         <span><span className="text-slate-500">Taken </span><Money value={r.taken} tone="owed" /></span>
                         {owes > 0 ? <span className={late ? "font-medium text-bad" : "text-slate-600"}>owes <Money value={owes} tone={late ? "bad" : "ink"} /></span> : <Badge tone="good" className="text-[11px]">Loans repaid</Badge>}
                       </div>
-                      <span aria-hidden="true" className="block h-1.5 overflow-hidden rounded-full bg-soft">
+                      <span aria-hidden="true" className="block h-1.5 overflow-hidden rounded-full bg-soft max-md:hidden">
                         <span className="bar-fill block h-full rounded-full bg-owed-bar" style={{ width: `${(r.taken / maxTaken) * 100}%`, animationDelay: `${Math.min(i * 35, 420) + 120}ms` }} />
                       </span>
                       {repaid + owes > 0 && <SplitBar className="h-1.5" parts={[{ value: repaid, className: "bg-brand-2" }, { value: owes, className: late ? "bg-bad/70" : "bg-owed-bar/50" }]} />}
@@ -150,10 +150,10 @@ export function BankBorrowers({ data, accountId, accountName, balance, open, pro
                       )}
                     </div>
                     <span className="max-md:hidden">{owes > 0 && p?.due ? <DateChip iso={p.due} today={today} size="sm" /> : <span className="text-[12px] text-slate-400">—</span>}</span>
-                    <div className="col-span-2 flex gap-2 md:col-span-1">
+                    <div className={`col-span-2 flex gap-2 md:col-span-1 ${owes > 0 ? "" : "max-md:-mt-1 max-md:justify-end"}`}>
                       {!viewer && owes > 0 && <Button size="sm" onClick={() => onRepay(r.personId)} className="flex-auto md:flex-none" aria-label={`Record a repayment from ${r.name}`}><InIcon size={14} />Record</Button>}
                       <button type="button" aria-expanded={isOpen} aria-controls={`bb-${r.personId}`} onClick={() => setOpenRow(isOpen ? null : r.personId)}
-                        className="inline-flex min-h-9 flex-auto items-center justify-center gap-1.5 rounded-lg border border-line px-3 text-[13px] font-medium text-slate-600 hover:bg-soft hover:text-ink md:flex-none">
+                        className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-line px-3 text-[13px] font-medium text-slate-600 hover:bg-soft hover:text-ink md:flex-none ${owes > 0 ? "flex-auto" : "max-md:min-h-8 max-md:border-transparent max-md:px-2 max-md:text-brand-2"}`}>
                         {isOpen ? "Hide" : "Statement"}<ChevronDown size={14} className={`transition-transform duration-300 ease-[var(--ease-spring)] ${isOpen ? "rotate-180" : ""}`} />
                       </button>
                     </div>
@@ -255,7 +255,7 @@ function Outlook({ outlook, accountName, today }: { outlook: ReturnType<typeof b
           <span className="font-semibold">How the balance grows as people pay back</span>
           <span aria-live="polite" className="min-h-5 text-slate-500">
             {cur ? <><b className="font-semibold text-ink">{cur.title}</b>{cur.add ? <> · <span className="money text-brand-2">+{taka(cur.add)}</span></> : null} · balance <span className="money text-ink">{taka(cur.value)}</span>{cur.who ? ` · ${cur.who}` : ""}</>
-              : "Assumes each repayment goes into the account. Hover a bar."}
+              : "Assumes each repayment goes into the account. Tap a bar to read it."}
           </span>
         </figcaption>
         <div tabIndex={0} role="group" aria-label={`${accountName} balance now ${taka(outlook.now)}; after every loan is paid back into it, ${taka(outlook.after)}. Use the arrow keys to read each step.`}
@@ -300,7 +300,7 @@ function Statement({ data, personId, accountId, accountName, first, name, balanc
   const lines = useMemo(() => loanLedger(data, personId, accountId).reverse(), [data, personId, accountId]);
   return (
     <div id={`bb-${personId}`} className="animate-fade-in border-t border-soft bg-subtle/60 px-4 py-3 sm:px-5">
-      <div className="mb-3 grid gap-2 sm:grid-cols-3">
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 [&>:last-child]:col-span-2 sm:[&>:last-child]:col-span-1">
         <div className="rounded-lg border border-line bg-surface px-3 py-2"><span className="eyebrow">Paid back into {accountName}</span><div><Money value={creditedBack} tone="good" className="text-[16px]" /></div></div>
         <div className="rounded-lg border border-line bg-surface px-3 py-2"><span className="eyebrow">Still owes on loans</span><div><Money value={owes} tone={owes ? "bad" : "good"} className="text-[16px]" /></div></div>
         <div className="rounded-lg border border-good-line bg-good-tint px-3 py-2"><span className="eyebrow text-brand-ink">{accountName} after {first} repays</span>

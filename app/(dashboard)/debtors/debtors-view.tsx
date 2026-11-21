@@ -130,10 +130,10 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
         )}
       </div>
 
-      <section aria-label="Lending at a glance" className="deck grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
+      <section aria-label="Lending at a glance" className="deck grid gap-5 p-4 sm:gap-6 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-5">
-          <div className="flex flex-wrap items-center gap-5">
-            <div className="relative grid size-[118px] flex-none place-items-center">
+          <div className="flex items-center gap-4 sm:flex-wrap sm:gap-5">
+            <div className="relative grid size-[84px] flex-none place-items-center sm:size-[118px]">
               <span aria-hidden="true" className="viz-breathe absolute inset-2 rounded-full bg-[radial-gradient(closest-side,rgba(232,194,122,0.32),transparent)]" />
               <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden="true">
                 <defs><linearGradient id="pp-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#7DD4B8" /><stop offset="1" stopColor="#92B5E8" /></linearGradient></defs>
@@ -155,7 +155,7 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
             <button type="button" onClick={() => show("owing")} className="deck-tile flex flex-col gap-1 p-4 text-left transition-colors">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55"><BankIcon size={13} className="text-[#E8C27A]" />Bank loans</span>
               <span className="money text-[20px] leading-tight text-white"><CountUp value={d.receivables.bankLoans} format={taka} duration={1300} intro /></span>
@@ -292,7 +292,7 @@ function PersonRow({ p, i, q, today, viewer, onRepay }: { p: Profile; i: number;
   return (
     <li style={stagger(i, 30, 360)} className="group/row relative animate-fade-up border-b border-soft transition-colors last:border-0 hover:bg-subtle">
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] origin-top scale-y-0 transition-transform duration-300 group-hover/row:scale-y-100 ${s.tone === "bad" ? "bg-bad" : s.tone === "good" ? "bg-brand-2" : "bg-owed-bar"}`} />
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-3.5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,0.75fr)_120px] md:gap-5 md:px-5">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,0.75fr)_120px] md:gap-5 md:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <span className="transition-transform duration-300 ease-[var(--ease-spring)] group-hover/row:scale-105">
             <Ring pct={p.taken ? p.pct : 0} size={48} stroke={3.5} color={s.tone === "bad" ? "var(--color-bad)" : "var(--color-brand-2)"}>
@@ -311,17 +311,17 @@ function PersonRow({ p, i, q, today, viewer, onRepay }: { p: Profile; i: number;
         </div>
         <span className="text-right md:hidden"><Money value={p.owes} tone={owed ? (s.tone === "bad" ? "bad" : "owed") : "good"} className="text-[16px]" /></span>
         <div className="col-span-2 flex min-w-0 flex-col gap-1.5 md:col-span-1">
-          <div className="flex items-baseline justify-between gap-2">
+          <div className="flex items-baseline justify-between gap-2 max-md:hidden">
             <Money value={p.owes} tone={owed ? (s.tone === "bad" ? "bad" : "owed") : "good"} className="text-[16px] max-md:hidden" />
-            <span className="text-[12px] text-slate-500">{owed ? `still owed of ${taka(p.taken)}` : p.taken ? "all paid back" : "nothing borrowed"}</span>
+            <span className="text-[12px] text-slate-500 max-md:hidden">{owed ? `still owed of ${taka(p.taken)}` : p.taken ? "all paid back" : "nothing borrowed"}</span>
             <span className="money text-[12px] text-brand-2">{p.taken ? `${p.pct}%` : ""}</span>
           </div>
           {p.taken > 0 && <SplitBar className="h-2.5" parts={[{ value: p.paid, className: "bg-gradient-to-r from-brand-2 to-[#3DAA80]" }, { value: p.owes, className: s.tone === "bad" ? "bg-bad/70" : "bg-owed-bar/80" }]} />}
-          <span className="text-[11.5px] text-slate-500">Repaid <Money value={p.paid} tone="good" /> · borrowed <Money value={p.taken} tone="muted" /></span>
+          <span className="flex justify-between gap-2 text-[11.5px] text-slate-500"><span>Repaid <Money value={p.paid} tone="good" /> · borrowed <Money value={p.taken} tone="muted" /></span>{p.taken > 0 && <span className="money text-brand-2 md:hidden">{p.pct}%</span>}</span>
         </div>
-        <div className="flex items-center md:justify-end">{owed ? <DateChip iso={p.due} today={today} /> : <span className="text-[12.5px] text-slate-400">—</span>}</div>
+        <div className="flex items-center md:justify-end">{owed ? <><span className="md:hidden"><DateChip iso={p.due} today={today} size="sm" /></span><span className="max-md:hidden"><DateChip iso={p.due} today={today} /></span></> : <span className="text-[12.5px] text-slate-400">—</span>}</div>
         <span className="relative z-10 flex items-center justify-end gap-1">
-          {!viewer && owed && <Button variant="secondary" size="sm" onClick={onRepay} className="max-md:min-h-10"><TrendIcon size={14} />Repay</Button>}
+          {!viewer && owed && <Button variant="secondary" size="sm" onClick={onRepay} className="max-md:min-h-10 max-md:px-3.5"><TrendIcon size={14} />Repay</Button>}
           <ChevronRight size={16} className="flex-none text-slate-400 transition-transform group-hover/row:translate-x-0.5 max-md:hidden" />
         </span>
       </div>
@@ -407,7 +407,7 @@ function Insights({ data, today, year, buckets, owing, receivables, onBucket, on
         <div className="flex flex-wrap items-end justify-between gap-3 px-4 pb-3 pt-4 sm:px-5">
           <div>
             <h2 className="m-0 text-[16px] font-semibold">How late the money is</h2>
-            <div className="mt-0.5 text-[13px] text-slate-500">Everything still owed, by how far past its due date it is. Click a band to see those people.</div>
+            <div className="mt-0.5 text-[13px] text-slate-500">Everything still owed, by how far past its due date it is. Tap a band to see those people.</div>
           </div>
           <span className="money text-[18px]">{taka(owedAll)}</span>
         </div>
@@ -434,7 +434,7 @@ function Insights({ data, today, year, buckets, owing, receivables, onBucket, on
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="surface-card p-4 sm:p-5">
           <h2 className="m-0 text-[16px] font-semibold">Who owes what</h2>
-          <p className="m-0 mb-4 mt-0.5 text-[13px] text-slate-500">Hover to read; click a person to open their profile.</p>
+          <p className="m-0 mb-4 mt-0.5 text-[13px] text-slate-500">Tap a person to open their profile.</p>
           {slices.length ? <Donut title="What each person owes" centerLabel="Owed" slices={slices}
             onPick={(name) => { const p = top.find((x) => x.name === name); if (p) onPerson(p.id); }} /> : <EmptyState compact title="Nobody owes you">All paid back.</EmptyState>}
         </section>
@@ -494,7 +494,7 @@ function DueCalendar({ open, today, profiles, viewer, cardName, onRepay }: {
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="m-0 text-[16px] font-semibold">What falls due, day by day</h2>
-            <div className="mt-0.5 text-[13px] text-slate-500">Six weeks back and fourteen ahead; today is outlined. Click a day to see who pays.</div>
+            <div className="mt-0.5 text-[13px] text-slate-500">Six weeks back and fourteen ahead; today is outlined. Tap a day to see who pays.</div>
           </div>
           <div className="flex flex-wrap gap-2 text-[12.5px]">
             <Badge tone="bad"><DueIcon size={12} />{taka(sumBy(late, (o) => o.left))} overdue</Badge>
@@ -536,7 +536,7 @@ function DueCalendar({ open, today, profiles, viewer, cardName, onRepay }: {
         <section className="surface-card overflow-hidden">
           <div className="px-4 pb-3 pt-4 sm:px-5">
             <h2 className="m-0 text-[16px] font-semibold">Next 30 days</h2>
-            <div className="mt-0.5 text-[13px] text-slate-500">Each day&apos;s total; click to open it on the left.</div>
+            <div className="mt-0.5 text-[13px] text-slate-500">Each day&apos;s total; tap to open it on the left.</div>
           </div>
           {byDay.length ? (
             <ol className="m-0 list-none border-t border-line p-0">

@@ -119,7 +119,7 @@ export function RepayForm({
           </label>
         )}
         <button type="button" onClick={() => save()} disabled={pending} aria-busy={pending || undefined}
-          className="min-h-10 rounded-md bg-brand px-4 text-[14px] font-medium text-white hover:bg-brand-hover">
+          className="min-h-11 rounded-md bg-brand px-4 text-[14px] font-medium text-white hover:bg-brand-hover max-sm:w-full sm:min-h-10">
           {pending ? "Saving…" : valid ? `Confirm ${taka(n)}` : "Save repayment"}
         </button>
       </div>

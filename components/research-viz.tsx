@@ -313,7 +313,7 @@ export function FlowChart({ months, selected, onSelect, height = 260, labels = R
                 <span className="opacity-70">{labels.net}</span><span>{signed(cur.net)}</span>
                 <span className="opacity-70">{labels.line}</span><span className="font-semibold">{lineText(cur.running)}</span>
               </div>
-              {(labels.count || onSelect) && <div className="mt-1 opacity-60">{labels.count ? labels.count(cur.count) : ""}{labels.count && onSelect ? " · " : ""}{onSelect ? "click to open" : ""}</div>}
+              {(labels.count || onSelect) && <div className="mt-1 opacity-60">{labels.count ? labels.count(cur.count) : ""}{labels.count && onSelect ? " · " : ""}{onSelect ? "tap to open" : ""}</div>}
             </div>
           )}
         </div>
@@ -508,7 +508,7 @@ export function Heatmap({ rows, cols, cells, max, rowMark, colMark, focus, onPic
         </tbody>
       </table>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 text-[12px] text-slate-500">
-        <span aria-live="polite" className="min-h-5">{hover ? <><b className="font-semibold text-ink">{hover.row}</b> paid by <b className="font-semibold text-ink">{hover.col}</b>: {taka(hover.total)} · {hover.count} {hover.count === 1 ? "expense" : "expenses"}{max ? ` · ${Math.round((hover.total / max) * 100)}% of the biggest pair` : ""}</> : onPick ? "Hover a cell for details; click it to see those expenses." : ""}</span>
+        <span aria-live="polite" className="min-h-5">{hover ? <><b className="font-semibold text-ink">{hover.row}</b> paid by <b className="font-semibold text-ink">{hover.col}</b>: {taka(hover.total)} · {hover.count} {hover.count === 1 ? "expense" : "expenses"}{max ? ` · ${Math.round((hover.total / max) * 100)}% of the biggest pair` : ""}</> : onPick ? "Tap a cell to see those expenses." : ""}</span>
         <span aria-hidden="true" className="flex items-center gap-1.5">Less
           {[0.12, 0.35, 0.58, 0.9].map((k) => <span key={k} className="size-3 rounded-[3px]" style={{ background: `color-mix(in srgb, var(--color-brand-2) ${Math.round(k * 100)}%, var(--color-surface))` }} />)}
           More</span>
@@ -534,7 +534,7 @@ export type CalendarWords = {
 };
 const RESEARCH_CAL: CalendarWords = {
   title: "Daily spending", item: ["expense", "expenses"], none: "nothing spent",
-  summary: (n, w) => `${n} spending days in the last ${w} weeks. Click a day to see it.`,
+  summary: (n, w) => `${n} spending days in the last ${w} weeks. Tap a day to see it.`,
 };
 
 /**

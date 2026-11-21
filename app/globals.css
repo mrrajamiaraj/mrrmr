@@ -465,46 +465,96 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   .stack-table { min-width: 0; }
   .stack-table thead { display: none; }
   .stack-table tbody { display: block; }
+  /* Each row is a compact card: a title line (cells without a label), then the labelled values two per line, each
+     with its small label above it — half the height of one "label … value" line per cell. */
   .stack-table tr {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px 14px;
     padding: 12px 16px;
   }
   .stack-table :is(td, th) {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 1px;
     min-height: 0;
     max-width: none;
-    padding: 2px 0;
-    text-align: right;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
     white-space: normal;
     overflow-wrap: anywhere;
+    font-size: 13.5px;
   }
+  /* Values keep their own inner layout but start at the left edge, under their label. */
+  .stack-table :is(td, th)[data-label] > * { justify-content: flex-start; text-align: left; margin-left: 0; }
+  .stack-table :is(td, th)[data-label] :is(span, div, p, small) { text-align: left; }
   .stack-table :is(td, th)[data-label]::before {
     content: attr(data-label);
     flex: none;
-    max-width: 50%;
-    text-align: left;
-    font-size: 12.5px;
-    font-weight: 400;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
     color: var(--color-slate-500);
   }
   .stack-table :is(td, th):not([data-label]) {
     order: -1;
-    justify-content: flex-start;
-    text-align: left;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
     font-weight: 500;
+    font-size: 14px;
   }
   .stack-table :is(td, th):empty, .stack-table .stack-hide { display: none; }
-  .stack-table :is(td, th)[colspan]:not(:empty) { justify-content: center; text-align: center; font-weight: 400; padding: 16px 0; }
-  .stack-table tr:has(> .stack-corner) > :not([data-label], .stack-corner) { padding-right: 40px; }
-  .stack-table .stack-corner { position: absolute; top: 8px; right: 8px; padding: 0; }
+  .stack-table :is(td, th)[colspan]:not(:empty) { grid-column: 1 / -1; align-items: center; text-align: center; font-weight: 400; padding: 12px 0; }
+  .stack-table tr:has(> .stack-corner) > :not([data-label], .stack-corner) { padding-right: 76px; }
+  .stack-table .stack-corner { position: absolute; top: 6px; right: 8px; padding: 0; flex-direction: row; }
   /* An expanded detail row (e.g. an EMI schedule) spans the card as normal, left-aligned content. */
-  .stack-table :is(td, th)[colspan].stack-full:not(:empty) { display: block; text-align: left; padding: 12px 0 4px; font-weight: 400; }
+  .stack-table :is(td, th)[colspan].stack-full:not(:empty) { display: block; text-align: left; padding: 8px 0 4px; font-weight: 400; }
+}
+
+/*
+ * Phones: an app-sized layout on every page. Desktop sizes are kept from 640px up.
+ * Unlayered so it beats the components' own (layered) utilities without !important.
+ */
+@media (max-width: 639.98px) {
+  :root {
+    --text-title: 24px;
+    --text-figure: 20px;
+    --text-display: 28px;
+  }
+  /* Headline amounts and big numbers, one step down each (exact class tokens used across the pages). */
+  [class~="text-[clamp(38px,6vw,60px)]"] { font-size: 32px; }
+  :is([class~="text-[clamp(36px,5.5vw,56px)]"], [class~="text-[clamp(34px,5vw,48px)]"]) { font-size: 30px; }
+  [class~="text-[clamp(30px,4.4vw,40px)]"] { font-size: 26px; }
+  :is([class~="text-[46px]"], [class~="text-[32px]"]) { font-size: 26px; }
+  :is([class~="text-[28px]"], [class~="text-[26px]"]) { font-size: 22px; }
+  [class~="text-[24px]"] { font-size: 20px; }
+  [class~="text-[22px]"] { font-size: 19px; }
+  [class~="text-[20px]"] { font-size: 18px; }
+  [class~="text-[16px]"] { font-size: 15px; }
+
+  /* Filter chips: one row you swipe sideways (like app filter bars) instead of wrapping onto two or three lines. */
+  [role="group"]:is([class~="flex-wrap"]) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+  [role="group"]:is([class~="flex-wrap"]) > * { flex: none; scroll-snap-align: start; }
+  [role="group"]:is([class~="flex-wrap"])::-webkit-scrollbar { display: none; }
+
+  /* Cards breathe less on a small screen: the content gets the width, not the padding. */
+  .deck-tile { padding: 12px; }
 }
 
 @utility money {

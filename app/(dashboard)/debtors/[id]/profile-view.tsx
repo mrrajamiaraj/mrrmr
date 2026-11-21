@@ -141,7 +141,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
           </div>
         </div>
 
-        <section aria-label={`${p.name} at a glance`} className="deck grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
+        <section aria-label={`${p.name} at a glance`} className="deck grid gap-5 p-4 sm:gap-6 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
           <div className="flex min-w-0 flex-col gap-5">
             <div className="flex flex-col gap-1">
               <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/60">{p.owes ? "Owes you now" : "Balance"}</span>
@@ -156,7 +156,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
                 </span>
               )}
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
               <div className="deck-tile flex flex-col gap-1 p-4">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Borrowed</span>
                 <span className="money text-[20px] leading-tight text-white"><CountUp value={p.taken} format={taka} duration={1300} intro /></span>
@@ -186,7 +186,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
 
       {months.length > 0 && (
         <SectionCard labelledBy="mon-h">
-          <SectionHead id="mon-h" title="Month by month" sub="Borrowed and repaid in each month, with what they owed at the month's end. Click a month to show only its entries below." />
+          <SectionHead id="mon-h" title="Month by month" sub="Borrowed and repaid in each month, with what they owed at the month's end. Tap a month to show only its entries below." />
           <div className="border-t border-line px-4 py-4 sm:px-5">
             <FlowChart months={months} onSelect={pickMonth} selected={from && from.slice(0, 7) === to.slice(0, 7) ? from.slice(0, 7) : undefined} labels={PERSON_LABELS} />
           </div>

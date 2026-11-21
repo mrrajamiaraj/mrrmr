@@ -89,10 +89,10 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
         )}
       </div>
 
-      <section aria-label="Repayments at a glance" className="deck grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-8">
+      <section aria-label="Repayments at a glance" className="deck grid gap-5 p-4 sm:gap-6 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-5">
-          <div className="flex flex-wrap items-center gap-5">
-            <div className="relative grid size-[118px] flex-none place-items-center">
+          <div className="flex items-center gap-4 sm:flex-wrap sm:gap-5">
+            <div className="relative grid size-[84px] flex-none place-items-center sm:size-[118px]">
               <span aria-hidden="true" className="viz-breathe absolute inset-2 rounded-full bg-[radial-gradient(closest-side,rgba(125,212,184,0.3),transparent)]" />
               <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden="true">
                 <defs><linearGradient id="rp-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#7DD4B8" /><stop offset="1" stopColor="#E8C27A" /></linearGradient></defs>
@@ -260,7 +260,7 @@ function ToCollect({ open, today, owing, cards, viewer, queue, setQueue, onRepay
         <div className="flex flex-wrap items-end justify-between gap-3 px-4 pb-3 pt-4 sm:px-5">
           <div>
             <h2 className="m-0 text-[16px] font-semibold">How late the money is</h2>
-            <div className="mt-0.5 text-[13px] text-slate-500">Everything still owed, by how far past its due date it is. Click a band to list just that.</div>
+            <div className="mt-0.5 text-[13px] text-slate-500">Everything still owed, by how far past its due date it is. Tap a band to list just that.</div>
           </div>
           <span className="money text-[18px]">{taka(owedAll)}</span>
         </div>
@@ -418,7 +418,7 @@ function Collected({ data, today }: { data: FinanceData; today: string }) {
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="m-0 text-[16px] font-semibold">Collected, month by month</h2>
-            <div className="mt-0.5 text-[13px] text-slate-500">The last 12 months, split by whether the money went into the bank. Click a month to filter everything below.</div>
+            <div className="mt-0.5 text-[13px] text-slate-500">The last 12 months, split by whether the money went into the bank. Tap a month to filter everything below.</div>
           </div>
           <span className="text-[13px] text-slate-500">All time <Money value={allTotal} tone="good" /></span>
         </div>
@@ -428,7 +428,7 @@ function Collected({ data, today }: { data: FinanceData; today: string }) {
       <section className="surface-card p-4 sm:p-5">
         <div className="mb-3">
           <h2 className="m-0 text-[16px] font-semibold">Day by day</h2>
-          <div className="mt-0.5 text-[13px] text-slate-500">The last 26 weeks. Deeper colour means more came in; click a day to see its payments.</div>
+          <div className="mt-0.5 text-[13px] text-slate-500">The last 26 weeks. Deeper colour means more came in; tap a day to see its payments.</div>
         </div>
         <CalendarHeat days={days} end={today} weeks={26} today={today} selected={f.day} onPick={(iso) => set({ day: f.day === iso ? undefined : iso, month: undefined })}
           words={{ title: "Money collected", item: ["payment", "payments"], none: "nothing collected", summary: (n, w) => `${n} days with a repayment in the last ${w} weeks. Click one.` }} />
@@ -463,7 +463,7 @@ function Collected({ data, today }: { data: FinanceData; today: string }) {
         <section className="surface-card overflow-hidden">
           <div className="px-4 pb-3 pt-4 sm:px-5">
             <h2 className="m-0 text-[16px] font-semibold">Who paid back</h2>
-            <div className="mt-0.5 text-[13px] text-slate-500">{periodText}, most first. Click to open their profile.</div>
+            <div className="mt-0.5 text-[13px] text-slate-500">{periodText}, most first. Tap to open their profile.</div>
           </div>
           {who.length ? (
             <ol key={`${f.month}|${f.day}`} className="m-0 list-none border-t border-line p-0">

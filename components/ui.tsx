@@ -17,7 +17,7 @@ export type ButtonSize = "sm" | "md" | "lg";
 const BTN_BASE =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium select-none disabled:pointer-events-none";
 const BTN_SIZE: Record<ButtonSize, string> = {
-  sm: "min-h-9 px-3 text-[13px]",
+  sm: "min-h-9 px-3 text-[13px] pointer-coarse:min-h-10",
   md: "min-h-10 px-4 text-[14px]",
   lg: "min-h-12 px-5 text-[15px]",
 };
