@@ -69,3 +69,13 @@ test("number fields open the decimal keypad", () => {
     for (const n of numbers) assert.match(n, /inputMode="decimal"/, `${f}: ${n.slice(0, 60)}`);
   }
 });
+
+test("phone layout: app-sized type, swipeable chip rows, two-column table cards, no back-to-top under the tab bar", () => {
+  const css = read("../app/globals.css");
+  assert.match(css, /--text-title: 24px;/);
+  assert.match(css, /\[role="group"\]:is\(\[class~="flex-wrap"\]\) \{\s*flex-wrap: nowrap;/);
+  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\);/);
+  assert.match(read("../components/shell.tsx"), /right-4 z-30 hidden size-11 lg:grid/);
+  assert.match(read("../components/dashboard.tsx"), /grid w-full grid-cols-3 gap-2 sm:flex/);
+  assert.match(read("../components/command-palette.tsx"), /pointer-coarse:hidden/);
+});
