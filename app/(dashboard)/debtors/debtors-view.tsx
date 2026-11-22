@@ -43,8 +43,9 @@ function standing(p: Profile): { label: string; tone: "bad" | "owed" | "good" | 
   if (p.dueKind === "soon") return { label: "Due soon", tone: "owed" };
   return { label: p.paid > 0 ? "Part repaid" : "Owes", tone: "owed" };
 }
-const match = (p: Profile, f: Filter) =>
-  f === "all" || (f === "repaid" ? p.owes <= 0 : p.owes > 0 && (f === "owing" || (f === "overdue" ? p.dueKind === "late" : p.dueKind === "soon")));
+// People with nothing recorded (never borrowed, nothing paid) aren't listed; their profile still opens from search (⌘K).
+const match = (p: Profile, f: Filter) => (p.txCount > 0 || p.owes > 0) &&
+  (f === "all" || (f === "repaid" ? p.owes <= 0 : p.owes > 0 && (f === "owing" || (f === "overdue" ? p.dueKind === "late" : p.dueKind === "soon"))));
 
 const LENDING_LABELS: FlowLabels = {
   a: "Lent out", b: "Paid back", line: "Owed at month end", lineNote: "Owed to you at each month end", net: "Paid back − lent",
@@ -188,7 +189,7 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
   return (
     <Shell subtitle="" hero={hero}>
       <PillTabs label="People views" value={view} onChange={setView} tabs={[
-        { key: "people", label: "People", icon: <PeopleIcon size={15} />, count: all.length },
+        { key: "people", label: "People", icon: <PeopleIcon size={15} />, count: count("all") },
         { key: "insights", label: "Insights", icon: <TrendIcon size={15} /> },
         { key: "due", label: "Due calendar", icon: <HistoryIcon size={15} />, count: datedDue },
       ]} />
