@@ -172,7 +172,7 @@ function Sidebar({ tabs, active, admin, onSearch, onHelp }: {
                 const Icon = t.icon;
                 return (
                   <li key={t.href}>
-                    <Link href={t.href} aria-current={on ? "page" : undefined}
+                    <Link href={t.href} aria-current={on ? "page" : undefined} prefetch={t.primary ? true : undefined}
                       className={`${railRow} ${on ? "bg-surface font-medium text-ink shadow-[var(--shadow-card)] ring-1 ring-line" : ""}`}>
                       {/* Active marker: a short jade bar on the inner edge. */}
                       <span aria-hidden="true" className={`absolute -left-3 top-2 bottom-2 w-[3px] rounded-r-full bg-brand-2 transition-opacity ${on ? "opacity-100" : "opacity-0"}`} />
@@ -334,7 +334,8 @@ function MobileNav({ tabs, active }: { tabs: Tab[]; active?: string }) {
           const Icon = t.icon;
           return (
             <li key={t.href} className="flex flex-1">
-              <Link href={t.href} aria-current={on ? "page" : undefined} onClick={(e) => onTab(e, on)}
+              {/* Full prefetch: each main tab's page and data load in the background, so the first tap is near instant. */}
+              <Link href={t.href} aria-current={on ? "page" : undefined} prefetch onClick={(e) => onTab(e, on)}
                 className={`relative flex min-h-[var(--bottom-nav-h)] flex-1 flex-col items-center justify-center gap-1 text-[11px] ${on ? "font-semibold text-ink" : "text-slate-500"}`}>
                 <span className={`grid h-7 w-14 place-items-center rounded-full transition-[background-color,scale] duration-300 ease-[var(--ease-spring)] ${on ? "scale-100 bg-good-tint-2 text-brand-ink" : "scale-90"}`}>
                   <Icon size={19} />

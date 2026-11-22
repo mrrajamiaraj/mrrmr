@@ -7,7 +7,9 @@ import { isViewerEmail } from "@/lib/viewer";
 // View mode always lands on Research — the only section it may open.
 export default async function HomePage() {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (isViewerEmail(data.user?.email)) redirect("/research");
-  redirect(normalizePrefs(data.user?.user_metadata?.prefs).landing);
+  // Verified locally from the signed session token (see the dashboard layout); no Auth round trip.
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (isViewerEmail(claims?.email as string | undefined)) redirect("/research");
+  redirect(normalizePrefs((claims?.user_metadata as Record<string, unknown> | undefined)?.prefs).landing);
 }

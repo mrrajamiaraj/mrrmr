@@ -40,6 +40,10 @@ const nextConfig: NextConfig = {
       // No form here sends more than a few KB (the biggest is a 10-payer card purchase); 1 MB default → 100 KB.
       bodySizeLimit: "100kb",
     },
+    // Client cache: a page you just opened (or that a tab prefetched) is reused for a short while, so switching tabs
+    // back and forth is instant. Any save (a server action calling revalidatePath) and pull-to-refresh clear it, so
+    // your own changes always show at once; only edits made elsewhere (another device) can take up to 2 minutes.
+    staleTimes: { dynamic: 60, static: 120 },
   },
   async headers() {
     return [

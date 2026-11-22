@@ -467,6 +467,8 @@ export async function savePrefs(prefs: unknown): Promise<ActionResult> {
   const supabase = await writer();
   const { error } = await supabase.auth.updateUser({ data: { prefs: clean } });
   if (error) return { error: "Could not save your preferences. Try again." };
+  // Pages read prefs from the session token (no Auth round trip); a fresh token carries the new prefs at once.
+  await supabase.auth.refreshSession();
   revalidatePath("/", "layout");
   return {};
 }
@@ -493,6 +495,7 @@ export async function changePassword(current: string, next: string, confirm: str
     data: { password_changed_at: new Date().toISOString() },
   });
   if (error) return { error: error.code === "same_password" ? "The new password must be different from the current one." : "Could not change the password. Try again." };
+  await supabase.auth.refreshSession(); // the token now carries the new "password changed" date
   return {};
 }
 
