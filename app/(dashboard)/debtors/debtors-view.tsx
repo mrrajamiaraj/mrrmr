@@ -22,7 +22,7 @@ import { usePalettePeople } from "@/components/command-palette";
 import { CountUp, stagger } from "@/components/motion";
 import { DateChip, HUES, Ring, SplitBar } from "@/components/viz";
 import { CalendarHeat, Donut, FlowChart, Mark, PillTabs, RaceChart, Sparkline, type FlowLabels } from "@/components/research-viz";
-import { buildProfiles, cardLabel, type Profile } from "@/lib/ledger";
+import { buildProfiles, cardLabel, owedOf, type Profile } from "@/lib/ledger";
 import { computeDashboard } from "@/lib/dashboard";
 import { monthlySeries } from "@/lib/trends";
 import { buildStatement } from "@/lib/statement";
@@ -54,6 +54,56 @@ const LENDING_LABELS: FlowLabels = {
 const AGING_COLOR: Record<AgingKey, string> = {
   late60: "#8E2A20", late30: "#B8452F", late1: "#D9774F", week: "#C79A3A", later: "#3F9A75", undated: "#8A8F98",
 };
+
+// ---- Where the money came from: a bank account (loans) or one of your cards (purchases) ----------------------------
+
+export type Source = { key: string; kind: "bank" | "card"; label: string; full: string; color: string; owed: number; taken: number };
+const CARD_SHORT: Record<number, string> = { 1: "Amex card", 2: "Visa card" };
+const BANK_COLOR = "var(--color-owed-bar)";
+const cardColor = (slot: number) => (slot === 2 ? "#2F5583" : "#B98E81");
+
+/** One entry per source this person has borrowed through, with what they still owe on it and what they took in all. */
+export function sourcesOf(p: Profile, data: FinanceData): Source[] {
+  const out: Source[] = [];
+  const loans = data.loans.filter((l) => l.person_id === p.id);
+  if (loans.length) {
+    const names = [...new Set(loans.map((l) => data.accounts.find((a) => a.id === l.account_id)?.name ?? "Bank"))];
+    out.push({ key: "bank", kind: "bank", label: `${names.join(" / ")} account`, full: `Loan from your ${names.join(" / ")} bank account`, color: BANK_COLOR, owed: p.loanOut, taken: p.loanTotal });
+  }
+  for (const c of data.cards) {
+    const uses = data.cardUses.filter((u) => u.person_id === p.id && u.card_id === c.id);
+    if (!uses.length) continue;
+    out.push({ key: c.id, kind: "card", label: CARD_SHORT[c.slot] ?? `${c.bank} card`, full: `Purchases on your ${cardLabel(c)}`, color: cardColor(c.slot), owed: p.cardOutByCard[c.id] ?? 0, taken: sumBy(uses, owedOf) });
+  }
+  return out;
+}
+
+function CardGlyph({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19M6.5 15h4" />
+    </svg>
+  );
+}
+
+/** Small labelled tags: "City Bank account ৳5,000 · Amex card ৳1,200". Owed amounts while anything is owed, else what was taken. */
+function SourceTags({ sources, owing, className = "" }: { sources: Source[]; owing: boolean; className?: string }) {
+  if (!sources.length) return null;
+  return (
+    <span className={`flex flex-wrap gap-1.5 ${className}`}>
+      {sources.map((s) => {
+        const v = owing ? s.owed : s.taken;
+        return (
+          <span key={s.key} title={s.full} className={`inline-flex max-w-full items-center gap-1 rounded-md border border-line bg-surface py-0.5 pl-1.5 pr-2 text-[11.5px] ${owing && !s.owed ? "opacity-55" : ""}`}>
+            <span className="flex-none" style={{ color: s.color }}>{s.kind === "bank" ? <BankIcon size={12} /> : <CardGlyph />}</span>
+            <span className="truncate font-medium text-slate-700">{s.label}</span>
+            <span className="money flex-none text-slate-500">{owing && !s.owed ? "paid" : taka(v)}</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 const monthsSince = (iso: string, today: string) =>
   (Number(today.slice(0, 4)) - Number(iso.slice(0, 4))) * 12 + Number(today.slice(5, 7)) - Number(iso.slice(5, 7)) + 1;
@@ -90,14 +140,24 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
   }, [d.open, today]);
   const balances = useMemo(() => new Map(all.map((p) => [p.id, buildStatement(data, p.id, today, { from: null, to: null })?.rows.map((r) => Math.max(r.balance, 0)) ?? []])), [all, data, today]);
 
+  const sources = useMemo(() => new Map(all.map((p) => [p.id, sourcesOf(p, data)])), [all, data]);
+  // Every source anyone has borrowed through, for the "From" filter.
+  const sourceList = useMemo(() => {
+    const m = new Map<string, Source>();
+    for (const list of sources.values()) for (const s of list) if (!m.has(s.key)) m.set(s.key, s);
+    return [...m.values()].sort((a, b) => (a.kind === b.kind ? a.label.localeCompare(b.label) : a.kind === "bank" ? -1 : 1));
+  }, [sources]);
+  const [src, setSrc] = useState("");
+
   const people = useMemo(() => all
     .filter((p) => match(p, filter) && (!bucket || bucketsOf.get(p.id)?.has(bucket)))
-    .filter((p) => !query || `${p.name} ${p.relation ?? ""} ${p.phone ?? ""} ${p.notes ?? ""} ${p.reasons.join(" ")}`.toLowerCase().includes(query))
+    .filter((p) => !src || sources.get(p.id)?.some((s) => s.key === src))
+    .filter((p) => !query || `${p.name} ${p.relation ?? ""} ${p.phone ?? ""} ${p.notes ?? ""} ${p.reasons.join(" ")} ${(sources.get(p.id) ?? []).map((s) => s.label).join(" ")}`.toLowerCase().includes(query))
     .sort((a, b) =>
       sort === "due" ? (a.owes > 0 && a.due ? a.due : "9999").localeCompare(b.owes > 0 && b.due ? b.due : "9999") || b.owes - a.owes
       : sort === "name" ? a.name.localeCompare(b.name)
       : sort === "recent" ? (b.lastIso ?? "").localeCompare(a.lastIso ?? "")
-      : b.owes - a.owes || a.name.localeCompare(b.name)), [all, filter, bucket, bucketsOf, query, sort]);
+      : b.owes - a.owes || a.name.localeCompare(b.name)), [all, filter, bucket, bucketsOf, query, sort, src, sources]);
 
   const count = (f: Filter) => all.filter((p) => match(p, f)).length;
   const owing = all.filter((p) => p.owes > 0);
@@ -236,6 +296,23 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
                   </span>
                 )}
               </div>
+              {sourceList.length > 1 && (
+                <div role="group" aria-label="Filter by where the money came from" className="-mx-1 flex flex-wrap items-center gap-1.5 px-1 pb-1">
+                  <span className="flex-none text-[12px] font-medium text-slate-500">From</span>
+                  {[{ key: "", kind: null, label: "Any source", color: "" } as const, ...sourceList].map((s) => {
+                    const on = src === s.key;
+                    const owed = s.key ? sumBy([...sources.values()].flat().filter((x) => x.key === s.key), (x) => x.owed) : 0;
+                    return (
+                      <button key={s.key || "any"} type="button" aria-pressed={on} onClick={() => setSrc(s.key)} title={"full" in s ? s.full : undefined}
+                        className={`inline-flex min-h-9 flex-none items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition-[background-color,color,transform] active:scale-95 ${on ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:border-line-strong hover:text-ink"}`}>
+                        {s.kind && <span style={{ color: on ? undefined : s.color }}>{s.kind === "bank" ? <BankIcon size={13} /> : <CardGlyph size={13} />}</span>}
+                        {s.label}
+                        {s.key && owed > 0 && <span className={`money text-[12px] ${on ? "text-on-ink/70" : "text-slate-400"}`}>{taka(owed)}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {layout === "list" ? (
@@ -244,14 +321,14 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
                   <span>Person</span><span>Paid back so far</span><span className="text-right">Next due</span><span />
                 </div>
                 <ul key={`${filter}|${bucket}|${sort}|${query}`} className="m-0 list-none p-0">
-                  {people.map((p, i) => <PersonRow key={p.id} p={p} i={i} q={query} today={today} viewer={viewer} onRepay={() => setRepaying(p)} />)}
+                  {people.map((p, i) => <PersonRow key={p.id} p={p} i={i} q={query} today={today} viewer={viewer} sources={sources.get(p.id) ?? []} onRepay={() => setRepaying(p)} />)}
                 </ul>
                 {!people.length && <NoMatch all={all.length} viewer={viewer} onClear={() => { setQ(""); setFilter("all"); setBucket(null); }} onAdd={() => setAdding(true)} />}
               </section>
             ) : (
               <>
                 <ul key={`${filter}|${bucket}|${sort}|${query}`} className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
-                  {people.map((p, i) => <PersonCard key={p.id} p={p} i={i} q={query} today={today} viewer={viewer} history={balances.get(p.id) ?? []} onRepay={() => setRepaying(p)} />)}
+                  {people.map((p, i) => <PersonCard key={p.id} p={p} i={i} q={query} today={today} viewer={viewer} history={balances.get(p.id) ?? []} sources={sources.get(p.id) ?? []} onRepay={() => setRepaying(p)} />)}
                 </ul>
                 {!people.length && <section className="surface-card"><NoMatch all={all.length} viewer={viewer} onClear={() => { setQ(""); setFilter("all"); setBucket(null); }} onAdd={() => setAdding(true)} /></section>}
               </>
@@ -287,7 +364,7 @@ const CHIP = { bad: "bg-bad-tint text-bad", owed: "bg-owed-tint text-owed", good
 
 // ---- People: list row and card ----------------------------------------------------------------------------------
 
-function PersonRow({ p, i, q, today, viewer, onRepay }: { p: Profile; i: number; q: string; today: string; viewer: boolean; onRepay: () => void }) {
+function PersonRow({ p, i, q, today, viewer, sources, onRepay }: { p: Profile; i: number; q: string; today: string; viewer: boolean; sources: Source[]; onRepay: () => void }) {
   const s = standing(p);
   const owed = p.owes > 0;
   return (
@@ -319,6 +396,7 @@ function PersonRow({ p, i, q, today, viewer, onRepay }: { p: Profile; i: number;
           </div>
           {p.taken > 0 && <SplitBar className="h-2.5" parts={[{ value: p.paid, className: "bg-gradient-to-r from-brand-2 to-[#3DAA80]" }, { value: p.owes, className: s.tone === "bad" ? "bg-bad/70" : "bg-owed-bar/80" }]} />}
           <span className="flex justify-between gap-2 text-[11.5px] text-slate-500"><span>Repaid <Money value={p.paid} tone="good" /> · borrowed <Money value={p.taken} tone="muted" /></span>{p.taken > 0 && <span className="money text-brand-2 md:hidden">{p.pct}%</span>}</span>
+          <SourceTags sources={sources} owing={owed} className="relative z-10 mt-0.5" />
         </div>
         <div className="flex items-center md:justify-end">{owed ? <><span className="md:hidden"><DateChip iso={p.due} today={today} size="sm" /></span><span className="max-md:hidden"><DateChip iso={p.due} today={today} /></span></> : <span className="text-[12.5px] text-slate-400">—</span>}</div>
         <span className="relative z-10 flex items-center justify-end gap-1">
@@ -330,7 +408,7 @@ function PersonRow({ p, i, q, today, viewer, onRepay }: { p: Profile; i: number;
   );
 }
 
-function PersonCard({ p, i, q, today, viewer, history, onRepay }: { p: Profile; i: number; q: string; today: string; viewer: boolean; history: number[]; onRepay: () => void }) {
+function PersonCard({ p, i, q, today, viewer, history, sources, onRepay }: { p: Profile; i: number; q: string; today: string; viewer: boolean; history: number[]; sources: Source[]; onRepay: () => void }) {
   const s = standing(p);
   const owed = p.owes > 0;
   return (
@@ -356,6 +434,7 @@ function PersonCard({ p, i, q, today, viewer, history, onRepay }: { p: Profile; 
         {history.length > 1 && <Sparkline values={history} color={s.tone === "bad" ? "var(--color-bad)" : "var(--color-owed-bar)"} width={110} height={36} />}
       </div>
       {p.taken > 0 && <SplitBar className="h-2" parts={[{ value: p.paid, className: "bg-brand-2" }, { value: p.owes, className: s.tone === "bad" ? "bg-bad/70" : "bg-owed-bar/70" }]} />}
+      <SourceTags sources={sources} owing={owed} className="relative z-10" />
       <div className="flex items-center justify-between gap-2 text-[12px] text-slate-500">
         <span>{p.pct}% repaid · {p.loanCount + p.cardCount} {p.loanCount + p.cardCount === 1 ? "entry" : "entries"}</span>
         {!viewer && owed && <Button variant="secondary" size="sm" onClick={onRepay} className="relative z-10"><TrendIcon size={14} />Repay</Button>}
