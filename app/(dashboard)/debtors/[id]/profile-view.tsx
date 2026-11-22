@@ -12,7 +12,7 @@ import { OneSchedule } from "@/components/debtors/emi-schedule";
 import { EditPersonDialog, ExportPdfDialog, RepayDialog } from "@/components/debtors/person-dialogs";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { DateChip, Ring, TrendArea } from "@/components/viz";
-import { Donut, FlowChart, Mark, type FlowLabels } from "@/components/research-viz";
+import { Donut, Mark } from "@/components/research-viz";
 import { CountUp, stagger } from "@/components/motion";
 import { Badge, Button, buttonClass, EmptyState, IconButton, Menu, Money } from "@/components/ui";
 import { ChevronDown, ChevronLeft, DownloadIcon, DueIcon, FileIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon, CardIcon, TrendIcon } from "@/components/icons";
@@ -92,12 +92,6 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
       .map((c, i) => ({ name: cardLabel(c), value: p.cardOutByCard[c.id] ?? 0, color: i ? "#2F5583" : "#B98E81", sub: "their purchases on your card" })),
   ];
   const maxDue = Math.max(1, ...dues.map((o) => o.left));
-  const pickMonth = (key: string) => {
-    const [y, m] = key.split("-").map(Number);
-    const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
-    setFrom(`${key}-01`); setTo(`${key}-${String(last).padStart(2, "0")}`); setShow("all");
-    document.getElementById("hist-h")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
   const late = p.dueKind === "late" && p.owes > 0;
 
   return (
@@ -183,15 +177,6 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
       </header>
     }>
       <Flash text={flash} />
-
-      {months.length > 0 && (
-        <SectionCard labelledBy="mon-h">
-          <SectionHead id="mon-h" title="Month by month" sub="Borrowed and repaid in each month, with what they owed at the month's end. Tap a month to show only its entries below." />
-          <div className="border-t border-line px-4 py-4 sm:px-5">
-            <FlowChart months={months} onSelect={pickMonth} selected={from && from.slice(0, 7) === to.slice(0, 7) ? from.slice(0, 7) : undefined} labels={PERSON_LABELS} />
-          </div>
-        </SectionCard>
-      )}
 
       {(dues.length > 0 || p.owes > 0) && (
         <div className="grid items-start gap-5 lg:grid-cols-2">
@@ -355,9 +340,3 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
 const TH = "px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-slate-500";
 const TD = "px-4 py-3";
 const bal = (n: number) => (n < 0 ? `${taka(n)} credit` : taka(n));
-
-/** The month chart for one person: borrowed (brass), repaid (jade), balance owed at month end (blue line). */
-const PERSON_LABELS: FlowLabels = {
-  a: "Borrowed", b: "Repaid", line: "Owed at month end", lineNote: "What they owed at each month end", net: "Repaid − borrowed",
-  count: (n) => `${n} ${n === 1 ? "entry" : "entries"}`, colors: { a: "var(--color-owed-bar)", b: "var(--color-chart-in)", line: "var(--color-info)" },
-};
