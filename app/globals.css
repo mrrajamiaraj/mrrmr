@@ -456,6 +456,27 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
 }
 
 /*
+ * Phones and tablets (touch): keep the look, drop the work that never stops. The endless loops (drifting background,
+ * turning deck ring, breathing glows) repaint every frame, and the blurred top/bottom bars re-blur whatever moves behind
+ * them, so on a phone they kept the main thread busy and made opening a page take seconds. Entrance motion stays,
+ * just quicker; long lists skip drawing rows that are off screen.
+ */
+@media (pointer: coarse), (max-width: 639.98px) {
+  .aurora > span, .deck::before, .viz-pulse, .viz-breathe, .brand-glint, .brand-glow, .card-sweep, .card-glint, .card-spin, .debit-star { animation: none !important; }
+  .aurora > span { will-change: auto; }
+  .deck::before { --deck-angle: 210deg; }
+  .deck-tile { backdrop-filter: none; background: rgba(255, 255, 255, 0.075); }
+  [class~="backdrop-blur-md"], [class~="backdrop-blur"], [class~="backdrop-blur-xl"] { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  [class~="bg-page/90"] { background-color: var(--color-page); }
+  [class~="bg-surface/92"] { background-color: var(--color-surface); }
+  .viz-draw, .viz-wipe { animation-duration: 800ms; }
+  .viz-sweep { animation-duration: 700ms; }
+  .viz-grow, .viz-bar { animation-duration: 500ms; }
+  .bar-fill { animation-duration: 500ms; }
+  .lazy-row { content-visibility: auto; contain-intrinsic-size: auto 150px; }
+}
+
+/*
  * Phones: a .stack-table drops its header and shows each row as a small card, one "label … value" line per cell.
  * Labels come from each cell's data-label. A cell without one (the person or date) becomes the card's title;
  * .stack-corner pins a cell (the delete button) to the card's top-right corner.

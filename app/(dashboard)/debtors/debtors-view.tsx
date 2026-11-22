@@ -138,7 +138,9 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
     for (const o of d.open) m.set(o.personId, (m.get(o.personId) ?? new Set()).add(agingKey(o.iso, today)));
     return m;
   }, [d.open, today]);
-  const balances = useMemo(() => new Map(all.map((p) => [p.id, buildStatement(data, p.id, today, { from: null, to: null })?.rows.map((r) => Math.max(r.balance, 0)) ?? []])), [all, data, today]);
+  // Each person's balance history (a full statement per person) is only drawn in the Cards layout: build it only then.
+  const balances = useMemo(() => layout !== "cards" ? new Map<string, number[]>()
+    : new Map(all.map((p) => [p.id, buildStatement(data, p.id, today, { from: null, to: null })?.rows.map((r) => Math.max(r.balance, 0)) ?? []])), [all, data, today, layout]);
 
   const sources = useMemo(() => new Map(all.map((p) => [p.id, sourcesOf(p, data)])), [all, data]);
   // Every source anyone has borrowed through, for the "From" filter.
@@ -370,7 +372,7 @@ function PersonRow({ p, i, q, today, viewer, sources, onRepay }: { p: Profile; i
   const s = standing(p);
   const owed = p.owes > 0;
   return (
-    <li style={stagger(i, 30, 360)} className="group/row relative animate-fade-up border-b border-soft transition-colors last:border-0 hover:bg-subtle">
+    <li style={stagger(i, 30, 360)} className={`group/row relative border-b border-soft transition-colors last:border-0 hover:bg-subtle ${i < 6 ? "animate-fade-up" : "lazy-row"}`}>
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] origin-top scale-y-0 transition-transform duration-300 group-hover/row:scale-y-100 ${s.tone === "bad" ? "bg-bad" : s.tone === "good" ? "bg-brand-2" : "bg-owed-bar"}`} />
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,0.75fr)_120px] md:gap-5 md:px-5">
         <div className="flex min-w-0 items-center gap-3">

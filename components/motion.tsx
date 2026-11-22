@@ -16,6 +16,7 @@ export function CountUp({ value, format, duration = 900, intro = false }: { valu
   const [shown, setShown] = useState(() => (hydrated ? 0 : value));
   const [ready, setReady] = useState(!intro);
   const from = useRef(shown);
+  const el = useRef<HTMLSpanElement>(null);
 
   useLayoutEffect(() => {
     if (!intro || ready) return;
@@ -32,24 +33,38 @@ export function CountUp({ value, format, duration = 900, intro = false }: { valu
       setShown(value);
       return;
     }
+    // Each frame writes the text straight into the element: no React render per frame, so a page full of figures
+    // stays cheap on a phone. Touch screens get a shorter roll. React gets the final value once at the end.
     let raf = 0;
+    const span = el.current;
+    const dur = window.matchMedia("(pointer: coarse)").matches ? Math.min(duration, 550) : duration;
     const t0 = performance.now();
     const tick = (now: number) => {
-      const k = easeOutExpo((now - t0) / duration);
+      const k = easeOutExpo((now - t0) / dur);
       const n = start + (value - start) * k;
       from.current = n;
-      setShown(n);
-      if (k < 1) raf = requestAnimationFrame(tick);
+      if (k < 1) {
+        // Update React's own text node in place (replacing it would leave React writing to a detached node later).
+        const text = span?.firstChild;
+        if (text && text.nodeType === Node.TEXT_NODE) text.nodeValue = format(n);
+        else setShown(n);
+        raf = requestAnimationFrame(tick);
+      } else {
+        const text = span?.firstChild;
+        if (text && text.nodeType === Node.TEXT_NODE) text.nodeValue = format(value);
+        setShown(value);
+      }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
+    // format is a display function; a new identity each render must not restart the roll
   }, [value, duration, ready]);
 
   // The final figure for assistive tech straight away; the rolling digits are visual only.
   return (
     <span className="tabular-nums">
       <span className="sr-only">{format(value)}</span>
-      <span aria-hidden="true" style={ready ? undefined : { opacity: 0 }}>{format(shown)}</span>
+      <span ref={el} aria-hidden="true" style={ready ? undefined : { opacity: 0 }}>{format(shown)}</span>
     </span>
   );
 }
