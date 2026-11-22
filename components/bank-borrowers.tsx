@@ -36,7 +36,8 @@ export function BankBorrowers({ data, accountId, accountName, balance, open, pro
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("taken");
-  const [owingOnly, setOwingOnly] = useState(false);
+  // The list shows only people who still owe; people who have paid everything back are hidden until asked for.
+  const [showPaid, setShowPaid] = useState(false);
   const [picking, setPicking] = useState(false);
 
   const taken = sumBy(rows, (r) => r.taken);
@@ -45,7 +46,7 @@ export function BankBorrowers({ data, accountId, accountName, balance, open, pro
   const owingRows = rows.filter((r) => (r.p?.loanOut ?? 0) > 0);
   const ql = q.trim().toLowerCase();
   const shown = rows
-    .filter((r) => (!owingOnly || (r.p?.loanOut ?? 0) > 0) && (!ql || `${r.name} ${r.relation ?? ""} ${r.phone ?? ""} ${r.loans.map((l) => l.reason).join(" ")}`.toLowerCase().includes(ql)))
+    .filter((r) => (showPaid || (r.p?.loanOut ?? 0) > 0) &&(!ql || `${r.name} ${r.relation ?? ""} ${r.phone ?? ""} ${r.loans.map((l) => l.reason).join(" ")}`.toLowerCase().includes(ql)))
     .sort((a, b) => sort === "owes" ? (b.p?.loanOut ?? 0) - (a.p?.loanOut ?? 0) : sort === "recent" ? b.last.localeCompare(a.last) : sort === "name" ? a.name.localeCompare(b.name) : b.taken - a.taken);
   const maxTaken = Math.max(1, ...rows.map((r) => r.taken));
   const top = rows.slice(0, 8);
@@ -103,8 +104,12 @@ export function BankBorrowers({ data, accountId, accountName, balance, open, pro
               <SearchIcon size={15} className="text-slate-500" /><span className="sr-only">Search people who took money</span>
               <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
             </label>
-            <button type="button" aria-pressed={owingOnly} onClick={() => setOwingOnly((v) => !v)}
-              className={`min-h-10 rounded-full border px-3.5 text-[13px] font-medium transition-colors ${owingOnly ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:text-ink"}`}>Still owe</button>
+            {rows.length > owingRows.length && (
+              <button type="button" aria-pressed={showPaid} onClick={() => setShowPaid((v) => !v)}
+                className={`min-h-10 rounded-full border px-3.5 text-[13px] font-medium transition-colors ${showPaid ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:text-ink"}`}>
+                Show paid up ({rows.length - owingRows.length})
+              </button>
+            )}
             <label className="flex items-center gap-1.5 text-[13px] text-slate-500">Sort
               <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="min-h-10 rounded-lg border border-line-strong bg-surface px-2.5 text-[13.5px] text-ink">
                 <option value="taken">Most taken</option><option value="owes">Still owe most</option><option value="recent">Most recent</option><option value="name">Name (A–Z)</option>
@@ -162,7 +167,11 @@ export function BankBorrowers({ data, accountId, accountName, balance, open, pro
                 </li>
               );
             })}
-            {!shown.length && <li className="p-5 text-center text-[13.5px] text-slate-500">Nobody matches.</li>}
+            {!shown.length && (
+              <li className="p-5 text-center text-[13.5px] text-slate-500">
+                {ql ? "Nobody matches." : "Everyone has paid back what they took from the account."}
+              </li>
+            )}
           </ul>
         </>
       ) : (
