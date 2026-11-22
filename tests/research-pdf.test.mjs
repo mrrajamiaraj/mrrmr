@@ -45,8 +45,9 @@ test("every section renders a valid PDF", async () => {
 test("settlement figures are exact and match memberBalances", async () => {
   const text = await pdfText((await renderResearchPdf("settlement", base)).bytes);
   assert.match(text, /BDT 1,250\.00/, "contributed total");
-  assert.match(text, /BDT 500\.30/, "spent total: 0.1 + 0.2 + 500 exactly");
-  assert.match(text, /\+BDT 499\.90/, "Raja: 1000 - 500.10");
+  assert.match(text, /BDT 500\.30/, "total expenses: 0.1 + 0.2 + 500 exactly");
+  assert.match(text, /BDT 250\.20/, "Somik: 250 contributed + 0.2 paid");
+  assert.match(text, /BDT 250\.10/, "Raja: 500.30 - 250.20");
 });
 
 test("the expenses PDF honours the list's filters (same function as the page)", async () => {

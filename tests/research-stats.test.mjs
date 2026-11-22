@@ -52,9 +52,14 @@ test("dailyTotals adds same-day expenses exactly", () => {
   assert.deepEqual(d.get("2026-01-05"), { total: 0.3, count: 2 });
 });
 
-test("memberBalances: net is contributed − paid for, shares of contributions", () => {
-  const b = memberBalances(expenses, contributions, ["Raja", "Somik", "Adnan"]);
-  assert.deepEqual(b[0], { name: "Raja", contributed: 1000, spent: 500.1, net: 499.9, logs: 1, share: 80 });
-  assert.equal(b[1].net, 249.8);
-  assert.equal(b[2].share, 0);
+test("settlement: members = contributions + expenses paid; the leader = total expenses − everyone else", () => {
+  // total expenses 500.3; Somik 250 + 0.2 = 250.2; Adnan 0; Raja 500.3 − 250.2 = 250.1
+  const b = memberBalances(expenses, contributions, ["Raja", "Somik", "Adnan"], "Raja");
+  assert.deepEqual(b[1], { name: "Somik", contributed: 250, spent: 0.2, given: 250.2, leader: false, logs: 1, share: 50 });
+  assert.equal(b[0].leader, true);
+  assert.equal(b[0].given, 250.1, "exact to the paisa");
+  assert.equal(b[2].given, 0);
+  assert.equal(b.reduce((s, r) => s + r.given * 100, 0) / 100, 500.3, "settlements add up to total expenses");
+  // the leader is always listed, even with nothing recorded under their name
+  assert.equal(memberBalances(expenses, contributions, ["Somik"], "Raja")[0].name, "Raja");
 });

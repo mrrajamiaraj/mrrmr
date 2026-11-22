@@ -107,15 +107,39 @@ export function filterExpenses(expenses: ResearchExpense[], f: ExpenseFilter, da
     (!ql || `${e.facility} ${e.member} ${e.description} ${e.tag ?? ""} ${dateText(e.spent_on)} ${e.spent_on} ${e.amount}`.toLowerCase().includes(ql)));
 }
 
-export type MemberBalance = { name: string; contributed: number; spent: number; net: number; logs: number; share: number };
+export type MemberBalance = {
+  name: string;
+  /** money handed over directly (cash, bank transfer…) */
+  contributed: number;
+  /** expenses this member paid for themselves */
+  spent: number;
+  /** their settlement: what they've put into the research in total */
+  given: number;
+  /** the leader covers whatever the others haven't: total expenses − everyone else's settlement */
+  leader: boolean;
+  logs: number;
+  /** share of total expenses, % to 1 decimal */
+  share: number;
+};
 
-/** Each member's contributions against what they paid for. Shares are of all contributions, % to 1 decimal. */
-export function memberBalances(expenses: ResearchExpense[], contributions: ResearchContribution[], members: string[]): MemberBalance[] {
-  const totalCon = sumBy(contributions, (c) => c.amount);
-  return members.map((name) => {
+/**
+ * Settlement. Each member's settlement is everything they've put in: contributions + expenses they paid. The leader's
+ * is the rest of the cost: total expenses − all the other members' settlements. So the settlements always add up to
+ * the total expenses exactly.
+ */
+export function memberBalances(expenses: ResearchExpense[], contributions: ResearchContribution[], members: string[], leaderName: string): MemberBalance[] {
+  const totalExp = sumBy(expenses, (e) => e.amount);
+  const isLeader = (n: string) => n.trim().toLowerCase() === leaderName.trim().toLowerCase();
+  const names = members.some(isLeader) ? members : [leaderName, ...members];
+  const base = names.map((name) => {
     const C = contributions.filter((c) => c.member === name);
     const contributed = sumBy(C, (c) => c.amount);
     const spent = sumBy(expenses.filter((e) => e.member === name), (e) => e.amount);
-    return { name, contributed, spent, net: subMoney(contributed, spent), logs: C.length, share: totalCon ? Math.round((contributed / totalCon) * 1000) / 10 : 0 };
+    return { name, contributed, spent, given: sumBy([contributed, spent], (x) => x), leader: isLeader(name), logs: C.length, share: 0 };
+  });
+  const others = sumBy(base.filter((r) => !r.leader), (r) => r.given);
+  return base.map((r) => {
+    const given = r.leader ? subMoney(totalExp, others) : r.given;
+    return { ...r, given, share: totalExp ? Math.round((given / totalExp) * 1000) / 10 : 0 };
   });
 }

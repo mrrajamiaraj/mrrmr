@@ -12,10 +12,10 @@ import { Flash } from "@/components/debtors/bits";
 import { PillTabs, RaceChart, Sparkline } from "@/components/research-viz";
 import { deleteContribution, deleteExpense, saveContribution, saveExpense } from "@/lib/research-actions";
 import {
-  CONTRIBUTION_NOTES, DEFAULT_FACILITIES, DEFAULT_MEMBERS, mergeNames,
+  CONTRIBUTION_NOTES, DEFAULT_FACILITIES, DEFAULT_MEMBERS, LEADER, mergeNames,
   type ResearchContribution, type ResearchData, type ResearchExpense,
 } from "@/lib/research";
-import { cumulative, monthlyFlow } from "@/lib/research-stats";
+import { cumulative, memberBalances, monthlyFlow } from "@/lib/research-stats";
 import { addDays, addMonths, dateLong, taka, todayIso } from "@/lib/format";
 import { AnalyticsTab, ContributionsTab, LedgerTab, MonthlyTab, NO_FILTER, SettlementTab, takaDec, type DialogState, type LedgerFilter } from "./research-tabs";
 
@@ -50,7 +50,9 @@ export function ResearchView({ data }: { data: ResearchData }) {
 
   const totalExp = sumBy(expenses, (e) => e.amount);
   const totalCon = sumBy(contributions, (c) => c.amount);
-  const net = subMoney(totalCon, totalExp);
+  // Settlement: the team's share (their contributions + expenses they paid) and the leader's (the rest of the cost).
+  const lead = useMemo(() => memberBalances(expenses, contributions, members, LEADER).find((r) => r.leader)?.given ?? 0, [expenses, contributions, members]);
+  const teamShare = subMoney(totalExp, lead);
   // Reconciliation: every member's contributed and spent must add up to the ledger totals (to the paisa).
   const perCon = sumBy(members, (m) => sumBy(contributions.filter((c) => c.member === m), (c) => c.amount));
   const perExp = sumBy(members, (m) => sumBy(expenses.filter((e) => e.member === m), (e) => e.amount));
@@ -96,7 +98,8 @@ export function ResearchView({ data }: { data: ResearchData }) {
     );
   }
 
-  const cover = totalExp ? (totalCon / totalExp) * 100 : totalCon ? 100 : 0;
+  const cover = totalExp ? Math.max((teamShare / totalExp) * 100, 0) : 0;
+  const short = lead < 0; // the team has put in more than the whole cost
   const spark = flow.slice(-12);
 
   const hero = (
@@ -121,13 +124,13 @@ export function ResearchView({ data }: { data: ResearchData }) {
       <section aria-label="Research ledger at a glance" className="deck grid gap-5 p-4 sm:gap-6 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-5">
           <div className="flex items-center gap-4 sm:flex-wrap sm:gap-5">
-            {/* Coverage ring: how much of the spending the contributions cover. */}
+            {/* Ring: the team's share of the total cost; the rest is the leader's settlement. */}
             <div className="relative grid size-[84px] flex-none place-items-center sm:size-[118px]">
-              <span aria-hidden="true" className="viz-breathe absolute inset-2 rounded-full" style={{ background: `radial-gradient(closest-side, ${net < 0 ? "rgba(255,160,143,0.35)" : "rgba(125,212,184,0.35)"}, transparent)` }} />
+              <span aria-hidden="true" className="viz-breathe absolute inset-2 rounded-full" style={{ background: `radial-gradient(closest-side, ${short ? "rgba(255,160,143,0.35)" : "rgba(125,212,184,0.35)"}, transparent)` }} />
               <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden="true">
                 <defs>
                   <linearGradient id="rs-cover" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#92B5E8" /><stop offset="1" stopColor={net < 0 ? "#FFA08F" : "#7DD4B8"} />
+                    <stop offset="0" stopColor="#92B5E8" /><stop offset="1" stopColor="#7DD4B8" />
                   </linearGradient>
                 </defs>
                 <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="9" />
@@ -136,15 +139,17 @@ export function ResearchView({ data }: { data: ResearchData }) {
               </svg>
               <span className="relative flex flex-col items-center text-white">
                 <span className="money text-[24px] leading-none"><CountUp value={Math.round(cover)} format={(n) => `${Math.round(n)}%`} duration={1400} intro /></span>
-                <span className="mt-1 text-[10.5px] uppercase tracking-[0.1em] text-white/55">covered</span>
+                <span className="mt-1 text-[10.5px] uppercase tracking-[0.1em] text-white/55">by team</span>
               </span>
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/60">{net < 0 ? "Short by" : "Left over"} · {rangeText}</span>
-              <span className={`money text-[clamp(36px,5.5vw,56px)] font-medium leading-none tracking-[-0.03em] ${net < 0 ? "text-[#FFA08F]" : "text-white"}`}>
-                <CountUp value={Math.abs(net)} format={taka} duration={1400} intro />
+              <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/60">Total expenses · {rangeText}</span>
+              <span className="money text-[clamp(36px,5.5vw,56px)] font-medium leading-none tracking-[-0.03em] text-white">
+                <CountUp value={totalExp} format={taka} duration={1400} intro />
               </span>
-              <span className="text-[12.5px] text-white/55">{net < 0 ? "Contributions don't cover the spending yet." : net > 0 ? "Contributions cover all the spending." : "Contributions exactly match the spending."}</span>
+              <button type="button" onClick={() => setTab("settlement")} className="text-left text-[12.5px] text-white/60 underline decoration-white/20 underline-offset-2 hover:text-white">
+                Team {taka(teamShare)} · {LEADER} <span className={short ? "text-[#FFA08F]" : ""}>{short ? "−" : ""}{taka(lead)}</span>
+              </button>
             </div>
           </div>
 

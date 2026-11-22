@@ -334,7 +334,8 @@ export function FlowChart({ months, selected, onSelect, height = 260, labels = R
  * The gap is the balance. Styled for the dark hero deck.
  */
 export type RaceLabels = { a: string; b: string; short: string; ahead: string; shortColor?: string };
-const RESEARCH_RACE: RaceLabels = { a: "Contributed", b: "Spent", short: "short", ahead: "ahead" };
+// The gap is cash flow only (spent beyond the money handed in); who owes what is on the Settlement tab.
+const RESEARCH_RACE: RaceLabels = { a: "Contributed", b: "Spent", short: "spent beyond contributions", ahead: "contributions ahead by" };
 
 /** `contributed` is the upper (blue) line, `spent` the gold one; labels rename them (e.g. Repaid vs Lent). */
 export function RaceChart({ points, height = 190, labels = RESEARCH_RACE }: { points: CumPoint[]; height?: number; labels?: RaceLabels }) {

@@ -9,8 +9,8 @@ import { CountUp, stagger } from "@/components/motion";
 import { EmptyNote } from "@/components/debtors/bits";
 import { useViewer } from "@/components/shell";
 import { Badge } from "@/components/ui";
-import { CONTRIB, CalendarHeat, Diverging, Donut, FlowChart, Heatmap, Mark, SPENT } from "@/components/research-viz";
-import { facilityLook, memberLook, type ResearchContribution, type ResearchExpense } from "@/lib/research";
+import { CONTRIB, CalendarHeat, Donut, FlowChart, Heatmap, Mark, SPENT } from "@/components/research-viz";
+import { LEADER, LEADER_FULL, facilityLook, memberLook, type ResearchContribution, type ResearchExpense } from "@/lib/research";
 import { breakdown, dailyTotals, filterExpenses, matrix, memberBalances, monthlyFlow } from "@/lib/research-stats";
 import { sumBy } from "@/lib/money";
 import { dateLong, initials, monthLabel, taka } from "@/lib/format";
@@ -89,6 +89,29 @@ function Head({ title, sub, action }: { title: string; sub?: React.ReactNode; ac
     </div>
   );
 }
+/** The tab's headline total, with how it splits by person. */
+function TotalStrip({ label, total, count, noun, by, tone }: {
+  label: string; total: number; count: number; noun: string; by: { name: string; total: number }[]; tone: "owed" | "info";
+}) {
+  return (
+    <section className={`${card} spot flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5`}>
+      <div className="min-w-0">
+        <span className="eyebrow">{label}</span>
+        <div className={`money mt-1 text-[30px] leading-none sm:text-[34px] ${tone === "owed" ? "text-owed" : "text-info"}`}><CountUp value={total} format={taka} /></div>
+        <span className="mt-1 block text-[12.5px] text-slate-500">{count} {noun}{count === 1 ? "" : "s"}</span>
+      </div>
+      <ul className="m-0 grid list-none grid-cols-2 gap-x-5 gap-y-2 p-0 text-[13px] sm:flex sm:flex-wrap sm:justify-end">
+        {by.filter((b) => b.total > 0).map((b) => (
+          <li key={b.name} className="flex min-w-0 flex-col">
+            <span className="flex items-center gap-1.5 text-[12px] text-slate-500"><span aria-hidden="true" className="size-2 flex-none rounded-full" style={{ background: memberLook(b.name).dot }} /><span className="truncate">{b.name}</span></span>
+            <span className="money">{taka(b.total)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** A removable filter pill. */
 function Chip({ children, onClear }: { children: React.ReactNode; onClear: () => void }) {
   return (
@@ -170,6 +193,8 @@ export function LedgerTab({ expenses, facilities, members, setDialog, filter, se
 
   return (
     <>
+      <TotalStrip label="Total expenses" total={sumBy(expenses, (e) => e.amount)} count={expenses.length} noun="expense" tone="owed"
+        by={breakdown(expenses, (e) => e.member, (e) => e.amount, members)} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <section className={card}>
           <Head title="Where it went" sub="Tap a facility to show only its expenses." />
@@ -306,9 +331,10 @@ export function ContributionsTab({ contributions, members, setDialog }: {
 
   return (
     <>
+      <TotalStrip label="Total given directly · cash or bank transfer" total={sumBy(contributions, (c) => c.amount)} count={contributions.length} noun="contribution" tone="info" by={byMember} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section className={card}>
-          <Head title="Who put money in" sub="Tap a slice to show only that member." />
+          <Head title="Who gave money" sub="Tap a slice to show only that member." />
           <div className="px-4 pb-4 sm:px-5">
             <Donut title="Contributions by member" centerLabel="Contributed" picked={mem || undefined} onPick={(n) => setMem(mem === n ? "" : n)}
               slices={byMember.map((s) => ({ name: s.name, value: s.total, color: memberLook(s.name).dot, sub: `${s.count} payments · avg ${takaDec(s.avg)}` }))} />
@@ -395,81 +421,97 @@ export function ContributionsTab({ contributions, members, setDialog }: {
 
 // ---- Settlement -----------------------------------------------------------------------------------------------------
 
-export function SettlementTab({ expenses, contributions, members, totalExp, totalCon, setDialog }: {
+export function SettlementTab({ expenses, contributions, members, totalExp, setDialog }: {
   expenses: ResearchExpense[]; contributions: ResearchContribution[]; members: string[];
   totalExp: number; totalCon: number; setDialog: (d: DialogState) => void;
 }) {
   const viewer = useViewer();
-  const net = totalCon - totalExp;
-  const rows = useMemo(() => memberBalances(expenses, contributions, members), [expenses, contributions, members]);
-  const maxBar = Math.max(1, ...rows.flatMap((r) => [r.contributed, r.spent]));
-  const cover = totalExp ? (totalCon / totalExp) * 100 : totalCon ? 100 : 0;
-  const R = 52;
+  const rows = useMemo(() => memberBalances(expenses, contributions, members, LEADER), [expenses, contributions, members]);
+  const lead = rows.find((r) => r.leader)!;
+  const team = rows.filter((r) => !r.leader);
+  const teamTotal = sumBy(team, (r) => r.given);
+  // Leader first, then the team by how much they've put in.
+  const ordered = [lead, ...[...team].sort((a, b) => b.given - a.given)];
+  const shown = ordered.filter((r) => r.given > 0);
+  const [pick, setPick] = useState("");
 
   return (
     <>
-      <section className={`${card} spot grid gap-6 p-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-6`}>
-        <div className="relative mx-auto grid size-[140px] place-items-center">
-          <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden="true">
-            <circle cx="60" cy="60" r={R} fill="none" stroke="var(--color-soft)" strokeWidth="10" />
-            <circle cx="60" cy="60" r={R} fill="none" stroke={cover >= 100 ? "var(--color-brand-2)" : "var(--color-owed-bar)"} strokeWidth="10" strokeLinecap="round"
-              pathLength={100} strokeDasharray="100" className="viz-sweep" style={{ ["--to" as string]: 100 - Math.min(cover, 100) }} />
-          </svg>
-          <span className="relative flex flex-col items-center">
-            <span className="money text-[26px] leading-none"><CountUp value={Math.round(cover)} format={(n) => `${Math.round(n)}%`} /></span>
-            <span className="mt-1 text-[11px] text-slate-500">covered</span>
-          </span>
-        </div>
-        <div className="flex min-w-0 flex-col gap-3">
-          <div>
-            <h2 className={`m-0 text-[20px] font-semibold ${net < 0 ? "text-bad" : "text-brand-2"}`}>
-              {net < 0 ? <><CountUp value={-net} format={taka} /> still to be covered</> : net > 0 ? <><CountUp value={net} format={taka} /> left over</> : "Fully settled"}
-            </h2>
-            <p className="m-0 mt-1 text-[13px] text-slate-500">{taka(totalCon)} contributed − {taka(totalExp)} spent. Each member&apos;s net is what they put in minus what they paid for.</p>
+      <section className={`${card} spot flex flex-col gap-5 p-4 sm:p-6`}>
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+          <div className="min-w-0">
+            <span className="eyebrow">Total expenses</span>
+            <div className="money mt-1 text-[30px] leading-none sm:text-[36px]"><CountUp value={totalExp} format={taka} /></div>
           </div>
-          {[["Contributed", totalCon, CONTRIB], ["Spent", totalExp, SPENT]].map(([l, v, c], i) => (
-            <div key={l as string} className="grid grid-cols-[84px_1fr_auto] items-center gap-3 text-[13px]">
-              <span className="text-slate-600">{l}</span>
-              <span aria-hidden="true" className="h-3 overflow-hidden rounded-full bg-soft">
-                <span className="bar-fill block h-full rounded-full" style={{ width: `${((v as number) / Math.max(totalCon, totalExp, 1)) * 100}%`, background: c as string, animationDelay: `${i * 150}ms` }} />
-              </span>
-              <span className="money">{taka(v as number)}</span>
-            </div>
-          ))}
+          <p className="m-0 text-[13px] text-slate-500">
+            Team <span className="money text-ink">{taka(teamTotal)}</span> + {LEADER} <span className={`money ${lead.given < 0 ? "text-bad" : "text-ink"}`}>{lead.given < 0 ? "−" : ""}{taka(lead.given)}</span> = <span className="money text-ink">{taka(totalExp)}</span>
+          </p>
         </div>
+        {/* who covered the cost: one bar, one segment per person, the same order as the cards */}
+        {shown.length > 0 && totalExp > 0 && (
+          <div className="flex flex-col gap-2.5">
+            <div aria-hidden="true" className="flex h-4 w-full gap-[2px] overflow-hidden rounded-full bg-soft">
+              {shown.map((r, k) => (
+                <span key={r.name} className={`bar-fill h-full transition-opacity first:rounded-l-full last:rounded-r-full ${pick && pick !== r.name ? "opacity-35" : ""}`}
+                  style={{ width: `${r.share}%`, background: memberLook(r.name).dot, animationDelay: `${k * 90}ms` }} />
+              ))}
+            </div>
+            <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1.5 p-0 text-[12.5px]">
+              {shown.map((r) => (
+                <li key={r.name}>
+                  <button type="button" aria-pressed={pick === r.name} onClick={() => setPick(pick === r.name ? "" : r.name)} className={`inline-flex items-center gap-1.5 rounded-md transition-opacity ${pick && pick !== r.name ? "opacity-50" : ""}`}>
+                    <span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: memberLook(r.name).dot }} />
+                    <span className="font-medium">{r.name}</span><span className="tabular-nums text-slate-500">{r.share}%</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <p className="m-0 border-t border-line pt-3 text-[12.5px] text-slate-500">
+          Each member&apos;s settlement is the money they gave directly (cash or bank transfer) plus the expenses they paid themselves.
+          {" "}{LEADER_FULL}&apos;s settlement is the rest: total expenses − everyone else&apos;s settlement.
+        </p>
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {rows.map((r, i) => {
+        {ordered.map((r, i) => {
           const c = memberLook(r.name).dot;
+          const lines: [string, number, string, React.ReactNode][] = r.leader
+            ? [["Total expenses", totalExp, SPENT, <OutIcon key="o" size={13} />], ["− Team's settlement", teamTotal, CONTRIB, <InIcon key="i" size={13} />]]
+            : [["Contributions", r.contributed, CONTRIB, <InIcon key="i" size={13} />], ["+ Expenses paid", r.spent, SPENT, <OutIcon key="o" size={13} />]];
+          const barMax = Math.max(1, ...lines.map((l) => l[1]));
           return (
-            <article key={r.name} style={stagger(i, 80)} className="surface-card lift spot flex animate-fade-up flex-col gap-3 p-4">
+            <article key={r.name} style={stagger(i, 80)}
+              className={`surface-card lift spot flex animate-fade-up flex-col gap-3 p-4 transition-opacity ${r.leader ? "ring-1 ring-good-line" : ""} ${pick && pick !== r.name ? "opacity-50" : ""}`}>
               <div className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2.5">
                   <span aria-hidden="true" className="grid size-10 flex-none place-items-center rounded-full text-[13px] font-bold text-white shadow-[var(--shadow-lift)]" style={{ background: c }}>{initials(r.name)}</span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[14.5px] font-semibold">{r.name}</span>
-                    <span className="block text-[11.5px] text-slate-500">{r.logs} {r.logs === 1 ? "payment" : "payments"} · {r.share}% of all put in</span>
+                    <span className="block truncate text-[14.5px] font-semibold">{r.leader ? LEADER_FULL : r.name}</span>
+                    <span className="block text-[11.5px] text-slate-500">{r.leader ? "covers the rest of the cost" : `${r.logs} ${r.logs === 1 ? "contribution" : "contributions"}`}</span>
                   </span>
                 </span>
-                <Badge tone={r.net < 0 ? "bad" : r.net > 0 ? "good" : "neutral"} className="text-[11px]">{r.net < 0 ? "Paid for more" : r.net > 0 ? "Put in more" : "Even"}</Badge>
+                <Badge tone={r.leader ? "good" : "neutral"} className="flex-none text-[11px] tabular-nums">{r.share}%</Badge>
               </div>
-              <div className={`money text-[24px] leading-none ${r.net < 0 ? "text-bad" : r.net > 0 ? "text-brand-2" : ""}`}>
-                {r.net < 0 ? "−" : r.net > 0 ? "+" : ""}<CountUp value={Math.abs(r.net)} format={taka} />
+              <div>
+                <span className="eyebrow">Settlement</span>
+                <div className={`money mt-1 text-[24px] leading-none ${r.given < 0 ? "text-bad" : "text-ink"}`}>{r.given < 0 ? "−" : ""}<CountUp value={Math.abs(r.given)} format={taka} /></div>
               </div>
               <dl className="m-0 flex flex-col gap-2 text-[12.5px]">
-                {[["Put in", r.contributed, CONTRIB, <InIcon key="i" size={13} />], ["Paid for", r.spent, SPENT, <OutIcon key="o" size={13} />]].map(([l, v, col, icon], k) => (
-                  <div key={l as string}>
-                    <div className="flex justify-between"><dt className="flex items-center gap-1 text-slate-600">{icon}{l}</dt><dd className="money m-0">{taka(v as number)}</dd></div>
+                {lines.map(([l, v, col, icon], k) => (
+                  <div key={l}>
+                    <div className="flex justify-between gap-2"><dt className="flex items-center gap-1 text-slate-600">{icon}{l}</dt><dd className="money m-0">{taka(v)}</dd></div>
                     <span aria-hidden="true" className="mt-1 block h-1.5 overflow-hidden rounded-full bg-soft">
-                      <span className="bar-fill block h-full rounded-full" style={{ width: `${((v as number) / maxBar) * 100}%`, background: col as string, animationDelay: `${i * 80 + k * 120 + 200}ms` }} />
+                      <span className="bar-fill block h-full rounded-full" style={{ width: `${(v / barMax) * 100}%`, background: col, animationDelay: `${i * 80 + k * 120 + 200}ms` }} />
                     </span>
                   </div>
                 ))}
+                <div className="flex justify-between gap-2 border-t border-line pt-2 font-semibold"><dt>= Settlement</dt><dd className="money m-0">{r.given < 0 ? "−" : ""}{taka(r.given)}</dd></div>
               </dl>
-              {!viewer && (
+              {!viewer && !r.leader && (
                 <button type="button" onClick={() => setDialog({ kind: "contribution", row: null, member: r.name })}
-                  className="mt-auto inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-line px-3 text-[13px] font-medium text-brand-2 transition-colors hover:border-good-line hover:bg-good-tint">
+                  className="mt-auto inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-line px-3 text-[13px] font-medium text-brand-2 transition-colors hover:border-good-line hover:bg-good-tint">
                   <PlusIcon size={14} />Add contribution
                 </button>
               )}
@@ -477,11 +519,6 @@ export function SettlementTab({ expenses, contributions, members, totalExp, tota
           );
         })}
       </div>
-
-      <section className={card}>
-        <Head title="Who's ahead" sub="Each member's net, from the centre line: right put in more than they paid for, left paid for more." />
-        <div className="px-4 pb-5 sm:px-5"><Diverging rows={rows.map((r) => ({ name: r.name, value: r.net, color: memberLook(r.name).dot }))} /></div>
-      </section>
     </>
   );
 }

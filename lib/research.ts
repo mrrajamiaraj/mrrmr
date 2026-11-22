@@ -27,6 +27,9 @@ export type ResearchData = {
 
 export const DEFAULT_FACILITIES = ["BHS", "NICVD", "United Hospital", "BMRC"];
 export const DEFAULT_MEMBERS = ["Raja", "Somik", "Adnan", "Monir Sir"];
+/** Runs the research and covers whatever the rest of the team hasn't: their settlement is total expenses − the others'. */
+export const LEADER = "Raja";
+export const LEADER_FULL = "Raja Mia Raj";
 export const CONTRIBUTION_NOTES = ["Cash", "Bank Transfer", "bKash", "Nagad"];
 
 // Categorical marks (the small bar/dot next to a name). Mid-tone hues chosen to read on both Executive Minimal and
