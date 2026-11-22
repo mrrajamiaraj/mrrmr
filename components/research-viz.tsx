@@ -10,6 +10,7 @@ import { haptic } from "@/lib/haptics";
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useSlidingIndicator } from "@/components/motion";
+import { usePhone } from "@/components/use-phone";
 import { addDays, dateLong, monthLabel, taka } from "@/lib/format";
 import type { CumPoint, MonthFlow } from "@/lib/research-stats";
 
@@ -345,7 +346,8 @@ export function RaceChart({ points, height = 190, labels = RESEARCH_RACE }: { po
   const [hover, setHover] = useState<number | null>(null);
   const pts = [{ key: "start", spent: 0, contributed: 0 }, ...points];
   const n = pts.length;
-  const padX = 6, top = 12, bottom = 6, h = height;
+  const phone = usePhone(); // phones: a shorter chart so the hero doesn't fill the screen
+  const padX = 6, top = 12, bottom = 6, h = phone ? Math.min(height, 112) : height;
   const max = Math.max(1, ...pts.flatMap((p) => [p.spent, p.contributed])) * 1.1;
   const X = (i: number) => padX + (i * (w - 2 * padX)) / Math.max(n - 1, 1);
   const Y = (v: number) => top + (1 - v / max) * (h - top - bottom);

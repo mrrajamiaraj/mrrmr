@@ -203,7 +203,7 @@ function WeekBars({ weeks }: { weeks: CollectWeek[] }) {
       </figcaption>
       <div tabIndex={0} role="group" aria-label={`Money collected in each of the last ${n} weeks. Use the arrow keys to read each week.`}
         onKeyDown={onKey} onPointerLeave={() => setHover(null)} onBlur={() => setHover(null)}
-        className="relative grid h-[150px] items-end gap-1.5 rounded-lg outline-offset-4 sm:h-[170px]" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+        className="relative grid h-[96px] items-end gap-1 rounded-lg outline-offset-4 sm:h-[170px] sm:gap-1.5" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
         {avg > 0 && (
           <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-[#E8C27A]/70" style={{ bottom: `${(avg / max) * 100}%` }}>
             <span className="absolute -top-4 right-0 text-[10px] text-[#E8C27A]/90">avg {taka(avg)}</span>

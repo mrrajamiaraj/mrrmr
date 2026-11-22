@@ -58,20 +58,20 @@ export function Hero({ d, hour, actions, trend }: { d: Dashboard; hour: number; 
                 <CountUp value={bank.balance} format={taka} duration={1400} intro />
               </span>
             ) : <span className="text-figure text-white/60">Not set up</span>}
-            <span className="text-[12.5px] text-white/55">{bank ? `The balance you last entered · ${timestampLong(bank.updatedAt)}` : "Add your bank account to start."}</span>
+            <span className="text-[12.5px] text-white/55">{bank ? <><span className="max-sm:hidden">The balance you last entered · </span><span className="sm:hidden">Updated </span>{timestampLong(bank.updatedAt)}</> : "Add your bank account to start."}</span>
           </Link>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="deck-tiles grid grid-cols-2 gap-2.5 sm:gap-3">
             <Link href="/debtors?show=owing" className="deck-tile group flex flex-col gap-1 p-4 transition-colors">
               <span className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Owed to you<ArrowRightIcon size={13} className="transition-transform group-hover:translate-x-0.5" /></span>
               <span className="money text-[26px] leading-tight text-[#F0C77E]"><CountUp value={d.receivables.total} format={taka} duration={1300} intro /></span>
-              <span className="text-[12px] text-white/55">{people} {people === 1 ? "person" : "people"} · loans {taka(d.receivables.bankLoans)} · cards {taka(d.receivables.cards)}</span>
+              <span className="text-[12px] text-white/55">{people} {people === 1 ? "person" : "people"}<span className="max-sm:hidden"> · loans {taka(d.receivables.bankLoans)} · cards {taka(d.receivables.cards)}</span></span>
               {d.overdue.count > 0 && <span className="text-[12px] font-medium text-[#FFA08F]"><DueIcon size={12} className="mr-1 inline" />{taka(d.overdue.amount)} overdue</span>}
             </Link>
             <Link href="#cards" className="deck-tile group flex flex-col gap-1 p-4 transition-colors">
               <span className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">You owe on cards<ArrowRightIcon size={13} className="transition-transform group-hover:translate-x-0.5" /></span>
               <span className="money text-[26px] leading-tight text-[#FFA08F]"><CountUp value={d.liabilities.cards} format={taka} duration={1300} intro /></span>
-              <span className="text-[12px] text-white/55">{d.cards.length} {d.cards.length === 1 ? "card" : "cards"} · {taka(d.receivables.cards)} is others&apos; purchases</span>
+              <span className="text-[12px] text-white/55">{d.cards.length} {d.cards.length === 1 ? "card" : "cards"}<span className="max-sm:hidden"> · {taka(d.receivables.cards)} is others&apos; purchases</span></span>
             </Link>
           </div>
         </div>
@@ -80,7 +80,7 @@ export function Hero({ d, hour, actions, trend }: { d: Dashboard; hour: number; 
           <TrendArea dark color="#E8C27A" title={`Owed to you · last ${trend.length} months`}
             points={trend.map((p) => ({ key: p.key, label: p.label, short: p.short, value: p.owedEnd }))} />
           <p className="m-0 text-[12px] text-white/55">
-            {t1 >= t0 ? "Up" : "Down"} <b className="font-semibold text-white/85">{taka(t1 - t0)}</b> since {trend[0]?.label}. Built from dated loans, card purchases and repayments.
+            {t1 >= t0 ? "Up" : "Down"} <b className="font-semibold text-white/85">{taka(t1 - t0)}</b> since {trend[0]?.label}.<span className="max-sm:hidden"> Built from dated loans, card purchases and repayments.</span>
           </p>
         </div>
 
@@ -88,7 +88,7 @@ export function Hero({ d, hour, actions, trend }: { d: Dashboard; hour: number; 
           <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/10 pt-4 text-[12.5px] text-white/65 lg:col-span-2">
             <span className="rounded-full border border-[#92B5E8]/40 bg-[#92B5E8]/10 px-2 py-0.5 text-[11px] font-semibold text-[#B9D0F2]">Projection</span>
             If every bank loan were repaid, {bank?.name ?? "the bank"} would hold <b className="money font-medium text-white">{taka(d.projection.bankAfterLoans)}</b>
-            <span className="text-white/45">— not money you have today; card repayments go to the cards, not the bank.</span>
+            <span className="text-white/45 max-sm:hidden">— not money you have today; card repayments go to the cards, not the bank.</span>
           </p>
         )}
       </section>

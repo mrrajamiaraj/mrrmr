@@ -576,6 +576,28 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
 
   /* Cards breathe less on a small screen: the content gets the width, not the padding. */
   .deck-tile { padding: 12px; }
+
+  /*
+   * Page heroes (the dark "deck"): a phone gets the headline figure, one swipeable row of stat tiles and a short
+   * chart — about half the height it would be with the desktop layout stacked. Extras marked .deck-extra (tile
+   * sparklines, footnotes) are left to the larger screens.
+   */
+  .deck { gap: 16px; }
+  .deck-tiles {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding-inline: 16px;
+    scroll-padding-inline: 16px;
+  }
+  .deck-tiles::-webkit-scrollbar { display: none; }
+  .deck-tiles > * { flex: 1 0 44%; min-width: 0; scroll-snap-align: start; grid-column: auto; }
+  .deck-tiles .deck-tile, .deck-tiles > .deck-tile { padding: 10px 12px; gap: 2px; }
+  .deck-extra { display: none !important; }
 }
 
 @utility money {

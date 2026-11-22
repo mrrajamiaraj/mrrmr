@@ -9,6 +9,7 @@ import { haptic } from "@/lib/haptics";
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { taka } from "@/lib/format";
+import { usePhone } from "@/components/use-phone";
 
 const useIso = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -59,7 +60,9 @@ export function TrendArea({ points, title, height = 170, dark = false, color = "
   const [hover, setHover] = useState<number | null>(null);
   const n = points.length;
   const max = Math.max(1, ...points.map((p) => p.value)) * 1.15;
-  const padX = 6, top = 14, bottom = 8, h = height;
+  // Phones: a shorter chart, so it sits beside the figures instead of taking half the screen.
+  const phone = usePhone();
+  const padX = 6, top = 14, bottom = 8, h = phone ? Math.min(height, 104) : height;
   const xy = points.map((p, i): [number, number] => [padX + (i * (w - 2 * padX)) / Math.max(n - 1, 1), top + (1 - p.value / max) * (h - top - bottom)]);
   const line = smoothPath(xy);
   const area = xy.length ? `${line} L${xy[n - 1][0]},${h} L${xy[0][0]},${h} Z` : "";
