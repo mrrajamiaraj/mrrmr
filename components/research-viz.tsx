@@ -81,7 +81,7 @@ export function PillTabs<K extends string>({ tabs, value, onChange, label }: {
         const on = t.key === value;
         return (
           <button key={t.key} data-k={t.key} type="button" role="tab" aria-selected={on} tabIndex={on ? 0 : -1} onClick={() => onChange(t.key)}
-            className={`relative z-10 inline-flex min-h-10 flex-none items-center gap-2 whitespace-nowrap rounded-xl px-3.5 text-[13.5px] transition-colors duration-200 ${on ? "font-semibold text-ink" : "text-slate-500 hover:text-ink"}`}>
+            className={`relative z-10 inline-flex min-h-10 flex-none items-center gap-2 whitespace-nowrap rounded-xl px-3.5 text-[13.5px] max-sm:flex-[1_0_auto] max-sm:justify-center max-sm:gap-1.5 max-sm:px-3 transition-colors duration-200 ${on ? "font-semibold text-ink" : "text-slate-500 hover:text-ink"}`}>
             {t.icon && <span aria-hidden="true" className={`transition-transform duration-300 ease-[var(--ease-spring)] ${on ? "scale-110 text-brand-2" : ""}`}>{t.icon}</span>}
             {t.label}
             {t.count != null && (

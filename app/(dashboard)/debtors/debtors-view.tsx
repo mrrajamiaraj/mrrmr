@@ -260,25 +260,27 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
         {view === "people" && (
           <>
             <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="flex min-h-11 min-w-0 flex-[1_1_260px] items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2">
+              {/* Phones: search on its own full-width row, then sort (fills the row) beside the List/Cards switch. */}
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap">
+                <label className="col-span-2 flex min-h-11 min-w-0 items-center gap-2 rounded-xl border border-line-strong bg-surface px-3 focus-within:border-brand-2 sm:flex-[1_1_260px] sm:rounded-lg">
                   <SearchIcon size={16} className="text-slate-500" /><span className="sr-only">Search people</span>
                   <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, reason, phone, notes"
                     className="min-w-0 flex-auto bg-transparent text-[14.5px] outline-none" />
                   {q && <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="grid size-7 animate-pop-in place-items-center rounded-md text-slate-400 hover:bg-soft hover:text-ink"><CloseIcon size={14} /></button>}
                 </label>
-                <label className="flex min-h-11 items-center gap-2 text-[13px] text-slate-500">Sort
-                  <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="min-h-11 rounded-lg border border-line-strong bg-surface px-2.5 text-[14px] text-ink">
+                <label className="flex min-h-11 min-w-0 items-center gap-2 text-[13px] text-slate-500"><span className="max-sm:sr-only">Sort</span>
+                  <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort people"
+                    className="min-h-11 min-w-0 rounded-lg border border-line-strong bg-surface px-2.5 text-[14px] text-ink max-sm:w-full max-sm:rounded-xl">
                     <option value="owes">Amount owed (highest)</option>
                     <option value="due">Due date (soonest)</option>
                     <option value="name">Name (A–Z)</option>
                     <option value="recent">Recent activity</option>
                   </select>
                 </label>
-                <div role="group" aria-label="Layout" className="flex rounded-lg border border-line-strong bg-surface p-0.5">
+                <div role="group" aria-label="Layout" className="flex h-11 rounded-lg border border-line-strong bg-surface p-0.5 max-sm:rounded-xl">
                   {(["list", "cards"] as const).map((l) => (
                     <button key={l} type="button" aria-pressed={layout === l} onClick={() => setLayout(l)}
-                      className={`min-h-10 rounded-md px-3 text-[13px] font-medium capitalize transition-colors ${layout === l ? "bg-ink text-on-ink" : "text-slate-600 hover:text-ink"}`}>{l}</button>
+                      className={`min-h-full rounded-md px-3 text-[13px] font-medium capitalize transition-colors max-sm:rounded-[9px] max-sm:px-3.5 ${layout === l ? "bg-ink text-on-ink" : "text-slate-600 hover:text-ink"}`}>{l}</button>
                   ))}
                 </div>
               </div>
