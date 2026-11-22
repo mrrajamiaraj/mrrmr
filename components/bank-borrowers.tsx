@@ -191,6 +191,14 @@ const stepLabel = (s: OutlookStep, today: string) => (s.kind === "overdue" ? "Ov
  * Waterfall: the balance now, one floating bar per repayment step (in due-date order), and the balance after.
  * Hover, focus or ←/→ reads a step; the list underneath says the same in words.
  */
+/** ৳850 · ৳12.5k · ৳1.56L — short enough to sit above a narrow bar on a phone. */
+function short(n: number) {
+  const a = Math.abs(n);
+  if (a < 1000) return taka(a);
+  if (a < 100000) return `৳${(a / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  return `৳${(a / 100000).toFixed(2).replace(/0$/, "").replace(/\.0$/, "")}L`;
+}
+
 function Outlook({ outlook, accountName, today }: { outlook: ReturnType<typeof bankOutlook>; accountName: string; today: string }) {
   const steps = useMemo(() => {
     if (outlook.steps.length <= MAX_STEPS) return outlook.steps;
@@ -250,43 +258,54 @@ function Outlook({ outlook, accountName, today }: { outlook: ReturnType<typeof b
         ) : <p className="m-0 text-[13px] text-slate-500">Nobody owes anything on loans from this account, so the balance stays as it is.</p>}
       </div>
 
-      <figure className="m-0 flex min-w-0 flex-col gap-2">
-        <figcaption className="flex flex-wrap items-baseline justify-between gap-2 text-[12.5px]">
-          <span className="font-semibold">How the balance grows as people pay back</span>
-          <span aria-live="polite" className="min-h-5 text-slate-500">
+      <figure className="m-0 flex min-w-0 flex-col gap-3 rounded-xl border border-line p-3.5 sm:p-4">
+        <figcaption className="flex flex-col gap-0.5">
+          <span className="text-[13px] font-semibold">How the balance grows as people pay back</span>
+          <span aria-live="polite" className="min-h-[18px] text-[12px] text-slate-500">
             {cur ? <><b className="font-semibold text-ink">{cur.title}</b>{cur.add ? <> · <span className="money text-brand-2">+{taka(cur.add)}</span></> : null} · balance <span className="money text-ink">{taka(cur.value)}</span>{cur.who ? ` · ${cur.who}` : ""}</>
-              : "Assumes each repayment goes into the account. Tap a bar to read it."}
+              : "Tap a bar for details. Assumes each repayment goes into the account."}
           </span>
         </figcaption>
         <div tabIndex={0} role="group" aria-label={`${accountName} balance now ${taka(outlook.now)}; after every loan is paid back into it, ${taka(outlook.after)}. Use the arrow keys to read each step.`}
           onKeyDown={onKey} onBlur={() => setHover(null)} onPointerLeave={() => setHover(null)}
-          className="relative grid h-[210px] items-end gap-1.5 rounded-lg outline-offset-4 sm:gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-          {[0.25, 0.5, 0.75].map((g) => <span key={g} aria-hidden="true" className="pointer-events-none absolute inset-x-0 border-t border-dashed border-line" style={{ bottom: `${g * 100}%` }} />)}
+          className="relative grid h-[180px] items-end gap-2 rounded-lg pt-5 outline-offset-4 sm:h-[200px]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 border-t border-line" />
           {Array.from({ length: cols }, (_, i) => {
             const isEnd = i === 0 || i === cols - 1;
             const value = i === 0 ? outlook.now : i === cols - 1 ? outlook.after : steps[i - 1].balance;
             const prev = i === 0 || i === cols - 1 ? lo : i === 1 ? outlook.now : steps[i - 2].balance;
             const s = !isEnd ? steps[i - 1] : null;
             const on = hover === i;
+            const dim = hover != null && !on;
+            const color = i === 0 ? "var(--color-slate-400)" : i === cols - 1 ? "var(--color-brand-2)" : s!.kind === "overdue" ? "var(--color-bad)" : s!.kind === "undated" ? "var(--color-slate-500)" : "var(--color-chart-in)";
             return (
-              <span key={i} onPointerEnter={() => setHover(i)} className={`relative flex h-full flex-col justify-end rounded-md transition-colors ${on ? "bg-subtle" : ""}`}>
-                {on && <span className="absolute inset-x-0 z-10 animate-pop-in text-center text-[10px] font-semibold tabular-nums" style={{ bottom: `calc(${h(value)} + 3px)` }}>{taka(isEnd ? value : s!.amount)}</span>}
-                <span aria-hidden="true" className="absolute inset-x-[10%] viz-grow rounded-[5px] transition-[filter,opacity] duration-200"
-                  style={{
-                    bottom: isEnd ? 0 : h(prev), height: isEnd ? h(value) : `calc(${h(value)} - ${h(prev)})`, minHeight: 3, animationDelay: `${i * 70}ms`,
-                    background: i === 0 ? "var(--color-slate-400)" : i === cols - 1 ? "linear-gradient(var(--color-brand-2), color-mix(in srgb, var(--color-brand-2) 55%, transparent))" : s!.kind === "overdue" ? "var(--color-bad)" : s!.kind === "undated" ? "var(--color-slate-500)" : "var(--color-chart-in)",
-                    opacity: hover != null && !on ? 0.5 : 1,
-                  }} />
-                {/* connector to the next bar's start */}
-                {i < cols - 1 && <span aria-hidden="true" className="pointer-events-none absolute -right-[4px] left-[90%] border-t border-dashed border-slate-400" style={{ bottom: h(value) }} />}
+              <span key={i} onPointerEnter={() => setHover(i)} className="relative h-full">
+                {/* level line carried over to the next bar: from this lane's right edge to the next lane's left edge (gap 8px) */}
+                {i < cols - 1 && <span aria-hidden="true" className="pointer-events-none absolute border-t border-dashed border-slate-300"
+                  style={{ bottom: h(value), left: "calc(50% + min(50%, 22px))", right: "calc(-8px - 50% + min(50%, 22px))" }} />}
+                {/* the bar sits in a slim centred lane so wide screens don't turn it into a block */}
+                <span className="absolute inset-y-0 left-1/2 w-[min(100%,44px)] -translate-x-1/2">
+                  <span className={`absolute inset-x-0 z-10 whitespace-nowrap text-center text-[10px] font-semibold tabular-nums transition-opacity ${dim ? "opacity-40" : ""} ${isEnd ? "text-ink" : s!.kind === "overdue" ? "text-bad" : "text-brand-2"}`}
+                    style={{ bottom: `calc(${h(value)} + 4px)`, left: "-12px", right: "-12px" }}>
+                    {/* exact figures while there's room (≤5 bars); a short form when bars get narrow */}
+                    {(cols <= 5 ? taka : short)(isEnd ? value : s!.amount).replace(/^/, isEnd ? "" : "+")}
+                  </span>
+                  <span aria-hidden="true" className={`absolute inset-x-0 z-[1] viz-grow transition-[opacity,box-shadow] duration-200 ${isEnd ? "rounded-t-[6px]" : "rounded-[4px]"}`}
+                    style={{
+                      bottom: isEnd ? 0 : h(prev), height: isEnd ? h(value) : `calc(${h(value)} - ${h(prev)})`, minHeight: 4, animationDelay: `${i * 70}ms`,
+                      background: color, opacity: dim ? 0.35 : 1, boxShadow: on ? `0 0 0 3px color-mix(in srgb, ${color} 25%, transparent)` : undefined,
+                    }} />
+                  {/* a cut mark: the bars for now/after start above zero */}
+                  {isEnd && lo > 0 && <span aria-hidden="true" className="absolute inset-x-0 bottom-[10px] z-[2] h-[5px] -skew-y-[8deg] bg-surface" />}
+                </span>
               </span>
             );
           })}
         </div>
-        <div aria-hidden="true" className="grid gap-1.5 text-[10.5px] text-slate-500 sm:gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-          {Array.from({ length: cols }, (_, i) => <span key={i} className={`truncate text-center ${hover === i ? "font-semibold text-ink" : ""}`}>{label(i)}</span>)}
+        <div aria-hidden="true" className="grid gap-2 text-[10.5px] text-slate-500" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+          {Array.from({ length: cols }, (_, i) => <span key={i} className={`truncate text-center ${hover === i ? "font-semibold text-ink" : i === 0 || i === cols - 1 ? "font-medium text-slate-600" : ""}`}>{label(i)}</span>)}
         </div>
-        {lo > 0 && <span className="text-[11px] text-slate-500">The scale starts at {taka(lo)} so each repayment is visible.</span>}
+        {lo > 0 && <span className="text-[11px] text-slate-400">Bars are cut at {taka(lo)} so small repayments stay visible.</span>}
       </figure>
     </div>
   );
