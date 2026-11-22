@@ -10,7 +10,7 @@ import { repayTargets } from "@/components/debtors/repay-form";
 import { Flash } from "@/components/debtors/bits";
 import { SetupAccount } from "@/components/setup-forms";
 import { usePalettePeople } from "@/components/command-palette";
-import { CardsStrip, Hero, RepayPicker } from "@/components/dashboard";
+import { CardsStrip, Hero, RepayPicker, type RepaySource } from "@/components/dashboard";
 import { Button, buttonClass, Menu, type MenuItem } from "@/components/ui";
 import { CardIcon, PlusIcon, TrendIcon } from "@/components/icons";
 import { CardPurchaseDialog } from "@/components/card-purchase-dialog";
@@ -31,8 +31,8 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
   const [adding, setAdding] = useState<{ mode: "loan" } | { mode: "card"; cardId: string } | null>(null);
   const [picking, setPicking] = useState(false);
   const [repaying, setRepaying] = useState<string | null>(null);
-  // Opened from the bank section: the repayment is for bank loans only (like a card page only takes that card's).
-  const [bankOnly, setBankOnly] = useState(false);
+  // What the repayment is for, chosen first: "loan" (the bank account) or a card id. The form then only offers that.
+  const [only, setOnly] = useState<string | null>(null);
   const [flash, setFlash] = useState("");
 
   const d = useMemo(() => computeDashboard(data, today), [data, today]);
@@ -55,6 +55,12 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
 
   const acct = { id: account.id, name: account.name };
   const rp = repaying ? profiles.find((p) => p.id === repaying) : undefined;
+  const who = (owes: (p: (typeof profiles)[number]) => number) => profiles
+    .map((p) => ({ id: p.id, name: p.name, owes: owes(p), status: p.status })).filter((p) => p.owes > 0).sort((a, b) => b.owes - a.owes);
+  const sources: RepaySource[] = [
+    { key: "loan", label: account.name, kind: "bank", sub: "bank loans", people: who((p) => p.loanOut) },
+    ...data.cards.map((c): RepaySource => ({ key: c.id, label: cardLabel(c), kind: "card", sub: "card purchases", people: who((p) => p.cardOutByCard[c.id] ?? 0) })),
+  ];
   const cardItems: MenuItem[] = data.cards.map((c) => ({ label: cardLabel(c), icon: <CardIcon size={17} />, onSelect: () => setAdding({ mode: "card", cardId: c.id }) }));
 
   return (
@@ -85,7 +91,7 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
 
       <div className="reveal">
         <BankBorrowers data={data} accountId={account.id} accountName={account.name} balance={account.balance} open={d.open} profiles={profiles} today={today}
-          viewer={viewer} onRepay={(id) => { setBankOnly(true); setRepaying(id); }} onAdd={() => setAdding({ mode: "loan" })} />
+          viewer={viewer} onRepay={(id) => { setOnly("loan"); setRepaying(id); }} onAdd={() => setAdding({ mode: "loan" })} />
       </div>
 
       {adding?.mode === "loan" && (
@@ -98,11 +104,11 @@ export function AccountView({ data, today, hour }: { data: FinanceData; today: s
           onClose={() => setAdding(null)} onSaved={(text) => { setAdding(null); setFlash(text); }} />
       )}
       {picking && (
-        <RepayPicker people={profiles.filter((p) => p.owes > 0).map((p) => ({ id: p.id, name: p.name, owes: p.owes, status: p.status }))}
-          onClose={() => setPicking(false)} onPick={(id) => { setPicking(false); setBankOnly(false); setRepaying(id); }} />
+        <RepayPicker people={profiles.filter((p) => p.owes > 0).map((p) => ({ id: p.id, name: p.name, owes: p.owes, status: p.status }))} sources={sources}
+          onClose={() => setPicking(false)} onPick={(id, key) => { setPicking(false); setOnly(key ?? null); setRepaying(id); }} />
       )}
       {rp && (
-        <RepayDialog p={rp} targets={repayTargets(rp, data.cards).filter((t) => !bankOnly || t.appliesTo === "loan")} account={acct}
+        <RepayDialog p={rp} targets={repayTargets(rp, data.cards).filter((t) => !only || t.key === only)} account={acct}
           onClose={() => setRepaying(null)} onSaved={(t) => { setRepaying(null); setFlash(t); }} />
       )}
     </Shell>

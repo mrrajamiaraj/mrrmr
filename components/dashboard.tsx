@@ -127,15 +127,67 @@ export function CardsStrip({ d }: { d: Dashboard }) {
 
 // ---- Record repayment: pick who paid --------------------------------------------------------------------------------
 
-export function RepayPicker({ people, onPick, onClose }: {
-  people: { id: string; name: string; owes: number; status: Status }[]; onPick: (id: string) => void; onClose: () => void;
+export type RepaySource = {
+  /** "loan" for the bank account, or a card id (matches RepayTarget.key) */
+  key: string; label: string; kind: "bank" | "card"; sub: string;
+  people: { id: string; name: string; owes: number; status: Status }[];
+};
+
+export function RepayPicker({ people, sources, onPick, onClose }: {
+  people: { id: string; name: string; owes: number; status: Status }[];
+  /** When given, the first step asks where the money was owed: the bank account or one of the cards. */
+  sources?: RepaySource[];
+  onPick: (id: string, sourceKey?: string) => void; onClose: () => void;
 }) {
   const [q, setQ] = useState("");
-  const list = people.filter((p) => p.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const [src, setSrc] = useState<RepaySource | null>(null);
+  const choosing = !!sources && !src;
+  const pool = src ? src.people : people;
+  const list = pool.filter((p) => p.name.toLowerCase().includes(q.trim().toLowerCase()));
+
+  if (choosing) {
+    return (
+      <Modal title="Record a repayment" onClose={onClose} maxWidth={460}>
+        <div className="flex flex-col gap-3 p-5">
+          <p className="m-0 text-[13.5px] text-slate-500">What is the repayment for?</p>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {sources!.map((s) => {
+              const total = sumBy(s.people, (p) => p.owes);
+              const none = !s.people.length;
+              return (
+                <li key={s.key}>
+                  <button type="button" disabled={none} onClick={() => { setSrc(s); setQ(""); }} data-autofocus={s === sources![0] || undefined}
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-xl border border-line bg-surface px-3.5 text-left transition-colors hover:border-line-strong hover:bg-soft disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-surface">
+                    <span className={`grid size-10 flex-none place-items-center rounded-lg ${s.kind === "bank" ? "bg-good-tint text-brand-2" : "bg-owed-tint text-owed"}`}>
+                      {s.kind === "bank" ? <BankIcon size={18} /> : <CardIcon size={18} />}
+                    </span>
+                    <span className="min-w-0 flex-auto">
+                      <span className="block truncate text-[14.5px] font-medium">{s.label}</span>
+                      <span className="block truncate text-[12px] text-slate-500">
+                        {none ? "Nobody owes on this" : `${s.people.length} ${s.people.length === 1 ? "person owes" : "people owe"} · ${s.sub}`}
+                      </span>
+                    </span>
+                    {!none && <Money value={total} tone="owed" className="text-[14px]" />}
+                    {!none && <ChevronRight size={16} className="flex-none text-slate-400" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
-    <Modal title="Record a repayment" onClose={onClose} maxWidth={460}>
+    <Modal title={src ? `Repayment — ${src.label}` : "Record a repayment"} onClose={onClose} maxWidth={460}>
       <div className="flex flex-col gap-3 p-5">
-        <p className="m-0 text-[13.5px] text-slate-500">Who paid you? Next you choose the loan or card it&apos;s for, and whether it goes into the bank.</p>
+        {src ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="m-0 text-[13.5px] text-slate-500">Who paid you back?</p>
+            <button type="button" onClick={() => { setSrc(null); setQ(""); }} className="min-h-9 rounded-lg px-2 text-[13px] font-medium text-brand-2 hover:bg-soft">← Change</button>
+          </div>
+        ) : <p className="m-0 text-[13.5px] text-slate-500">Who paid you? Next you choose the loan or card it&apos;s for, and whether it goes into the bank.</p>}
         <label className="field-label">
           Search
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name" className="field-input" data-autofocus />
@@ -143,7 +195,7 @@ export function RepayPicker({ people, onPick, onClose }: {
         <ul className="m-0 flex max-h-[50dvh] list-none flex-col overflow-y-auto p-0">
           {list.map((p) => (
             <li key={p.id}>
-              <button type="button" onClick={() => onPick(p.id)} className="flex min-h-12 w-full items-center gap-3 rounded-lg px-2 text-left hover:bg-soft">
+              <button type="button" onClick={() => onPick(p.id, src?.key)} className="flex min-h-12 w-full items-center gap-3 rounded-lg px-2 text-left hover:bg-soft">
                 <Avatar text={initials(p.name)} size={30} />
                 <span className="min-w-0 flex-auto truncate text-[14px] font-medium">{p.name}</span>
                 <StatusPill status={p.status} className="max-[380px]:hidden" />
