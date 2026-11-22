@@ -194,8 +194,9 @@ export function ResearchView({ data }: { data: ResearchData }) {
 
   return (
     <Shell subtitle={subtitle} hero={hero}>
-      <div className="surface-card flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
-        <div role="group" aria-label="Quick date range" className="flex flex-wrap gap-1.5">
+      {/* Phones: the ranges swipe on one line, From/To sit side by side at full width, Export spans the card. */}
+      <div className="surface-card flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 max-sm:grid max-sm:grid-cols-2 max-sm:gap-x-2.5">
+        <div role="group" aria-label="Quick date range" className="flex flex-wrap gap-1.5 max-sm:col-span-2">
           {PRESETS.map(([p, label]) => (
             <button key={p} type="button" aria-pressed={preset === p} onClick={() => { const r = presetRange(p, today); setFrom(r.from); setTo(r.to); }}
               className={`min-h-9 rounded-full border px-3 text-[13px] font-medium transition-[background-color,color,border-color,transform] duration-200 active:scale-95 ${preset === p ? "border-ink bg-ink text-on-ink" : "border-line bg-surface text-slate-600 hover:border-line-strong hover:text-ink"}`}>
@@ -203,14 +204,14 @@ export function ResearchView({ data }: { data: ResearchData }) {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">From
-            <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
-          <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">To
-            <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px]" /></label>
+        <div className="flex flex-wrap items-center gap-2 max-sm:contents">
+          <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600 max-sm:min-w-0 max-sm:flex-col max-sm:items-stretch max-sm:gap-1 max-sm:text-[11.5px] max-sm:font-medium max-sm:text-slate-500">From
+            <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px] max-sm:min-h-11 max-sm:w-full max-sm:min-w-0 max-sm:text-[14px] max-sm:text-ink" /></label>
+          <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600 max-sm:min-w-0 max-sm:flex-col max-sm:items-stretch max-sm:gap-1 max-sm:text-[11.5px] max-sm:font-medium max-sm:text-slate-500">To
+            <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="min-h-9 rounded-lg border border-line-strong bg-surface px-2 text-[13px] max-sm:min-h-11 max-sm:w-full max-sm:min-w-0 max-sm:text-[14px] max-sm:text-ink" /></label>
         </div>
-        <div className="ml-auto">
-          <Menu label="Export" align="end" triggerClass="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-info-line bg-info-tint px-3 text-[13px] font-medium text-info transition-transform hover:-translate-y-0.5"
+        <div className="ml-auto max-sm:col-span-2 max-sm:ml-0 max-sm:[&>*]:w-full">
+          <Menu label="Export" align="end" triggerClass="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-info-line bg-info-tint px-3 text-[13px] font-medium text-info transition-transform hover:-translate-y-0.5 max-sm:min-h-11 max-sm:w-full max-sm:justify-center max-sm:rounded-xl max-sm:text-[14px]"
             trigger={<><DownloadIcon size={14} />Export<ChevronDown size={13} /></>}
             items={[
               ...(["expenses", "contributions", "settlement", "facilities", "monthly"] as const).map((s) => ({
