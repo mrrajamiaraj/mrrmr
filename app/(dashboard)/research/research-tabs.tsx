@@ -210,21 +210,21 @@ export function LedgerTab({ expenses, facilities, members, setDialog, filter, se
         <div className="flex flex-col gap-3 border-b border-line p-4">
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <Search value={q} onChange={(v) => set({ q: v })} placeholder="Search by facility, person, note, date or amount…" />
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-              <select aria-label="Facility" value={fac} onChange={(e) => set({ fac: e.target.value })} className={select}>
+            {/* Phones: facility | member on one row, then month | date sort | amount sort — every control full-size. */}
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto max-sm:grid max-sm:grid-cols-6 max-sm:[&>*]:w-full max-sm:[&>*]:justify-center">
+              <select aria-label="Facility" value={fac} onChange={(e) => set({ fac: e.target.value })} className={`${select} max-sm:col-span-3`}>
                 <option value="">All facilities</option>
                 {facilities.map((f) => <option key={f}>{f}</option>)}
               </select>
-              <select aria-label="Team member" value={mem} onChange={(e) => set({ mem: e.target.value })} className={select}>
-                <option value="">All team members</option>
+              <select aria-label="Team member" value={mem} onChange={(e) => set({ mem: e.target.value })} className={`${select} max-sm:col-span-3`}>
+                <option value="">All members</option>
                 {members.map((m) => <option key={m}>{m}</option>)}
               </select>
-              <select aria-label="Month" value={month} onChange={(e) => set({ month: e.target.value, day: "" })} className={select}>
+              <select aria-label="Month" value={month} onChange={(e) => set({ month: e.target.value, day: "" })} className={`${select} max-sm:col-span-2`}>
                 <option value="">All months</option>
                 {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
               </select>
-              {sortBtn("date", "Date")}
-              {sortBtn("amount", "Amount")}
+              <span className="contents max-sm:[&>*]:col-span-2 max-sm:[&>*]:w-full max-sm:[&>*]:justify-center">{sortBtn("date", "Date")}{sortBtn("amount", "Amount")}</span>
             </div>
           </div>
           {active && (
@@ -248,7 +248,45 @@ export function LedgerTab({ expenses, facilities, members, setDialog, filter, se
             </div>
           )}
         </div>
-        <div className="overflow-x-auto">
+        {/* Phones: one compact row per expense — what it was and the amount on top; facility, who paid and the date under it. */}
+        <ul key={`m${sig}`} className="m-0 list-none p-0 sm:hidden">
+          {rows.slice(0, limit).map((e, k) => (
+            <li key={e.id} style={stagger(k, 22, 450)} className="animate-fade-up border-b border-soft">
+              <div className="flex gap-3 py-3 pl-3 pr-2">
+                <span aria-hidden="true" className="w-1 flex-none self-stretch rounded-full" style={{ background: facilityLook(e.facility).color }} />
+                <div className="min-w-0 flex-auto">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="line-clamp-2 min-w-0 text-[14.5px] font-medium leading-snug"><Mark text={e.description} q={q} /></span>
+                    <span className="money flex-none pt-px text-[15px]">{taka(e.amount)}</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-slate-500">
+                    <button type="button" onClick={() => set({ fac: fac === e.facility ? "" : e.facility })} className="font-medium text-slate-600"><Mark text={e.facility} q={q} /></button>
+                    <span aria-hidden="true">·</span>
+                    <button type="button" onClick={() => set({ mem: mem === e.member ? "" : e.member })} className="inline-flex items-center gap-1.5">
+                      <span aria-hidden="true" className="grid size-[18px] place-items-center rounded-full text-[8.5px] font-bold text-white" style={{ background: memberLook(e.member).dot }}>{initials(e.member)}</span>
+                      <Mark text={e.member} q={q} />
+                    </button>
+                    <span aria-hidden="true">·</span>
+                    <button type="button" onClick={() => set({ day: day === e.spent_on ? "" : e.spent_on })} aria-label={`Show only ${dateLong(e.spent_on)}`} className="tabular-nums">{dateLong(e.spent_on)}</button>
+                    {e.tag && (
+                      <button type="button" onClick={() => set({ q: e.tag ?? "" })} className="rounded-md border border-line bg-subtle px-1.5 py-px text-[11.5px] text-slate-600">#<Mark text={e.tag} q={q} /></button>
+                    )}
+                  </div>
+                </div>
+                {!viewer && (
+                  <span className="-my-1 flex flex-none flex-col justify-center [&>span]:flex-col [&>span]:gap-0 [&_button]:size-9">
+                    <RowActions what={`expense: ${e.facility}, ${taka(e.amount)}, ${dateLong(e.spent_on)}`}
+                      onEdit={() => setDialog({ kind: "expense", row: e })} onDelete={() => setDialog({ kind: "delete-expense", row: e })} />
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+          {rows.length === 0 && (
+            <li className="px-4 py-10 text-center text-slate-500">No expenses match these filters. <button type="button" onClick={() => set(NO_FILTER)} className="font-medium text-brand-2 underline underline-offset-2">Clear filters</button></li>
+          )}
+        </ul>
+        <div className="overflow-x-auto max-sm:hidden">
           <table className="stack-table w-full min-w-[820px] border-collapse text-[14px]">
             <thead>
               <tr className="border-b border-line bg-subtle text-left">
