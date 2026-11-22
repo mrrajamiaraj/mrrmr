@@ -111,7 +111,7 @@ export function ResearchView({ data }: { data: ResearchData }) {
             {viewer && <Badge tone="info" className="ml-1 normal-case tracking-normal"><EyeIcon size={12} />View only</Badge>}
           </div>
           <h1 className="m-0 mt-2 font-display text-title font-normal text-ink">Research ledger</h1>
-          <p className="m-0 mt-2 text-[14.5px] text-slate-500">{subtitle}</p>
+          <p className="m-0 mt-2 text-[14.5px] text-slate-500 max-sm:hidden">{subtitle}</p>
         </div>
         {!viewer && (
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
@@ -153,27 +153,27 @@ export function ResearchView({ data }: { data: ResearchData }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
+          <div className="deck-tiles grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
             <button type="button" onClick={() => setTab("ledger")} className="deck-tile group flex flex-col gap-1 p-4 text-left transition-colors">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55"><OutIcon size={13} className="text-[#E8C27A]" />Spent</span>
               <span className="money text-[22px] leading-tight text-[#F0C77E]"><CountUp value={totalExp} format={taka} duration={1300} intro /></span>
               <span className="text-[12px] text-white/55">{expenses.length} expenses</span>
-              <Sparkline values={spark.map((m) => m.spent)} color="#E8C27A" width={140} height={28} className="mt-1 w-full max-w-[140px]" />
+              <Sparkline values={spark.map((m) => m.spent)} color="#E8C27A" width={140} height={28} className="deck-extra mt-1 w-full max-w-[140px]" />
             </button>
             <button type="button" onClick={() => setTab("contributions")} className="deck-tile group flex flex-col gap-1 p-4 text-left transition-colors">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55"><InIcon size={13} className="text-[#92B5E8]" />Contributed</span>
               <span className="money text-[22px] leading-tight text-[#B9D0F2]"><CountUp value={totalCon} format={taka} duration={1300} intro /></span>
               <span className="text-[12px] text-white/55">{contributions.length} member payments</span>
-              <Sparkline values={spark.map((m) => m.contributed)} color="#92B5E8" width={140} height={28} className="mt-1 w-full max-w-[140px]" />
+              <Sparkline values={spark.map((m) => m.contributed)} color="#92B5E8" width={140} height={28} className="deck-extra mt-1 w-full max-w-[140px]" />
             </button>
             <button type="button" onClick={() => setTab("analytics")} className="deck-tile group flex flex-col gap-1 p-4 text-left transition-colors">
               <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Average expense</span>
               <span className="money text-[22px] leading-tight text-white"><CountUp value={avg} format={(n) => takaDec(Math.round(n * 100) / 100)} duration={1300} intro /></span>
               <span className="text-[12px] text-white/55">Largest {taka(peak)}</span>
-              <span aria-hidden="true" className="mt-2 block h-1.5 overflow-hidden rounded-full bg-white/10">
+              <span aria-hidden="true" className="deck-extra mt-2 block h-1.5 overflow-hidden rounded-full bg-white/10">
                 <span className="bar-fill block h-full rounded-full bg-gradient-to-r from-[#7DD4B8] to-[#E8C27A]" style={{ width: `${peak ? Math.max((avg / peak) * 100, 3) : 0}%` }} />
               </span>
-              <span className="text-[10.5px] text-white/45">average as a share of the largest</span>
+              <span className="deck-extra text-[10.5px] text-white/45">average as a share of the largest</span>
             </button>
           </div>
         </div>
@@ -186,7 +186,7 @@ export function ResearchView({ data }: { data: ResearchData }) {
           <span className="rounded-full border border-[#92B5E8]/40 bg-[#92B5E8]/10 px-2 py-0.5 text-[11px] font-semibold text-[#B9D0F2]">Separate ledger</span>
           {reconciled ? <CheckIcon size={14} className="text-[#7DD4B8]" /> : "⚠"}
           {reconciled ? "Reconciled:" : "Doesn't reconcile:"} members&apos; contributions add up to {taka(perCon)} and their spending to {taka(perExp)}.
-          <span className="text-white/45">Team research money only — not part of your bank, cards or loans.</span>
+          <span className="text-white/45 max-sm:hidden">Team research money only — not part of your bank, cards or loans.</span>
         </p>
       </section>
     </header>

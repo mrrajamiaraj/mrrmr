@@ -82,7 +82,7 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
             {viewer && <Badge tone="info" className="ml-1 normal-case tracking-normal"><EyeIcon size={12} />View only</Badge>}
           </div>
           <h1 className="m-0 mt-2 font-display text-title font-normal text-ink">Repayments</h1>
-          <p className="m-0 mt-2 text-[14.5px] text-slate-500">What&apos;s still to collect and when, what came in and how, and anything in the records that needs a look.</p>
+          <p className="m-0 mt-2 text-[14.5px] text-slate-500 max-sm:hidden">What&apos;s still to collect and when, what came in and how, and anything in the records that needs a look.</p>
         </div>
         {!viewer && owing.length > 0 && (
           <Button onClick={() => setPicking(true)} className="shine w-full sm:w-auto"><InIcon size={15} />Record a repayment</Button>
@@ -121,7 +121,7 @@ export function RepaymentsView({ data, today }: { data: FinanceData; today: stri
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="deck-tiles grid grid-cols-2 gap-3 xl:grid-cols-4">
             <HeroTile label="Still owed" icon={<PeopleIcon size={13} className="text-[#E8C27A]" />} value={owedTotal} note={plural(owing.length, "person", "people")} onClick={() => goQueue("all")} />
             <HeroTile label="Overdue" icon={<DueIcon size={13} className="text-[#FFA08F]" />} value={d.overdue.amount} hot={d.overdue.amount > 0} note={d.overdue.count ? plural(d.overdue.count, "item") : "Nothing late"} onClick={() => goQueue("overdue")} />
             <HeroTile label="Due in 30 days" icon={<TrendIcon size={13} className="text-[#7DD4B8]" />} value={sumBy(upcoming, (o) => o.left)} note={plural(upcoming.length, "item")} onClick={() => goQueue("month")} />
@@ -271,14 +271,15 @@ function ToCollect({ open, today, owing, cards, viewer, queue, setQueue, onRepay
               style={{ width: `${(b.amount / (owedAll || 1)) * 100}%`, background: AGING_COLOR[b.key], animationDelay: `${i * 90}ms` }} />
           ))}
         </div>
-        <ul className="m-0 grid list-none grid-cols-2 gap-2 p-4 sm:p-5 md:grid-cols-3 xl:grid-cols-6">
+        {/* Phones: a compact legend — one row per band that has money in it (empty bands are left out). */}
+        <ul className="m-0 grid list-none grid-cols-2 gap-2 p-4 sm:p-5 md:grid-cols-3 xl:grid-cols-6 max-sm:grid-cols-1 max-sm:gap-0 max-sm:py-2">
           {buckets.map((b, i) => (
-            <li key={b.key} style={stagger(i, 60)} className="animate-fade-up">
+            <li key={b.key} style={stagger(i, 60)} className={`animate-fade-up max-sm:border-b max-sm:border-soft max-sm:last:border-0 ${b.amount ? "" : "max-sm:hidden"}`}>
               <button type="button" disabled={!b.amount} aria-pressed={band === b.key} onClick={() => setBand(band === b.key ? null : b.key)}
-                className={`lift flex h-full w-full flex-col gap-1 rounded-xl border p-3 text-left transition-colors enabled:hover:bg-subtle disabled:opacity-50 ${band === b.key ? "border-ink bg-subtle" : "border-line"}`}>
-                <span className="flex items-center gap-2 text-[12px] font-medium text-slate-600"><span aria-hidden="true" className="size-2.5 flex-none rounded-full" style={{ background: AGING_COLOR[b.key] }} />{b.label}</span>
-                <span className="money text-[17px]">{taka(b.amount)}</span>
-                <span className="text-[11.5px] text-slate-500">{plural(b.people, "person", "people")}{owedAll ? ` · ${Math.round((b.amount / owedAll) * 100)}%` : ""}</span>
+                className={`lift flex h-full w-full flex-col gap-1 rounded-xl border p-3 text-left transition-colors enabled:hover:bg-subtle disabled:opacity-50 max-sm:grid max-sm:min-h-12 max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:items-center max-sm:gap-x-3 max-sm:gap-y-0 max-sm:rounded-lg max-sm:border-0 max-sm:px-2 max-sm:py-2 ${band === b.key ? "border-ink bg-subtle" : "border-line"}`}>
+                <span className="flex items-center gap-2 text-[12px] font-medium text-slate-600 max-sm:text-[13.5px] max-sm:text-ink"><span aria-hidden="true" className="size-2.5 flex-none rounded-full" style={{ background: AGING_COLOR[b.key] }} />{b.label}</span>
+                <span className="money text-[17px] max-sm:row-span-2 max-sm:text-[15px]">{taka(b.amount)}</span>
+                <span className="text-[11.5px] text-slate-500 max-sm:pl-[18px]">{plural(b.people, "person", "people")}{owedAll ? ` · ${Math.round((b.amount / owedAll) * 100)}%` : ""}</span>
               </button>
             </li>
           ))}

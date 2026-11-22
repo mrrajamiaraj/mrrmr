@@ -94,15 +94,19 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
       actions={<HeaderButton onClick={() => setBuying(true)}><CardIcon size={15} />Add purchase</HeaderButton>}>
 
       <section aria-label="This card" className="grid items-start gap-5 lg:grid-cols-[minmax(280px,400px)_minmax(0,1fr)]">
-        <div className="mx-auto flex w-full max-w-[400px] flex-col items-center gap-6 pt-2">
-          <CardVisual card={card} />
+        {/* Phones: the card and the limit gauge side by side (the figures are in the panel right below). */}
+        <div className="mx-auto flex w-full max-w-[400px] flex-col items-center gap-6 pt-2 max-sm:max-w-none max-sm:flex-row max-sm:gap-3 max-sm:pt-0">
+          <div className="w-full max-sm:w-[60%] max-sm:flex-none"><CardVisual card={card} /></div>
           {c.limit != null && c.utilization != null && (
-            <Gauge pct={c.utilization} label="of the limit used" sub={`${taka(c.balance)} of ${taka(c.limit)} · ${taka(c.available ?? 0)} available`} />
+            <div className="max-sm:min-w-0 max-sm:flex-auto max-sm:[&_.relative]:w-full max-sm:[&_.money]:text-[22px] max-sm:[&>div>span:last-child]:hidden">
+              <Gauge pct={c.utilization} label="of the limit used" sub={`${taka(c.balance)} of ${taka(c.limit)} · ${taka(c.available ?? 0)} available`} />
+            </div>
           )}
         </div>
 
         <div className="surface-card flex flex-col overflow-hidden">
-          <div className="grid sm:grid-cols-3 [&>*+*]:border-t [&>*+*]:border-line sm:[&>*+*]:border-l sm:[&>*+*]:border-t-0">
+          {/* Phones: "You owe" and "Available" side by side, "Pay by" across the full width under them. */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 [&>*]:min-w-0 [&>*+*]:border-line [&>:nth-child(2)]:border-l [&>:nth-child(3)]:col-span-2 [&>:nth-child(3)]:border-t sm:[&>:nth-child(3)]:col-span-1 sm:[&>:nth-child(3)]:border-l sm:[&>:nth-child(3)]:border-t-0">
             <BalanceEditor label="You owe on this card" inputLabel="Card balance from your statement (৳)" value={card.balance}
               footnote={`As you last entered it · ${timestampLong(card.updated_at)}`} onSave={(n) => setCardBalance(card.id, n)} />
             {/* Remaining balance: what you can still spend = credit limit − what you owe. */}
@@ -287,7 +291,7 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
         <TxnFilters f={txn.f} setF={txn.setF} shown={txn.rows.length} total={uses.length}
           people={[...new Map(uses.filter((u) => u.person_id).map((u) => [u.person_id!, { id: u.person_id!, name: nameOf(u.person_id) }])).values()].sort((a, b) => a.name.localeCompare(b.name))} />
         <div className="overflow-x-auto">
-          <table className="stack-table w-full min-w-[720px] border-collapse text-[14px]">
+          <table className="stack-table stack-3 w-full min-w-[720px] border-collapse text-[14px]">
             <thead>
               <tr className="border-y border-line bg-subtle text-left">
                 <SortTh k="date" label="Date" sort={sort} onSort={toggle} />
@@ -307,9 +311,9 @@ export function CardView({ data, slot, today }: { data: FinanceData; slot: 1 | 2
                       {me ? <Badge className="text-[11.5px]">My spending</Badge>
                         : <span className="inline-flex items-center gap-2"><Avatar text={initials(nameOf(u.person_id))} size={24} /><span className="font-medium">{nameOf(u.person_id)}</span></span>}
                     </td>
-                    <td data-label="What" className="px-4 py-3">
-                      <button type="button" onClick={() => setViewing(u)} className="min-h-9 text-left font-medium underline decoration-line-strong underline-offset-4 hover:text-brand-ink hover:decoration-brand-2">{u.reason_or_place}</button>
-                      <span className="flex flex-wrap justify-end gap-1 sm:justify-start">
+                    <td data-label="What" className="stack-title px-4 py-3 max-sm:order-[-1]">
+                      <button type="button" onClick={() => setViewing(u)} className="min-h-9 text-left font-medium underline decoration-line-strong underline-offset-4 hover:text-brand-ink hover:decoration-brand-2 max-sm:min-h-0">{u.reason_or_place}</button>
+                      <span className="flex flex-wrap justify-start gap-1">
                         <span className="text-[12px] text-slate-500">{u.category}</span>
                         {u.purchase_group && <Badge tone="info" className="text-[10.5px]">Split</Badge>}
                       </span>

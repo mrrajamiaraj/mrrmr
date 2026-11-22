@@ -89,8 +89,9 @@ export function TxnFilters({ f, setF, people, shown, total }: {
   const sel = "min-h-10 rounded-lg border border-line-strong bg-surface px-2.5 text-[13.5px]";
   return (
     <div className="flex flex-col gap-2 border-t border-line px-4 py-3 sm:px-5">
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="flex min-h-10 min-w-[200px] flex-[2_1_240px] items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2 focus-within:shadow-[var(--shadow-focus)]">
+      {/* Phones: search full width, then Person | Plan, then From | To — every control the same width. */}
+      <div className="flex flex-wrap items-end gap-2 max-sm:grid max-sm:grid-cols-2 max-sm:[&>select]:w-full max-sm:[&>select]:min-w-0">
+        <label className="flex min-h-10 min-w-[200px] flex-[2_1_240px] items-center gap-2 rounded-lg max-sm:col-span-2 max-sm:min-w-0 border border-line-strong bg-surface px-3 focus-within:border-brand-2 focus-within:shadow-[var(--shadow-focus)]">
           <SearchIcon size={15} className="text-slate-500" /><span className="sr-only">Search transactions</span>
           <input type="search" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} placeholder="Search person, place, category, amount" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
         </label>
@@ -103,8 +104,8 @@ export function TxnFilters({ f, setF, people, shown, total }: {
         <select id="tx-plan" value={f.plan} onChange={(e) => setF({ ...f, plan: e.target.value as TxnFilter["plan"] })} className={sel}>
           <option value="all">All plans</option><option value="full">Full payment</option><option value="emi">EMI</option><option value="mine">My spending</option>
         </select>
-        <label className="flex items-center gap-1.5 text-[12.5px] text-slate-500">From<input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} className={sel} /></label>
-        <label className="flex items-center gap-1.5 text-[12.5px] text-slate-500">To<input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} className={sel} /></label>
+        <label className="flex items-center gap-1.5 text-[12.5px] text-slate-500 max-sm:min-w-0 max-sm:flex-col max-sm:items-stretch max-sm:gap-1 max-sm:text-[11.5px] max-sm:font-medium">From<input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} className={`${sel} max-sm:w-full max-sm:min-w-0 max-sm:text-ink`} /></label>
+        <label className="flex items-center gap-1.5 text-[12.5px] text-slate-500 max-sm:min-w-0 max-sm:flex-col max-sm:items-stretch max-sm:gap-1 max-sm:text-[11.5px] max-sm:font-medium">To<input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} className={`${sel} max-sm:w-full max-sm:min-w-0 max-sm:text-ink`} /></label>
       </div>
       <div role="status" className="flex items-center justify-between text-[12.5px] text-slate-500">
         <span>Showing {shown} of {total}</span>

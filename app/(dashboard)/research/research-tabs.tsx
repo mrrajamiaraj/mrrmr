@@ -133,15 +133,16 @@ function BarPicker({ rows, picked, onPick, colorOf, label }: {
         return (
           <li key={r.name} style={stagger(i, 60)} className="animate-fade-up">
             <button type="button" aria-pressed={on} onClick={() => onPick(on ? "" : r.name)}
-              className={`group flex w-full flex-col gap-1.5 rounded-xl px-3 py-2 text-left transition-[background-color,box-shadow,opacity] duration-200 ${on ? "bg-subtle ring-1 ring-line-strong" : "hover:bg-subtle"} ${picked && !on ? "opacity-50 hover:opacity-100" : ""}`}>
+              className={`group flex w-full flex-col gap-1.5 rounded-xl px-3 py-2 text-left transition-[background-color,box-shadow,opacity] duration-200 max-sm:gap-1 max-sm:py-1.5 ${on ? "bg-subtle ring-1 ring-line-strong" : "hover:bg-subtle"} ${picked && !on ? "opacity-50 hover:opacity-100" : ""}`}>
               <span className="flex items-baseline justify-between gap-3 text-[13.5px]">
-                <span className="flex items-center gap-2 font-medium"><span aria-hidden="true" className="size-2.5 rounded-full transition-transform duration-300 group-hover:scale-125" style={{ background: colorOf(r.name) }} />{r.name}</span>
-                <span className="flex items-baseline gap-2"><span className="money">{taka(r.total)}</span><span className="w-12 text-right text-[11.5px] tabular-nums text-slate-500">{r.share}%</span></span>
+                <span className="flex min-w-0 items-center gap-2 font-medium"><span aria-hidden="true" className="size-2.5 flex-none rounded-full transition-transform duration-300 group-hover:scale-125" style={{ background: colorOf(r.name) }} /><span className="truncate">{r.name}</span><span className="flex-none text-[11.5px] font-normal text-slate-400 sm:hidden" aria-label={`${r.count} ${r.count === 1 ? "entry" : "entries"}`}>({r.count})</span></span>
+                <span className="flex flex-none items-baseline gap-2"><span className="money">{taka(r.total)}</span><span className="w-12 text-right text-[11.5px] tabular-nums text-slate-500 max-sm:w-10">{r.share}%</span></span>
               </span>
-              <span aria-hidden="true" className="block h-2 overflow-hidden rounded-full bg-soft">
+              <span aria-hidden="true" className="block h-2 overflow-hidden rounded-full bg-soft max-sm:h-1.5">
                 <span className="bar-fill block h-full rounded-full transition-[filter] group-hover:brightness-110" style={{ width: `${(r.total / max) * 100}%`, background: colorOf(r.name), animationDelay: `${i * 80 + 150}ms` }} />
               </span>
-              <span className="text-[11.5px] text-slate-500">{r.count} {r.count === 1 ? "entry" : "entries"}{on ? " · showing only this — click again to show all" : ""}</span>
+              {/* Phones show the count beside the name; this line only when the row is picked. */}
+              <span className={`text-[11.5px] text-slate-500 ${on ? "" : "max-sm:hidden"}`}>{r.count} {r.count === 1 ? "entry" : "entries"}{on ? " · showing only this — tap again to show all" : ""}</span>
             </button>
           </li>
         );

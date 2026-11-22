@@ -150,7 +150,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
+            <div className="deck-tiles grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
               <div className="deck-tile flex flex-col gap-1 p-4">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Borrowed</span>
                 <span className="money text-[20px] leading-tight text-white"><CountUp value={p.taken} format={taka} duration={1300} intro /></span>
@@ -171,7 +171,7 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
           <div className="flex min-w-0 flex-col justify-center">
             {balancePoints.length > 1
               ? <TrendArea dark color={late ? "#FFA08F" : "#E8C27A"} title="What they owed at each month end" points={balancePoints} />
-              : <p className="m-0 text-[13px] text-white/55">A balance chart appears once there are entries in more than one month.</p>}
+              : <p className="deck-extra m-0 text-[13px] text-white/55">A balance chart appears once there are entries in more than one month.</p>}
           </div>
         </section>
       </header>
@@ -224,8 +224,8 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
               ))}
             </div>
           } />
-        <div className="flex flex-wrap items-end gap-3 border-t border-line px-4 py-3 sm:px-5">
-          <label className="flex min-h-10 min-w-0 flex-[1_1_200px] items-center gap-2 self-end rounded-lg border border-line-strong bg-surface px-3 focus-within:border-brand-2">
+        <div className="flex flex-wrap items-end gap-3 border-t border-line px-4 py-3 sm:px-5 max-sm:grid max-sm:grid-cols-2 max-sm:gap-2 max-sm:[&>label]:min-w-0 max-sm:[&_input[type=date]]:w-full max-sm:[&_input[type=date]]:min-w-0">
+          <label className="flex min-h-10 min-w-0 flex-[1_1_200px] items-center gap-2 self-end rounded-lg max-sm:col-span-2 border border-line-strong bg-surface px-3 focus-within:border-brand-2">
             <SearchIcon size={15} className="text-slate-500" /><span className="sr-only">Search history</span>
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search reason, method, amount" className="min-w-0 flex-auto bg-transparent text-[14px] outline-none" />
           </label>
@@ -236,11 +236,11 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
             <input type="date" value={to} min={from || undefined} max={today} onChange={(e) => setTo(e.target.value)} className="min-h-10 rounded-lg border border-line-strong bg-surface px-2.5 text-[14px] text-ink" />
           </label>
           {filtered && <Button variant="quiet" size="sm" onClick={() => { setFrom(""); setTo(""); }}>Clear dates</Button>}
-          <span role="status" className="ml-auto text-[12.5px] text-slate-500">{shownRows.length} {shownRows.length === 1 ? "entry" : "entries"}{filtered ? " in range" : ""}{ql ? " matching" : ""}</span>
+          <span role="status" className="ml-auto text-[12.5px] text-slate-500 max-sm:col-span-2 max-sm:ml-0">{shownRows.length} {shownRows.length === 1 ? "entry" : "entries"}{filtered ? " in range" : ""}{ql ? " matching" : ""}</span>
         </div>
 
         <div className="overflow-x-auto border-t border-line">
-          <table className="stack-table w-full min-w-[760px] border-collapse text-[14px]">
+          <table className="stack-table stack-3 w-full min-w-[760px] border-collapse text-[14px]">
             <thead>
               <tr className="bg-subtle text-left">
                 <th scope="col" className={TH}>Date</th>
@@ -264,8 +264,8 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
                   <Fragment key={r.id}>
                     <tr style={stagger(k, 25, 450)} className="animate-fade-up border-b border-soft align-top">
                       <td className={`${TD} whitespace-nowrap text-slate-600`}>{dateLong(r.iso)}</td>
-                      <td data-label="Entry" className={TD}>
-                        <span className="flex flex-col items-end gap-0.5 text-right sm:items-start sm:text-left">
+                      <td data-label="Entry" className={`${TD} stack-title`}>
+                        <span className="flex flex-col items-start gap-0.5 text-left">
                           <span className="flex flex-wrap items-center gap-1.5 font-medium">
                             <Badge tone={r.repaid != null ? "good" : r.kind === "loan" ? "neutral" : "info"} className="text-[11px]">{r.type}</Badge>
                             {plan?.plan === "emi" && <Badge tone="info" className="text-[11px]">EMI {plan.paidCount}/{plan.of}</Badge>}
@@ -280,8 +280,9 @@ export function DebtorProfileView({ data, personId, today }: { data: FinanceData
                         </span>
                       </td>
                       <td data-label="Method" className={`${TD} text-slate-600`}>{r.method ?? <span className="text-slate-400">—</span>}</td>
-                      <td data-label="Borrowed" className={`${TD} money text-right`}>{r.borrowed != null ? taka(r.borrowed) : <span className="text-slate-400 max-sm:hidden">—</span>}</td>
-                      <td data-label="Repaid" className={`${TD} money text-right text-brand-2`}>{r.repaid != null ? taka(r.repaid) : <span className="text-slate-400 max-sm:hidden">—</span>}</td>
+                      {/* Phones show only the one that applies (a row is either borrowing or a repayment). */}
+                      <td data-label="Borrowed" className={`${TD} money text-right ${r.borrowed == null ? "stack-hide" : ""}`}>{r.borrowed != null ? taka(r.borrowed) : <span className="text-slate-400">—</span>}</td>
+                      <td data-label="Repaid" className={`${TD} money text-right text-brand-2 ${r.repaid == null ? "stack-hide" : ""}`}>{r.repaid != null ? taka(r.repaid) : <span className="text-slate-400">—</span>}</td>
                       <td data-label="Balance" className={`${TD} text-right`}>
                         <span className="inline-flex flex-col items-end gap-1">
                           <span className="money">{bal(r.balance)}</span>

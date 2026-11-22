@@ -28,7 +28,7 @@ import { monthlySeries } from "@/lib/trends";
 import { buildStatement } from "@/lib/statement";
 import { cumulative } from "@/lib/research-stats";
 import { aging, agingKey, dueCalendar, lendingMonths, lentFor, type AgingKey } from "@/lib/people-stats";
-import { addDays, dateLong, taka } from "@/lib/format";
+import { addDays, dateLong, dateShort, taka } from "@/lib/format";
 import { sumBy } from "@/lib/money";
 import type { FinanceData } from "@/lib/types";
 
@@ -183,7 +183,7 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
             {viewer && <Badge tone="info" className="ml-1 normal-case tracking-normal"><EyeIcon size={12} />View only</Badge>}
           </div>
           <h1 className="m-0 mt-2 font-display text-title font-normal text-ink">People &amp; loans</h1>
-          <p className="m-0 mt-2 text-[14.5px] text-slate-500">Everyone who owes you money — bank loans and purchases on your cards — and what they&apos;ve paid back.</p>
+          <p className="m-0 mt-2 text-[14.5px] text-slate-500 max-sm:hidden">Everyone who owes you money — bank loans and purchases on your cards — and what they&apos;ve paid back.</p>
         </div>
         {!viewer && (
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
@@ -218,18 +218,18 @@ export function DebtorsView({ data, today, initialFilter = "all" }: { data: Fina
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
+          <div className="deck-tiles grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 [&>:last-child:nth-child(odd)]:col-span-2 sm:[&>:last-child:nth-child(odd)]:col-span-1">
             <button type="button" onClick={() => show("owing")} className="deck-tile flex flex-col gap-1 p-4 text-left transition-colors">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55"><BankIcon size={13} className="text-[#E8C27A]" />Bank loans</span>
               <span className="money text-[20px] leading-tight text-white"><CountUp value={d.receivables.bankLoans} format={taka} duration={1300} intro /></span>
               <span className="text-[12px] text-white/55">cards {taka(d.receivables.cards)}</span>
-              <Sparkline values={year.map((m) => m.running)} color="#E8C27A" width={140} height={26} className="mt-1 w-full max-w-[140px]" />
+              <Sparkline values={year.map((m) => m.running)} color="#E8C27A" width={140} height={26} className="deck-extra mt-1 w-full max-w-[140px]" />
             </button>
             <button type="button" onClick={() => show("overdue")} className="deck-tile flex flex-col gap-1 p-4 text-left transition-colors">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55"><DueIcon size={13} className="text-[#FFA08F]" />Overdue</span>
               <span className={`money text-[20px] leading-tight ${d.overdue.amount ? "text-[#FFA08F]" : "text-white"}`}><CountUp value={d.overdue.amount} format={taka} duration={1300} intro /></span>
               <span className="text-[12px] text-white/55">{overdue.length ? `${overdue.length} ${overdue.length === 1 ? "person" : "people"} late` : "Nobody is late"}</span>
-              <span aria-hidden="true" className="mt-1.5 flex -space-x-2">{overdue.slice(0, 5).map((p) => <span key={p.id} className="grid size-6 place-items-center rounded-full border border-white/20 bg-[#7F2920] text-[9.5px] font-bold text-white">{p.initials}</span>)}</span>
+              <span aria-hidden="true" className="deck-extra mt-1.5 flex -space-x-2">{overdue.slice(0, 5).map((p) => <span key={p.id} className="grid size-6 place-items-center rounded-full border border-white/20 bg-[#7F2920] text-[9.5px] font-bold text-white">{p.initials}</span>)}</span>
             </button>
             <button type="button" onClick={() => show("soon")} className="deck-tile flex flex-col gap-1 p-4 text-left transition-colors">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55"><TrendIcon size={13} className="text-[#7DD4B8]" />Due in 7 days</span>
@@ -402,7 +402,13 @@ function PersonRow({ p, i, q, today, viewer, sources, onRepay }: { p: Profile; i
           <span className="flex justify-between gap-2 text-[11.5px] text-slate-500"><span>Repaid <Money value={p.paid} tone="good" /> · borrowed <Money value={p.taken} tone="muted" /></span>{p.taken > 0 && <span className="money text-brand-2 md:hidden">{p.pct}%</span>}</span>
           <SourceTags sources={sources} owing={owed} className="relative z-10 mt-0.5" />
         </div>
-        <div className="flex items-center md:justify-end">{owed ? <><span className="md:hidden"><DateChip iso={p.due} today={today} size="sm" /></span><span className="max-md:hidden"><DateChip iso={p.due} today={today} /></span></> : <span className="text-[12.5px] text-slate-400">—</span>}</div>
+        {/* Phones: the due date as one short line beside the Repay button instead of a calendar tile on its own row. */}
+        <div className="flex items-center md:justify-end">{owed ? <>
+          <span className={`text-[12.5px] md:hidden ${s.tone === "bad" ? "font-medium text-bad" : "text-slate-500"}`}>
+            {p.due ? <>{s.tone === "bad" ? "Overdue · was due " : "Due "}{dateShort(p.due)}</> : "No due date"}
+          </span>
+          <span className="max-md:hidden"><DateChip iso={p.due} today={today} /></span>
+        </> : <span className="text-[12.5px] text-slate-400 max-md:hidden">—</span>}</div>
         <span className="relative z-10 flex items-center justify-end gap-1">
           {!viewer && owed && <Button variant="secondary" size="sm" onClick={onRepay} className="max-md:min-h-10 max-md:px-3.5"><TrendIcon size={14} />Repay</Button>}
           <ChevronRight size={16} className="flex-none text-slate-400 transition-transform group-hover/row:translate-x-0.5 max-md:hidden" />
@@ -655,7 +661,7 @@ function WeekStrip({ today, dues, dark = false }: { today: string; dues: string[
     return { iso, n: dues.filter((x) => x === iso).length, label: d.toLocaleDateString("en-GB", { weekday: "narrow", timeZone: "UTC" }) };
   });
   return (
-    <span aria-hidden="true" className="mt-1.5 grid grid-cols-7 gap-1">
+    <span aria-hidden="true" className={`${dark ? "deck-extra " : ""}mt-1.5 grid grid-cols-7 gap-1`}>
       {days.map((d, i) => (
         <span key={d.iso} className="flex flex-col items-center gap-0.5">
           <span className={`viz-grow h-4 w-full rounded-[4px] ${d.n ? "bg-[#E8C27A]" : dark ? "bg-white/10" : "bg-soft"}`} style={{ animationDelay: `${i * 60}ms` }} />

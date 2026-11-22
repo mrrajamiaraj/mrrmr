@@ -108,6 +108,9 @@ export function Donut({ slices, title, picked, onPick, size = 190, centerLabel =
 }) {
   const id = useId().replace(/:/g, "");
   const [hover, setHover] = useState<string | null>(null);
+  // Phones: a smaller ring beside its legend instead of a big ring stacked above it.
+  const phone = usePhone();
+  if (phone) size = Math.min(size, 124);
   const total = slices.reduce((s, x) => s + Math.max(x.value, 0), 0);
   const focus = hover ?? picked ?? null;
   const cur = slices.find((s) => s.name === focus);
@@ -121,7 +124,7 @@ export function Donut({ slices, title, picked, onPick, size = 190, centerLabel =
   });
 
   return (
-    <figure className="m-0 flex flex-wrap items-center justify-center gap-5 sm:flex-nowrap sm:justify-start">
+    <figure className="m-0 flex flex-wrap items-center justify-center gap-5 sm:flex-nowrap sm:justify-start max-sm:flex-nowrap max-sm:gap-3">
       <div className="relative flex-none" style={{ width: size, height: size }} onPointerLeave={() => setHover(null)}>
         <svg viewBox="0 0 100 100" width={size} height={size} className="block -rotate-90" aria-hidden="true">
           <defs>
@@ -143,9 +146,9 @@ export function Donut({ slices, title, picked, onPick, size = 190, centerLabel =
             })}
           </g>
         </svg>
-        <div key={focus ?? "all"} className="pointer-events-none absolute inset-0 flex animate-pop-in flex-col items-center justify-center px-6 text-center">
-          <span className="max-w-full truncate text-[11.5px] font-semibold uppercase tracking-[0.08em] text-slate-500">{cur ? cur.name : centerLabel}</span>
-          <span className="money text-[22px] leading-tight">{taka(cur ? cur.value : total)}</span>
+        <div key={focus ?? "all"} className="pointer-events-none absolute inset-0 flex animate-pop-in flex-col items-center justify-center px-6 text-center max-sm:px-4">
+          <span className="max-w-full truncate text-[11.5px] font-semibold uppercase tracking-[0.08em] text-slate-500 max-sm:text-[10px]">{cur ? cur.name : centerLabel}</span>
+          <span className="money text-[22px] leading-tight max-sm:text-[15px]">{taka(cur ? cur.value : total)}</span>
           <span className="text-[11.5px] text-slate-500">{cur ? `${total ? Math.round((cur.value / total) * 1000) / 10 : 0}%` : `${slices.length} ${slices.length === 1 ? "group" : "groups"}`}</span>
         </div>
       </div>

@@ -538,6 +538,12 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
   .stack-table .stack-corner { position: absolute; top: 6px; right: 8px; padding: 0; flex-direction: row; }
   /* An expanded detail row (e.g. an EMI schedule) spans the card as normal, left-aligned content. */
   .stack-table :is(td, th)[colspan].stack-full:not(:empty) { display: block; text-align: left; padding: 8px 0 4px; font-weight: 400; }
+  /* .stack-3: short values (method, amount, balance) three to a line instead of two. */
+  .stack-table.stack-3 tr { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; }
+  /* .stack-title: a labelled cell that reads as the card's subject (what the entry is) — full width, no label. */
+  .stack-table :is(td, th).stack-title { grid-column: 1 / -1; font-size: 14px; }
+  .stack-table :is(td, th).stack-title::before { display: none; }
+  .stack-table tr:has(> .stack-corner) > .stack-title { padding-right: 44px; }
 }
 
 /*
@@ -570,6 +576,8 @@ html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: norm
     scrollbar-width: none;
     margin-inline: -16px;
     padding-inline: 16px;
+    /* without this, snapping lines the first chip up with the screen edge and hides the 16px gutter */
+    scroll-padding-inline: 16px;
   }
   [role="group"]:is([class~="flex-wrap"]) > * { flex: none; scroll-snap-align: start; }
   [role="group"]:is([class~="flex-wrap"])::-webkit-scrollbar { display: none; }
